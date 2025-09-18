@@ -76,9 +76,10 @@ const MobileOrderDetailsPage: React.FC = () => {
       setLoading(true);
       
       // Fetch specific order
-      const orderResponse = await fetch(`http://localhost:8000/api/orders/${orderId}`);
-      if (orderResponse.ok) {
-        const orderData = await orderResponse.json();
+      const { orderAPI } = await import('../services/api');
+      const orderResponse = await orderAPI.getOrderById(Number(orderId));
+      if (orderResponse.status === 200) {
+        const orderData = orderResponse.data;
         // Map items to food_items for compatibility
         if (orderData.items) {
           orderData.food_items = orderData.items.map((item: any) => ({
@@ -94,9 +95,10 @@ const MobileOrderDetailsPage: React.FC = () => {
         // Fetch buffet package info from database if missing
         if (orderData.buffet_quantity && (!orderData.buffet_package_name || !orderData.buffet_package_price)) {
           try {
-            const packageResponse = await fetch(`http://localhost:8000/api/buffet-packages/${orderData.buffet_package_id || 1}`);
-            if (packageResponse.ok) {
-              const packageData = await packageResponse.json();
+            const { buffetAPI } = await import('../services/api');
+            const packageResponse = await buffetAPI.getBuffetPackageById(orderData.buffet_package_id || 1);
+            if (packageResponse.status === 200) {
+              const packageData = packageResponse.data;
               orderData.buffet_package_name = packageData.name || 'Buffet Package';
               orderData.buffet_package_price = packageData.price || 0;
             }
@@ -110,9 +112,10 @@ const MobileOrderDetailsPage: React.FC = () => {
         setOrder(orderData);
         
         // Fetch table info
-        const tablesResponse = await fetch('http://localhost:8001/api/tables');
-        if (tablesResponse.ok) {
-          const tablesData = await tablesResponse.json();
+        const { tableAPI } = await import('../services/api');
+        const tablesResponse = await tableAPI.getTables();
+        if (tablesResponse.status === 200) {
+          const tablesData = tablesResponse.data;
           const tableInfo = tablesData.find((t: Table) => t.id === orderData.table_id);
           setTable(tableInfo);
         }

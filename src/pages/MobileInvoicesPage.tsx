@@ -63,10 +63,13 @@ const MobileInvoicesPage: React.FC = () => {
     try {
       setLoading(true);
       
+      // Fetch orders using Supabase API
+      const { orderAPI, tableAPI } = await import('../services/api');
+      
       // Fetch orders
-      const ordersResponse = await fetch('http://localhost:8000/api/orders');
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
+      const ordersResponse = await orderAPI.getOrders();
+      if (ordersResponse.status === 200) {
+        const ordersData = ordersResponse.data;
         const filteredOrders = ordersData.filter((order: Order) => 
           order.status === 'pending' && order.order_type === 'buffet'
         );
@@ -94,9 +97,9 @@ const MobileInvoicesPage: React.FC = () => {
       }
 
       // Fetch tables
-      const tablesResponse = await fetch('http://localhost:8001/api/tables');
-      if (tablesResponse.ok) {
-        const tablesData = await tablesResponse.json();
+      const tablesResponse = await tableAPI.getTables();
+      if (tablesResponse.status === 200) {
+        const tablesData = tablesResponse.data;
         setTables(tablesData);
       }
     } catch (error) {

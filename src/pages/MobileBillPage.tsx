@@ -133,27 +133,22 @@ const MobileBillPage: React.FC = () => {
     // Nếu có order cũ và packageQuantity = 0, chỉ cập nhật món ăn
     if (currentOrder && packageQuantity === 0) {
       // Chỉ cập nhật món ăn, không thay đổi số lượng vé
-      const response = await fetch(`http://localhost:8000/api/orders/${currentOrder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: selectedItems
-            .filter(item => itemQuantities[item.id] > 0)
-            .map(item => ({
-              food_item_id: item.food_item.id,
-              name: item.food_item.name,
-              price: 0,
-              quantity: itemQuantities[item.id],
-              total: 0,
-              special_instructions: 'Gọi thoải mái',
-              printer_id: null
-            }))
-        }),
+      const { orderAPI } = await import('../services/api');
+      const response = await orderAPI.updateOrder(currentOrder.id, {
+        items: selectedItems
+          .filter(item => itemQuantities[item.id] > 0)
+          .map(item => ({
+            food_item_id: item.food_item.id,
+            name: item.food_item.name,
+            price: 0,
+            quantity: itemQuantities[item.id],
+            total: 0,
+            special_instructions: 'Gọi thoải mái',
+            printer_id: null
+          }))
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         alert('Cập nhật món ăn thành công!');
         navigate('/mobile-tables');
       } else {
@@ -167,9 +162,10 @@ const MobileBillPage: React.FC = () => {
       let employeeId = 14; // fallback
       if (user?.id) {
         try {
-          const response = await fetch(`http://localhost:8000/api/employees`);
-          if (response.ok) {
-            const employees = await response.json();
+          const { employeeAPI } = await import('../services/api');
+          const response = await employeeAPI.getEmployees();
+          if (response.status === 200) {
+            const employees = response.data;
             const employee = employees.find((emp: any) => emp.user_id === user.id);
             if (employee) {
               employeeId = employee.id;
@@ -249,15 +245,10 @@ const MobileBillPage: React.FC = () => {
             }))
         };
 
-        const response = await fetch(`http://localhost:8000/api/orders/${currentOrder.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedOrderData),
-        });
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.updateOrder(currentOrder.id, updatedOrderData);
 
-        if (response.ok) {
+        if (response.status === 200) {
           alert('Cập nhật order thành công!');
           navigate('/mobile-tables');
         } else {
@@ -265,20 +256,15 @@ const MobileBillPage: React.FC = () => {
         }
       } else {
         // Tạo order mới
-        const response = await fetch('http://localhost:8000/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.createOrder({
             ...orderData,
             table_id: selectedTable.id,
             order_type: 'buffet',
             status: 'pending'
-          }),
-        });
+          });
 
-        if (response.ok) {
+        if (response.status === 200) {
           alert('Tạo order thành công!');
           navigate('/mobile-tables');
         } else {
@@ -300,28 +286,23 @@ const MobileBillPage: React.FC = () => {
     // Nếu có order cũ và packageQuantity = 0, chỉ cập nhật món ăn và thanh toán
     if (currentOrder && packageQuantity === 0) {
       // 1. Cập nhật order status thành paid
-      const response = await fetch(`http://localhost:8000/api/orders/${currentOrder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'paid',
-          items: selectedItems
-            .filter(item => itemQuantities[item.id] > 0)
-            .map(item => ({
-              food_item_id: item.food_item.id,
-              name: item.food_item.name,
-              price: 0,
-              quantity: itemQuantities[item.id],
-              total: 0,
-              special_instructions: 'Gọi thoải mái',
-              printer_id: null
-            }))
-        }),
+      const { orderAPI } = await import('../services/api');
+      const response = await orderAPI.updateOrder(currentOrder.id, {
+        status: 'paid',
+        items: selectedItems
+          .filter(item => itemQuantities[item.id] > 0)
+          .map(item => ({
+            food_item_id: item.food_item.id,
+            name: item.food_item.name,
+            price: 0,
+            quantity: itemQuantities[item.id],
+            total: 0,
+            special_instructions: 'Gọi thoải mái',
+            printer_id: null
+          }))
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
           customer_id: currentOrder.customer_id || undefined,
@@ -359,9 +340,10 @@ const MobileBillPage: React.FC = () => {
       let employeeId = 14; // fallback
       if (user?.id) {
         try {
-          const response = await fetch(`http://localhost:8000/api/employees`);
-          if (response.ok) {
-            const employees = await response.json();
+          const { employeeAPI } = await import('../services/api');
+          const response = await employeeAPI.getEmployees();
+          if (response.status === 200) {
+            const employees = response.data;
             const employee = employees.find((emp: any) => emp.user_id === user.id);
             if (employee) {
               employeeId = employee.id;
@@ -442,15 +424,10 @@ const MobileBillPage: React.FC = () => {
             }))
         };
 
-        const response = await fetch(`http://localhost:8000/api/orders/${currentOrder.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedOrderData),
-        });
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.updateOrder(currentOrder.id, updatedOrderData);
 
-        if (response.ok) {
+        if (response.status === 200) {
           alert('Thanh toán thành công!');
           navigate('/mobile-tables');
         } else {
@@ -458,20 +435,15 @@ const MobileBillPage: React.FC = () => {
         }
       } else {
         // Tạo order mới và thanh toán luôn
-        const response = await fetch('http://localhost:8000/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.createOrder({
             ...orderData,
             table_id: selectedTable.id,
             order_type: 'buffet',
             status: 'paid'
-          }),
-        });
+          });
 
-        if (response.ok) {
+        if (response.status === 200) {
           alert('Tạo order và thanh toán thành công!');
           navigate('/mobile-tables');
         } else {
