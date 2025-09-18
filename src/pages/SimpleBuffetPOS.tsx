@@ -211,11 +211,9 @@ const SimpleBuffetPOS: React.FC = () => {
 
   const fetchPackageItems = async (packageId: number) => {
     try {
-      const response = await fetch(`/api/buffet-package-items?package_id=${packageId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPackageItems(data);
-      }
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getPackageItems(packageId);
+      setPackageItems(response.data || []);
     } catch (error) {
       console.error('Error fetching package items:', error);
     }
@@ -266,16 +264,15 @@ const SimpleBuffetPOS: React.FC = () => {
   // Function lấy employee_id từ user_id
   const getEmployeeId = async (userId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/employees`);
-      if (response.ok) {
-        const employees = await response.json();
-        const employee = employees.find((emp: any) => emp.user_id === userId);
-        return employee ? employee.id : 14; // fallback to 14 if not found
-      }
+      const { employeeAPI } = await import('../services/api');
+      const res = await employeeAPI.getEmployees();
+      const employees = res.data as any[];
+      const employee = Array.isArray(employees) ? employees.find((emp: any) => emp.user_id === userId) : undefined;
+      return employee ? employee.id : 14;
     } catch (error) {
-      console.error('Error fetching employee ID:', error);
+      console.error('Error resolving employee ID:', error);
+      return 14;
     }
-    return 14; // fallback
   };
 
   const handleCreateOrder = async () => {
