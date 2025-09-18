@@ -128,52 +128,7 @@ export const mockAPI = {
     return mockResponse;
   },
 
-  // Mock employees data
-  getEmployees: async () => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [
-      {
-        id: 1,
-        user_id: 1,
-        employee_code: 'EMP001',
-        full_name: 'Administrator',
-        position: 'owner',
-        department: 'Management',
-        phone: '0123456789',
-        email: 'admin@gubgipati.com',
-        hire_date: '2024-01-01',
-        salary: 50000000,
-        is_active: true
-      },
-      {
-        id: 2,
-        user_id: 2,
-        employee_code: 'EMP002',
-        full_name: 'Manager',
-        position: 'manager',
-        department: 'Operations',
-        phone: '0123456790',
-        email: 'manager@gubgipati.com',
-        hire_date: '2024-01-01',
-        salary: 30000000,
-        is_active: true
-      },
-      {
-        id: 3,
-        user_id: 3,
-        employee_code: 'EMP003',
-        full_name: 'Staff Member',
-        position: 'waiter',
-        department: 'Service',
-        phone: '0123456791',
-        email: 'staff@gubgipati.com',
-        hire_date: '2024-01-01',
-        salary: 15000000,
-        is_active: true
-      }
-    ];
-  },
+  
 
   // Mock dashboard data
   getDashboard: async (): Promise<AxiosResponse<any>> => {
