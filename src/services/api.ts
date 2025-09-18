@@ -361,6 +361,19 @@ export const customerAPI = {
 // Employee API
 export const employeeAPI = {
   getEmployees: (): Promise<AxiosResponse<Employee[]>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('employees')
+          .select('*')
+          .order('id', { ascending: true })
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<Employee[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getEmployees();
     }
@@ -470,12 +483,83 @@ export const tableAPI = {
 export const orderAPI = {
   getOrders: (params?: any): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
-      return Promise.resolve({ data: [], status: 200, statusText: 'OK', headers: {}, config: {} as any });
+      const tableId = params?.table_id;
+      return new Promise((resolve, reject) => {
+        let query = supabase.from('orders').select('*, items:order_items(*)').order('id', { ascending: false });
+        if (tableId) query = (query as any).eq('table_id', tableId);
+        query.then((res: any) => {
+          if (res.error) { reject(res.error); return; }
+          const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+          resolve(axiosLike);
+        }, reject);
+      });
     }
     if (IS_PRODUCTION) {
       return mockAPI.getOrders();
     }
     return api.get('/orders', { params });
+  },
+  createOrder: (data: any): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        const { items, ...order } = data;
+        supabase
+          .from('orders')
+          .insert(order)
+          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
+          .single()
+          .then(async (res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const orderId = res.data.id;
+            if (Array.isArray(items) && items.length > 0) {
+              await supabase.from('order_items').insert(
+                items.map((it: any) => ({
+                  order_id: orderId,
+                  food_item_id: it.food_item_id,
+                  quantity: it.quantity,
+                  unit_price: it.price,
+                  total_price: it.total,
+                  service_name: it.name
+                }))
+              );
+            }
+            const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.post('/orders', data);
+  },
+  updateOrder: (id: number, data: any): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        const { items, ...order } = data;
+        supabase
+          .from('orders')
+          .update(order)
+          .eq('id', id)
+          .select('*')
+          .single()
+          .then(async (res: any) => {
+            if (res.error) { reject(res.error); return; }
+            if (Array.isArray(items) && items.length > 0) {
+              await supabase.from('order_items').insert(
+                items.map((it: any) => ({
+                  order_id: id,
+                  food_item_id: it.food_item_id,
+                  quantity: it.quantity,
+                  unit_price: it.price,
+                  total_price: it.total,
+                  service_name: it.name
+                }))
+              );
+            }
+            const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.put(`/orders/${id}`, data);
   },
 };
 

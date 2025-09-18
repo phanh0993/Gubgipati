@@ -316,16 +316,8 @@ const SimpleBuffetPOS: React.FC = () => {
           }))
         };
 
-        const response = await fetch(`/api/orders/${currentOrder.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updatedOrderData),
-        });
-
-        if (response.ok) {
-          const updatedOrder = await response.json();
+        const { orderAPI } = await import('../services/api');
+        const { data: updatedOrder } = await orderAPI.updateOrder(Number(currentOrder.id), updatedOrderData);
           console.log('✅ Order updated in database:', updatedOrder);
           
           // Cập nhật currentOrder - API đã gộp items rồi, chỉ cần fetch lại
@@ -369,16 +361,8 @@ const SimpleBuffetPOS: React.FC = () => {
           }))
         };
 
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderData),
-        });
-
-        if (response.ok) {
-          const newOrder = await response.json();
+        const { orderAPI } = await import('../services/api');
+        const { data: newOrder } = await orderAPI.createOrder(orderData);
           console.log('✅ Order created in database:', newOrder);
           
           // Cập nhật currentOrder để hiển thị
