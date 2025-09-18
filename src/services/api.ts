@@ -552,16 +552,7 @@ export const orderAPI = {
       return new Promise((resolve, reject) => {
         supabase
           .from('orders')
-          .select(`
-            *,
-            order_items (
-              id,
-              food_item_id,
-              quantity,
-              unit_price,
-              total_price
-            )
-          `)
+          .select('*')
           .eq('id', id)
           .single()
           .then(async (res: any) => {
@@ -580,17 +571,17 @@ export const orderAPI = {
                 employee: empRes.data
               });
 
-              // Đọc items từ order_items (fallback khi cột items chưa tồn tại)
+              // Đọc items từ cột items (JSONB)
               console.log('🔍 Order data:', o);
-              console.log('🔍 Order items from DB:', o.order_items);
-              const normalizedItems = (o.order_items || []).map((it: any) => ({
-                id: it.id,
+              console.log('🔍 Items from orders.items:', o.items);
+              const normalizedItems = (o.items || []).map((it: any, index: number) => ({
+                id: it.id || index,
                 order_id: o.id,
                 food_item_id: it.food_item_id,
-                name: 'Food Item', // Tạm thời dùng tên cố định vì không có service_name
+                name: it.name || 'Unknown Item',
                 quantity: Number(it.quantity || 0),
-                price: Number(it.unit_price || 0),
-                total: Number(it.total_price || 0)
+                price: Number(it.price || 0),
+                total: Number(it.total || 0)
               }));
               console.log('🔍 Normalized items:', normalizedItems);
 
@@ -626,36 +617,19 @@ export const orderAPI = {
         const orderPayload = { 
           order_number: orderNumber, 
           status: 'open', 
-          // items: items || [], // Tạm thời comment vì cột chưa tồn tại
+          items: items || [], // Lưu items trực tiếp vào cột items
           ...order 
         };
         supabase
           .from('orders')
           .insert(orderPayload)
-          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
+          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount, items')
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const orderId = res.data.id;
-            // Vẫn lưu vào order_items để tương thích với logic cũ
-            if (Array.isArray(items) && items.length > 0) {
-              console.log('🔄 Inserting items into order_items:', items);
-              const orderItemsData = items.map((it: any) => ({
-                order_id: orderId,
-                food_item_id: it.food_item_id,
-                quantity: it.quantity,
-                unit_price: it.price,
-                total_price: it.total
-              }));
-              console.log('📝 Order items data:', orderItemsData);
-              
-              const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
-              if (itemsError) {
-                console.error('❌ Error inserting order_items:', itemsError);
-              } else {
-                console.log('✅ Order items inserted successfully');
-              }
-            }
+            // Items đã được lưu trực tiếp vào cột items của orders
+            console.log('✅ Order created with items:', res.data.items);
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
           }, reject);
@@ -669,7 +643,7 @@ export const orderAPI = {
         const { items, ...order } = data;
         const updatePayload = { 
           ...order,
-          // items: items || [] // Tạm thời comment vì cột chưa tồn tại
+          items: items || [] // Cập nhật cột items
         };
         supabase
           .from('orders')
@@ -679,37 +653,8 @@ export const orderAPI = {
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
-            if (Array.isArray(items) && items.length > 0) {
-              // Với từng món: nếu đã tồn tại trong order_items thì cộng dồn quantity & total, nếu chưa thì insert
-              for (const it of items) {
-                const foodId = it.food_item_id || null;
-                const name = it.name || null;
-                const sel = await supabase
-                  .from('order_items')
-                  .select('id, quantity, total_price, unit_price')
-                  .eq('order_id', id)
-                  .eq('food_item_id', foodId)
-                  .maybeSingle();
-
-                if (!sel.error && sel.data) {
-                  const newQty = Number(sel.data.quantity || 0) + Number(it.quantity || 0);
-                  const unitPrice = Number(sel.data.unit_price || it.price || 0);
-                  const newTotal = unitPrice * newQty;
-                  await supabase
-                    .from('order_items')
-                    .update({ quantity: newQty, total_price: newTotal })
-                    .eq('id', sel.data.id);
-                } else {
-                  await supabase.from('order_items').insert({
-                    order_id: id,
-                    food_item_id: foodId,
-                    quantity: Number(it.quantity || 0),
-                    unit_price: Number(it.price || 0),
-                    total_price: Number(it.total || 0)
-                  });
-                }
-              }
-            }
+            // Items đã được cập nhật trực tiếp vào cột items của orders
+            console.log('✅ Order updated with items:', res.data.items);
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
           }, reject);
