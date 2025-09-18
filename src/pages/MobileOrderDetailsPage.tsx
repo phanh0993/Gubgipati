@@ -273,14 +273,18 @@ const MobileOrderDetailsPage: React.FC = () => {
       if (response.ok) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
-          invoice_number: `INV-${Date.now()}`,
           customer_id: order.customer_id || null,
           employee_id: order.employee_id || 14,
-          subtotal: order.subtotal || 0,
+          items: [
+            {
+              service_id: 1, // Dummy service ID for orders
+              quantity: 1,
+              unit_price: order.total_amount || 0,
+            }
+          ],
+          discount_amount: 0,
           tax_amount: order.tax_amount || 0,
-          total_amount: order.total_amount || 0,
           payment_method: 'cash',
-          payment_status: 'paid',
           notes: `Order: ${order.order_number || order.id}`
         };
         

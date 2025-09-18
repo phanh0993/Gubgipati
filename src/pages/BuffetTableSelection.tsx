@@ -344,14 +344,18 @@ const BuffetTableSelection: React.FC = () => {
       
       // 2. Tạo invoice để ghi nhận doanh thu
       const invoiceData = {
-        invoice_number: `INV-${Date.now()}`,
         customer_id: orderDetails.customer_id || null,
         employee_id: orderDetails.employee_id || 14,
-        subtotal: orderDetails.subtotal || 0,
+        items: [
+          {
+            service_id: 1, // Dummy service ID for buffet orders
+            quantity: 1,
+            unit_price: orderDetails.total_amount || 0,
+          }
+        ],
+        discount_amount: 0,
         tax_amount: orderDetails.tax_amount || 0,
-        total_amount: orderDetails.total_amount || 0,
         payment_method: 'cash',
-        payment_status: 'paid',
         notes: `Buffet Order: ${orderDetails.order_number} - Table: ${orderDetails.table_name} (${orderDetails.area})`
       };
       

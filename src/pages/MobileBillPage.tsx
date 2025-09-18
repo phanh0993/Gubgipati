@@ -322,14 +322,18 @@ const MobileBillPage: React.FC = () => {
       if (response.ok) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
-          invoice_number: `INV-${Date.now()}`,
           customer_id: currentOrder.customer_id || null,
           employee_id: currentOrder.employee_id || 14,
-          subtotal: currentOrder.subtotal || 0,
+          items: [
+            {
+              service_id: 1, // Dummy service ID for buffet orders
+              quantity: 1,
+              unit_price: currentOrder.total_amount || 0,
+            }
+          ],
+          discount_amount: 0,
           tax_amount: currentOrder.tax_amount || 0,
-          total_amount: currentOrder.total_amount || 0,
           payment_method: 'cash',
-          payment_status: 'paid',
           notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id}`
         };
         
