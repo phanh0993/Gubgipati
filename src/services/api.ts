@@ -382,12 +382,18 @@ export const payrollAPI = {
 export const buffetAPI = {
   getPackages: (): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
-      return supabase
-        .from('buffet_packages')
-        .select('*')
-        .eq('is_active', true)
-        .order('id', { ascending: true })
-        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('buffet_packages')
+          .select('*')
+          .eq('is_active', true)
+          .order('id', { ascending: true })
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
     }
     if (IS_PRODUCTION) {
       return mockAPI.getBuffetPackages();
@@ -397,11 +403,17 @@ export const buffetAPI = {
   
   getPackageItems: (packageId: number): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
-      return supabase
-        .from('buffet_package_items')
-        .select('*, food_item:food_items(*)')
-        .eq('package_id', packageId)
-        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('buffet_package_items')
+          .select('*, food_item:food_items(*)')
+          .eq('package_id', packageId)
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
     }
     if (IS_PRODUCTION) {
       return mockAPI.getBuffetPackageItems(packageId);
@@ -411,12 +423,18 @@ export const buffetAPI = {
   
   getFoodItems: (): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
-      return supabase
-        .from('food_items')
-        .select('*')
-        .eq('is_available', true)
-        .order('id', { ascending: true })
-        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('food_items')
+          .select('*')
+          .eq('is_available', true)
+          .order('id', { ascending: true })
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
     }
     if (IS_PRODUCTION) {
       return mockAPI.getFoodItems();
@@ -429,11 +447,17 @@ export const buffetAPI = {
 export const tableAPI = {
   getTables: (): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
-      return supabase
-        .from('tables')
-        .select('*')
-        .order('id', { ascending: true })
-        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('tables')
+          .select('*')
+          .order('id', { ascending: true })
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
     }
     if (IS_PRODUCTION) {
       return mockAPI.getTables();
