@@ -322,6 +322,8 @@ const BuffetTableSelection: React.FC = () => {
     try {
       const { orderAPI } = await import('../services/api');
       const res = await orderAPI.getOrderById(orderId);
+      console.log('🔍 Order details from API:', res.data);
+      console.log('🔍 Items in order details:', res.data?.items);
       setOrderDetails(res.data);
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -704,7 +706,11 @@ const BuffetTableSelection: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Món Đã Order
               </Typography>
-              {orderDetails.items && orderDetails.items.length > 0 ? (
+              {(() => {
+                console.log('🔍 Rendering items:', orderDetails.items);
+                console.log('🔍 Items length:', orderDetails.items?.length);
+                return orderDetails.items && orderDetails.items.length > 0;
+              })() ? (
                 <List dense>
                   {mergeDuplicateItems(orderDetails.items).map((item: any, index: number) => (
                     <ListItem key={index}>
