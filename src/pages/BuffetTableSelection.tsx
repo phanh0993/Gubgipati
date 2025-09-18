@@ -278,43 +278,43 @@ const BuffetTableSelection: React.FC = () => {
       
       let itemsTotal = 0;
       const items = mergeDuplicateItems(orderDetails.items);
-      const updatedItems = items.map((item: any, index: number) => {
+      
+      // Cập nhật từng món ăn riêng lẻ (thay thế, không cộng dồn)
+      const { orderAPI } = await import('../services/api');
+      
+      for (let index = 0; index < items.length; index++) {
+        const item = items[index];
         const newQuantity = editingQuantities[`item_${index}`] !== undefined 
           ? editingQuantities[`item_${index}`] 
           : (item.quantity || 0);
+        
+        if (newQuantity !== item.quantity) {
+          // Cập nhật số lượng món ăn (thay thế hoàn toàn)
+          await orderAPI.updateOrderItemQuantity(selectedOrder.id, item.food_item_id, newQuantity);
+        }
+        
         const itemTotal = (item.price || 0) * newQuantity;
         itemsTotal += itemTotal;
-        return {
-          ...item,
-          quantity: newQuantity,
-          total: itemTotal
-        };
-      });
+      }
       
       const newSubtotal = buffetTotal + itemsTotal;
       const newTax = newSubtotal * 0.1;
       const newTotal = newSubtotal + newTax;
       
-      // Cập nhật order qua Supabase
-      const { orderAPI } = await import('../services/api');
+      // Cập nhật thông tin tổng của order
       await orderAPI.updateOrder(selectedOrder.id, {
         buffet_quantity: newBuffetQuantity,
-        total_amount: newTotal,
-        items: updatedItems.map((item: any) => ({
-          food_item_id: item.food_item_id || null,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          total: item.price * item.quantity
-        }))
+        subtotal: newSubtotal,
+        tax_amount: newTax,
+        total_amount: newTotal
       });
 
-        alert('Cập nhật thành công!');
-        setEditingQuantities({});
-        // Cập nhật lại orderDetails với dữ liệu mới
-        await fetchOrderDetails(selectedOrder.id);
-        fetchData();
-        setShowOrderDialog(false);
+      alert('Cập nhật thành công!');
+      setEditingQuantities({});
+      // Cập nhật lại orderDetails với dữ liệu mới
+      await fetchOrderDetails(selectedOrder.id);
+      fetchData();
+      setShowOrderDialog(false);
     } catch (error) {
       console.error('Error updating order:', error);
       alert('Lỗi khi cập nhật order');

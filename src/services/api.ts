@@ -654,8 +654,8 @@ export const orderAPI = {
                   .maybeSingle();
 
                 if (existingItem) {
-                  // Món đã tồn tại - cộng dồn số lượng
-                  const newQuantity = existingItem.quantity + item.quantity;
+                  // Món đã tồn tại - thay thế số lượng (không cộng dồn)
+                  const newQuantity = item.quantity;
                   const newTotal = existingItem.unit_price * newQuantity;
                   
                   await supabase
@@ -666,7 +666,7 @@ export const orderAPI = {
                     })
                     .eq('id', existingItem.id);
                   
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} + ${item.quantity} = ${newQuantity}`);
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${newQuantity}`);
                 } else {
                   // Món mới - thêm mới
                   await supabase.from('order_items').insert({
@@ -718,8 +718,8 @@ export const orderAPI = {
                   .maybeSingle();
 
                 if (existingItem) {
-                  // Món đã tồn tại - cộng dồn số lượng
-                  const newQuantity = existingItem.quantity + item.quantity;
+                  // Món đã tồn tại - thay thế số lượng (không cộng dồn)
+                  const newQuantity = item.quantity;
                   const newTotal = existingItem.unit_price * newQuantity;
                   
                   await supabase
@@ -730,7 +730,7 @@ export const orderAPI = {
                     })
                     .eq('id', existingItem.id);
                   
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} + ${item.quantity} = ${newQuantity}`);
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${newQuantity}`);
                 } else {
                   // Món mới - thêm mới
                   await supabase.from('order_items').insert({
