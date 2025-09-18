@@ -557,7 +557,6 @@ export const orderAPI = {
             order_items (
               id,
               food_item_id,
-              service_name,
               quantity,
               unit_price,
               total_price
@@ -588,7 +587,7 @@ export const orderAPI = {
                 id: it.id,
                 order_id: o.id,
                 food_item_id: it.food_item_id,
-                name: it.service_name || 'Unknown Item',
+                name: 'Food Item', // Tạm thời dùng tên cố định vì không có service_name
                 quantity: Number(it.quantity || 0),
                 price: Number(it.unit_price || 0),
                 total: Number(it.total_price || 0)
@@ -646,8 +645,7 @@ export const orderAPI = {
                 food_item_id: it.food_item_id,
                 quantity: it.quantity,
                 unit_price: it.price,
-                total_price: it.total,
-                service_name: it.service_name || it.name
+                total_price: it.total
               }));
               console.log('📝 Order items data:', orderItemsData);
               
@@ -690,7 +688,7 @@ export const orderAPI = {
                   .from('order_items')
                   .select('id, quantity, total_price, unit_price')
                   .eq('order_id', id)
-                  .eq(foodId ? 'food_item_id' : 'service_name', foodId || name)
+                  .eq('food_item_id', foodId)
                   .maybeSingle();
 
                 if (!sel.error && sel.data) {
@@ -705,7 +703,6 @@ export const orderAPI = {
                   await supabase.from('order_items').insert({
                     order_id: id,
                     food_item_id: foodId,
-                    service_name: name,
                     quantity: Number(it.quantity || 0),
                     unit_price: Number(it.price || 0),
                     total_price: Number(it.total || 0)
