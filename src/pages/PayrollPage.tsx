@@ -120,14 +120,16 @@ const PayrollPage: React.FC = () => {
           totalCommission: (payrollRecord?.commission_total ?? payrollRecord?.bonus_amount ?? 0),
           totalOvertimeAmount: 0,
           totalSalary: (
-            payrollRecord?.net_pay ??
-            payrollRecord?.gross_pay ??
             (
-              (payrollRecord?.base_salary || 0) +
-              (payrollRecord?.commission_total || 0) +
-              (payrollRecord?.overtime_amount || 0) -
-              (payrollRecord?.deductions || 0)
-            ) ?? selectedEmployee.base_salary || 0
+              payrollRecord?.net_pay ??
+              payrollRecord?.gross_pay ??
+              (
+                (payrollRecord?.base_salary || 0) +
+                (payrollRecord?.commission_total || 0) +
+                (payrollRecord?.overtime_amount || 0) -
+                (payrollRecord?.deductions || 0)
+              )
+            ) ?? (selectedEmployee.base_salary || 0)
           ),
           overtime_records: [],
           period: selectedMonth
