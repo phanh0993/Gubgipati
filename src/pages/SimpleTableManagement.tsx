@@ -53,14 +53,10 @@ const SimpleTableManagement: React.FC = () => {
   const fetchTables = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8001/api/tables');
-      if (response.ok) {
-        const data = await response.json();
-        setTables(data);
-        setError(null);
-      } else {
-        setError('Lỗi khi tải danh sách bàn');
-      }
+      const { tableAPI } = await import('../services/api');
+      const response = await tableAPI.getTables();
+      setTables(response.data);
+      setError(null);
     } catch (error) {
       setError('Lỗi kết nối server');
     } finally {

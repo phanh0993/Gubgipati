@@ -78,21 +78,17 @@ const MobileTablesPage: React.FC = () => {
         setIsRefreshing(true);
       }
       
-      // Fetch tables
-      const tablesResponse = await fetch('http://localhost:8001/api/tables');
-      if (tablesResponse.ok) {
-        const tablesData = await tablesResponse.json();
-        setTables(tablesData);
-      }
-
-      // Fetch orders
-      const ordersResponse = await fetch('http://localhost:8000/api/orders');
-      if (ordersResponse.ok) {
-        const ordersData = await ordersResponse.json();
-        setOrders(ordersData.filter((order: Order) => 
-          order.status === 'pending' && order.order_type === 'buffet'
-        ));
-      }
+      // Fetch tables and orders using API
+      const { tableAPI, orderAPI } = await import('../services/api');
+      const [tablesRes, ordersRes] = await Promise.all([
+        tableAPI.getTables(),
+        orderAPI.getOrders()
+      ]);
+      
+      setTables(tablesRes.data);
+      setOrders(ordersRes.data.filter((order: Order) => 
+        order.status === 'pending' && order.order_type === 'buffet'
+      ));
 
     } catch (error) {
       console.error('Error fetching data:', error);
