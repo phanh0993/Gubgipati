@@ -169,53 +169,13 @@ const PayrollPage: React.FC = () => {
   };
 
   const handleAddOvertime = async () => {
-    if (!selectedEmployeeId || !overtimeForm.hours || parseFloat(overtimeForm.hours) <= 0) {
-      alert('Vui lòng nhập số giờ tăng ca hợp lệ');
-      return;
-    }
-
-    setOvertimeLoading(true);
-    try {
-      await overtimeAPI.addOvertimeRecord({
-        employee_id: selectedEmployeeId as number,
-        date: overtimeForm.date,
-        hours: parseFloat(overtimeForm.hours),
-        notes: overtimeForm.notes
-      });
-
-      // Reset form
-      setOvertimeForm({
-        date: new Date().toISOString().split('T')[0],
-        hours: '',
-        notes: ''
-      });
-      setOvertimeDialogOpen(false);
-
-      // Reload payroll data
-      await loadEmployeePayroll();
-      
-      alert('Đã thêm giờ tăng ca thành công!');
-    } catch (error) {
-      console.error('Error adding overtime:', error);
-      alert('Có lỗi xảy ra khi thêm giờ tăng ca');
-    } finally {
-      setOvertimeLoading(false);
-    }
+    alert('Tính năng tăng ca tạm vô hiệu trên bản Vercel (mock data).');
+    return;
   };
 
   const handleDeleteOvertime = async (overtimeId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bản ghi tăng ca này?')) {
-      return;
-    }
-
-    try {
-      await overtimeAPI.deleteOvertimeRecord(overtimeId);
-      await loadEmployeePayroll();
-      alert('Đã xóa bản ghi tăng ca thành công!');
-    } catch (error) {
-      console.error('Error deleting overtime:', error);
-      alert('Có lỗi xảy ra khi xóa bản ghi tăng ca');
-    }
+    alert('Xóa tăng ca tạm vô hiệu trên bản Vercel (mock data).');
+    return;
   };
 
   const getMonthYearText = (monthStr: string) => {
