@@ -330,7 +330,6 @@ const SimpleBuffetPOS: React.FC = () => {
 
         setCurrentOrder(convertedOrder);
         alert('Đã thêm món vào order hiện tại!');
-        }
       } else {
         // Tạo order mới
         const orderData = {
