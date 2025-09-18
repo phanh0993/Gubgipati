@@ -297,7 +297,7 @@ const MobileBillPage: React.FC = () => {
 
     // Nếu có order cũ và packageQuantity = 0, chỉ cập nhật món ăn và thanh toán
     if (currentOrder && packageQuantity === 0) {
-      // Chỉ cập nhật món ăn và thanh toán
+      // 1. Cập nhật order status thành paid
       const response = await fetch(`http://localhost:8000/api/orders/${currentOrder.id}`, {
         method: 'PUT',
         headers: {
@@ -320,7 +320,32 @@ const MobileBillPage: React.FC = () => {
       });
 
       if (response.ok) {
-        alert('Thanh toán thành công!');
+        // 2. Tạo invoice để ghi nhận doanh thu
+        const invoiceData = {
+          invoice_number: `INV-${Date.now()}`,
+          customer_id: currentOrder.customer_id || null,
+          employee_id: currentOrder.employee_id || 14,
+          subtotal: currentOrder.subtotal || 0,
+          tax_amount: currentOrder.tax_amount || 0,
+          total_amount: currentOrder.total_amount || 0,
+          payment_method: 'cash',
+          payment_status: 'paid',
+          notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id}`
+        };
+        
+        const invoiceResponse = await fetch('http://localhost:8000/api/invoices', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(invoiceData),
+        });
+        
+        if (invoiceResponse.ok) {
+          alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
+        } else {
+          alert('Thanh toán thành công nhưng lỗi khi tạo hóa đơn doanh thu');
+        }
         navigate('/mobile-tables');
       } else {
         alert('Lỗi khi thanh toán');
