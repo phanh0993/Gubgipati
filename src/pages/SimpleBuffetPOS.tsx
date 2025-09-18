@@ -183,7 +183,6 @@ const SimpleBuffetPOS: React.FC = () => {
                 await fetchPackageItems(packages[0].id);
               }
             }
-          }
         } catch (error) {
           console.error('Error loading existing order:', error);
           // Load default package items if error

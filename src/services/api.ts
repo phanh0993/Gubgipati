@@ -236,52 +236,6 @@ export const invoicesAPI = {
     api.get('/invoices/stats/daily', { params }),
 };
 
-// Payroll API
-export const payrollAPI = {
-  getAll: (params?: { employee_id?: number; pay_period?: string; pay_status?: string; limit?: number; offset?: number }): Promise<AxiosResponse<{ payrolls: Payroll[] }>> =>
-    api.get('/payroll', { params }),
-    
-  getById: (id: number): Promise<AxiosResponse<{ payroll: Payroll; commissions: any[] }>> =>
-    api.get(`/payroll/${id}`),
-    
-  calculate: (data: { employee_id: number; pay_period_start: string; pay_period_end: string }): Promise<AxiosResponse<any>> =>
-    api.post('/payroll/calculate', data),
-    
-  create: (data: Partial<Payroll>): Promise<AxiosResponse<{ payroll: Payroll; message: string }>> =>
-    api.post('/payroll', data),
-    
-  update: (id: number, data: Partial<Payroll>): Promise<AxiosResponse<{ payroll: Payroll; message: string }>> =>
-    api.put(`/payroll/${id}`, data),
-    
-  delete: (id: number): Promise<AxiosResponse<{ message: string }>> =>
-    api.delete(`/payroll/${id}`),
-    
-  createBulkMonthly: (data: { year: number; month: number }): Promise<AxiosResponse<any>> =>
-    api.post('/payroll/bulk-monthly', data),
-    
-  getEmployeeStats: (employeeId: number, limit?: number): Promise<AxiosResponse<any>> =>
-    api.get(`/payroll/stats/employee/${employeeId}`, { params: { limit } }),
-
-  getEmployeePayroll: (employeeId: number, month: string): Promise<AxiosResponse<{
-    employee: Employee;
-    period: string;
-    baseSalary: number;
-    totalCommission: number;
-    totalOvertimeAmount: number;
-    totalSalary: number;
-    invoices: any[];
-    overtime_records: any[];
-    summary: any;
-  }>> =>
-    api.get('/payroll-temp', { params: { employee_id: employeeId, month } }),
-
-  getMonthlySummary: (month: string): Promise<AxiosResponse<{
-    period: string;
-    employees: any[];
-    summary: any;
-  }>> =>
-    api.get(`/payroll/summary/${month}`),
-};
 
 // Dashboard API
 export const dashboardAPI = {
