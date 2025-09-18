@@ -798,7 +798,7 @@ export const orderAPI = {
         }
       });
     }
-    return api.put(`/orders/${id}/items/${foodItemId}`, { quantity: newQuantity });
+    return api.put(`/orders/${orderId}/items/${foodItemId}`, { quantity: newQuantity });
   },
 };
 
