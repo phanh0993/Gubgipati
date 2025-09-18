@@ -25,7 +25,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Add, Person, Edit, Delete } from '@mui/icons-material';
-import { employeesAPI } from '../services/api';
+import { employeeAPI } from '../services/api';
 import { Employee } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -55,9 +55,9 @@ const EmployeesPage: React.FC = () => {
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const response = await employeesAPI.getAll();
+      const response = await employeeAPI.getEmployees();
       const apiData = response.data as any;
-      setEmployees(apiData.employees || apiData || []);
+      setEmployees(apiData || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Không thể tải danh sách nhân viên');
     } finally {
@@ -104,15 +104,7 @@ const EmployeesPage: React.FC = () => {
   };
 
   const handleDelete = async (employee: Employee) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa nhân viên "${employee.fullname || employee.username}"?`)) {
-      try {
-        await employeesAPI.delete(employee.id);
-        loadEmployees();
-        setError('');
-      } catch (err: any) {
-        setError(err.response?.data?.error || 'Không thể xóa nhân viên');
-      }
-    }
+    alert('Chức năng xóa chỉ khả dụng trong phiên bản đầy đủ với backend');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,24 +117,9 @@ const EmployeesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editMode && editingEmployee) {
-        // Update employee
-        const updateData: any = { ...formData };
-        if (!updateData.password) {
-          delete updateData.password; // Không update password nếu để trống
-        }
-        await employeesAPI.update(editingEmployee.id, updateData);
-      } else {
-        // Create new employee
-        await employeesAPI.create(formData);
-      }
-      handleClose();
-      loadEmployees();
-      setError('');
-    } catch (err: any) {
-      setError(err.response?.data?.error || `Không thể ${editMode ? 'cập nhật' : 'tạo'} nhân viên`);
-    }
+    // Mock implementation - just close dialog
+    alert('Chức năng này chỉ khả dụng trong phiên bản đầy đủ với backend');
+    handleClose();
   };
 
   if (loading) {

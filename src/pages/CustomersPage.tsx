@@ -25,7 +25,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { Add, Search, Phone, Email, Edit, Delete } from '@mui/icons-material';
-import { customersAPI } from '../services/api';
+import { customerAPI } from '../services/api';
 import { Customer } from '../types';
 import { formatCurrency, formatDate, formatPhone } from '../utils/formatters';
 
@@ -56,14 +56,10 @@ const CustomersPage: React.FC = () => {
   const loadCustomers = async () => {
     try {
       setLoading(true);
-      const response = await customersAPI.getAll({
-        search,
-        limit: 200, // Tăng limit lên 200 để hiển thị nhiều khách hàng hơn
-        offset: 0,
-      });
+      const response = await customerAPI.getCustomers();
       const apiData = response.data as any;
-      setCustomers(apiData.customers || apiData || []);
-      setTotal(apiData.total || 0);
+      setCustomers(apiData || []);
+      setTotal(apiData.length || 0);
     } catch (err: any) {
       console.error('Customers API error:', err);
       setError(err.response?.data?.error || 'Không thể tải danh sách khách hàng');
@@ -107,34 +103,7 @@ const CustomersPage: React.FC = () => {
   };
 
   const handleDelete = async (customer: Customer) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa khách hàng "${customer.name || customer.fullname}"?`)) {
-      try {
-        await customersAPI.delete(customer.id);
-        loadCustomers();
-        setError('');
-      } catch (err: any) {
-        const errorData = err.response?.data;
-        
-        // Nếu khách hàng có lịch sử hóa đơn, hỏi có muốn xóa bắt buộc không
-        if (errorData?.hasInvoices) {
-          const forceDelete = window.confirm(
-            `${errorData.error}\n\nLưu ý: Việc xóa khách hàng có lịch sử hóa đơn có thể ảnh hưởng đến báo cáo. Bạn có chắc chắn muốn tiếp tục?`
-          );
-          
-          if (forceDelete) {
-            try {
-              await customersAPI.delete(customer.id, true); // force = true
-              loadCustomers();
-              setError('');
-            } catch (forceErr: any) {
-              setError(forceErr.response?.data?.error || 'Không thể xóa khách hàng');
-            }
-          }
-        } else {
-          setError(errorData?.error || 'Không thể xóa khách hàng');
-        }
-      }
-    }
+    alert('Chức năng xóa chỉ khả dụng trong phiên bản đầy đủ với backend');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -144,35 +113,9 @@ const CustomersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      if (editMode && editingCustomer) {
-        // Update customer
-        await customersAPI.update(editingCustomer.id, formData);
-      } else {
-        // Create new customer
-        await customersAPI.create(formData);
-      }
-      handleClose();
-      loadCustomers();
-      setError('');
-    } catch (err: any) {
-      const errorData = err.response?.data;
-      
-      // Kiểm tra nếu là lỗi khách hàng đã tồn tại
-      if (errorData?.existingCustomer) {
-        const existing = errorData.existingCustomer;
-        const useExisting = window.confirm(
-          `${errorData.error}\n\nBạn có muốn sử dụng khách hàng đã có sẵn không?`
-        );
-        
-        if (useExisting) {
-          handleClose();
-          // Có thể thêm logic để chọn khách hàng đã có trong danh sách
-        }
-      } else {
-        setError(errorData?.error || `Không thể ${editMode ? 'cập nhật' : 'tạo'} khách hàng`);
-      }
-    }
+    // Mock implementation - just close dialog
+    alert('Chức năng này chỉ khả dụng trong phiên bản đầy đủ với backend');
+    handleClose();
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {

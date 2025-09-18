@@ -89,11 +89,9 @@ const MobileMenuPage: React.FC = () => {
 
   const fetchPackages = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/buffet-packages');
-      if (response.ok) {
-        const data = await response.json();
-        setPackages(data);
-      }
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getPackages();
+      setPackages(response.data);
     } catch (error) {
       console.error('Error fetching packages:', error);
     }
@@ -111,11 +109,9 @@ const MobileMenuPage: React.FC = () => {
     setSelectedItems({});
     setOrderItems({});
     try {
-      const response = await fetch(`http://localhost:8000/api/buffet-package-items?package_id=${pkg.id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPackageItems(data);
-      }
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getPackageItems(pkg.id);
+      setPackageItems(response.data);
     } catch (error) {
       console.error('Error fetching package items:', error);
     }

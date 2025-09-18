@@ -361,4 +361,78 @@ export const overtimeAPI = {
     api.delete(`/overtime?id=${id}`),
 };
 
+// Customer API
+export const customerAPI = {
+  getCustomers: (): Promise<AxiosResponse<Customer[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getCustomers();
+    }
+    return api.get('/customers');
+  },
+};
+
+// Employee API
+export const employeeAPI = {
+  getEmployees: (): Promise<AxiosResponse<Employee[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getEmployees();
+    }
+    return api.get('/employees');
+  },
+};
+
+// Payroll API
+export const payrollAPI = {
+  getPayroll: (): Promise<AxiosResponse<Payroll[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getPayroll();
+    }
+    return api.get('/payroll');
+  },
+};
+
+// Buffet API
+export const buffetAPI = {
+  getPackages: (): Promise<AxiosResponse<any[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getBuffetPackages();
+    }
+    return api.get('/buffet-packages');
+  },
+  
+  getPackageItems: (packageId: number): Promise<AxiosResponse<any[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getBuffetPackageItems(packageId);
+    }
+    return api.get(`/buffet-package-items?package_id=${packageId}`);
+  },
+  
+  getFoodItems: (): Promise<AxiosResponse<any[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getFoodItems();
+    }
+    return api.get('/food-items');
+  },
+};
+
+// Table API
+export const tableAPI = {
+  getTables: (): Promise<AxiosResponse<any[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getTables();
+    }
+    return api.get('/tables');
+  },
+};
+
+// Order API
+export const orderAPI = {
+  getOrders: (params?: any): Promise<AxiosResponse<any[]>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getOrders();
+    }
+    return api.get('/orders', { params });
+  },
+};
+
 export default api;

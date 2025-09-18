@@ -101,11 +101,9 @@ const SimpleBuffetPOS: React.FC = () => {
 
   const fetchPackages = async () => {
     try {
-      const response = await fetch('/api/buffet-packages');
-      if (response.ok) {
-        const data = await response.json();
-        setPackages(data);
-      }
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getPackages();
+      setPackages(response.data);
     } catch (error) {
       console.error('Error fetching packages:', error);
     }
@@ -116,14 +114,14 @@ const SimpleBuffetPOS: React.FC = () => {
       if (selectedTable) {
         try {
           // Kiểm tra xem bàn đã có order chưa từ database
-          const response = await fetch(`/api/orders?table_id=${selectedTable.id}`);
-          if (response.ok) {
-            const orders = await response.json();
-            const existingOrder = orders.find((order: any) => 
-              order.table_id === selectedTable.id && 
-              order.order_type === 'buffet' && 
-              order.status !== 'paid'
-            );
+          const { orderAPI } = await import('../services/api');
+          const response = await orderAPI.getOrders({ table_id: selectedTable.id });
+          const orders = response.data;
+          const existingOrder = orders.find((order: any) => 
+            order.table_id === selectedTable.id && 
+            order.order_type === 'buffet' && 
+            order.status !== 'paid'
+          );
             
             if (existingOrder) {
               // Convert existingOrder to match local BuffetOrder interface

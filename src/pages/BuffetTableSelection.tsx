@@ -95,13 +95,14 @@ const BuffetTableSelection: React.FC = () => {
         setIsRefreshing(true);
       }
       
+      const { tableAPI, orderAPI } = await import('../services/api');
       const [tablesRes, ordersRes] = await Promise.all([
-        fetch('http://localhost:8001/api/tables'),
-        fetch('http://localhost:8000/api/orders')
+        tableAPI.getTables(),
+        orderAPI.getOrders()
       ]);
 
-      const tablesData = await tablesRes.json();
-      const ordersData = await ordersRes.json();
+      const tablesData = tablesRes.data;
+      const ordersData = ordersRes.data;
 
       console.log('Tables data:', tablesData);
       console.log('Orders data:', ordersData);

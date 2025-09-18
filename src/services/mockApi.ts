@@ -215,5 +215,467 @@ export const mockAPI = {
     };
 
     return mockResponse;
+  },
+
+  // Mock buffet packages
+  getBuffetPackages: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          name: 'Buffet Cơ Bản',
+          description: 'Buffet cơ bản với các món ăn phổ biến',
+          price: 299000,
+          duration_minutes: 90,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 2,
+          name: 'Buffet Cao Cấp',
+          description: 'Buffet cao cấp với các món ăn đặc biệt',
+          price: 499000,
+          duration_minutes: 120,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 3,
+          name: 'Buffet Trẻ Em',
+          description: 'Buffet dành cho trẻ em',
+          price: 199000,
+          duration_minutes: 90,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock food items
+  getFoodItems: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          name: 'Phở Bò',
+          description: 'Phở bò truyền thống Việt Nam',
+          price: 65000,
+          category_id: 1,
+          image_url: '',
+          is_available: true,
+          printer_id: 1,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 2,
+          name: 'Cơm Gà',
+          description: 'Cơm gà Hải Nam',
+          price: 45000,
+          category_id: 1,
+          image_url: '',
+          is_available: true,
+          printer_id: 1,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 3,
+          name: 'Bún Bò Huế',
+          description: 'Bún bò Huế cay nồng',
+          price: 55000,
+          category_id: 1,
+          image_url: '',
+          is_available: true,
+          printer_id: 1,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 4,
+          name: 'Bánh Mì',
+          description: 'Bánh mì thịt nướng',
+          price: 25000,
+          category_id: 2,
+          image_url: '',
+          is_available: true,
+          printer_id: 1,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 5,
+          name: 'Chả Cá',
+          description: 'Chả cá Lã Vọng',
+          price: 85000,
+          category_id: 1,
+          image_url: '',
+          is_available: true,
+          printer_id: 1,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock buffet package items
+  getBuffetPackageItems: async (packageId: number) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const packageItems = {
+      1: [
+        {
+          id: 1,
+          package_id: 1,
+          food_item_id: 1,
+          is_unlimited: true,
+          max_quantity: null,
+          food_item: {
+            id: 1,
+            name: 'Phở Bò',
+            description: 'Phở bò truyền thống Việt Nam',
+            price: 65000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        },
+        {
+          id: 2,
+          package_id: 1,
+          food_item_id: 2,
+          is_unlimited: true,
+          max_quantity: null,
+          food_item: {
+            id: 2,
+            name: 'Cơm Gà',
+            description: 'Cơm gà Hải Nam',
+            price: 45000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        }
+      ],
+      2: [
+        {
+          id: 3,
+          package_id: 2,
+          food_item_id: 1,
+          is_unlimited: true,
+          max_quantity: null,
+          food_item: {
+            id: 1,
+            name: 'Phở Bò',
+            description: 'Phở bò truyền thống Việt Nam',
+            price: 65000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        },
+        {
+          id: 4,
+          package_id: 2,
+          food_item_id: 3,
+          is_unlimited: true,
+          max_quantity: null,
+          food_item: {
+            id: 3,
+            name: 'Bún Bò Huế',
+            description: 'Bún bò Huế cay nồng',
+            price: 55000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        },
+        {
+          id: 5,
+          package_id: 2,
+          food_item_id: 5,
+          is_unlimited: true,
+          max_quantity: null,
+          food_item: {
+            id: 5,
+            name: 'Chả Cá',
+            description: 'Chả cá Lã Vọng',
+            price: 85000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        }
+      ],
+      3: [
+        {
+          id: 6,
+          package_id: 3,
+          food_item_id: 2,
+          is_unlimited: false,
+          max_quantity: 1,
+          food_item: {
+            id: 2,
+            name: 'Cơm Gà',
+            description: 'Cơm gà Hải Nam',
+            price: 45000,
+            category_id: 1,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        },
+        {
+          id: 7,
+          package_id: 3,
+          food_item_id: 4,
+          is_unlimited: false,
+          max_quantity: 2,
+          food_item: {
+            id: 4,
+            name: 'Bánh Mì',
+            description: 'Bánh mì thịt nướng',
+            price: 25000,
+            category_id: 2,
+            image_url: '',
+            is_available: true,
+            printer_id: 1
+          }
+        }
+      ]
+    };
+    
+    return {
+      data: packageItems[packageId as keyof typeof packageItems] || [],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock tables
+  getTables: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          table_number: 'A01',
+          table_name: 'Bàn A01',
+          position_x: 100,
+          position_y: 100,
+          capacity: 4,
+          area: 'A',
+          status: 'empty',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 2,
+          table_number: 'A02',
+          table_name: 'Bàn A02',
+          position_x: 200,
+          position_y: 100,
+          capacity: 6,
+          area: 'A',
+          status: 'empty',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 3,
+          table_number: 'B01',
+          table_name: 'Bàn B01',
+          position_x: 100,
+          position_y: 200,
+          capacity: 4,
+          area: 'B',
+          status: 'empty',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 4,
+          table_number: 'B02',
+          table_name: 'Bàn B02',
+          position_x: 200,
+          position_y: 200,
+          capacity: 8,
+          area: 'B',
+          status: 'empty',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock orders
+  getOrders: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock customers
+  getCustomers: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          full_name: 'Nguyễn Văn An',
+          email: 'nguyenvanan@email.com',
+          phone: '0901234567',
+          address: '123 Đường ABC, Quận 1, TP.HCM',
+          date_of_birth: '1990-01-15',
+          gender: 'male',
+          notes: 'Khách hàng VIP',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 2,
+          full_name: 'Trần Thị Bình',
+          email: 'tranthibinh@email.com',
+          phone: '0912345678',
+          address: '456 Đường XYZ, Quận 3, TP.HCM',
+          date_of_birth: '1985-05-20',
+          gender: 'female',
+          notes: '',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock employees
+  getEmployees: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          full_name: 'Lê Văn Cường',
+          email: 'levancuong@company.com',
+          phone: '0923456789',
+          address: '789 Đường DEF, Quận 5, TP.HCM',
+          position: 'Quản lý',
+          department: 'Quản lý',
+          hire_date: '2023-01-01',
+          salary: 15000000,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        },
+        {
+          id: 2,
+          full_name: 'Phạm Thị Diệu',
+          email: 'phamthidieu@company.com',
+          phone: '0934567890',
+          address: '321 Đường GHI, Quận 7, TP.HCM',
+          position: 'Nhân viên phục vụ',
+          department: 'Phục vụ',
+          hire_date: '2023-06-01',
+          salary: 8000000,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
+  // Mock payroll
+  getPayroll: async () => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    return {
+      data: [
+        {
+          id: 1,
+          employee_id: 1,
+          employee_name: 'Lê Văn Cường',
+          month: 1,
+          year: 2024,
+          base_salary: 15000000,
+          bonus: 2000000,
+          deduction: 500000,
+          total_salary: 16500000,
+          status: 'paid',
+          created_at: '2024-01-31T00:00:00Z',
+          updated_at: '2024-01-31T00:00:00Z'
+        },
+        {
+          id: 2,
+          employee_id: 2,
+          employee_name: 'Phạm Thị Diệu',
+          month: 1,
+          year: 2024,
+          base_salary: 8000000,
+          bonus: 1000000,
+          deduction: 200000,
+          total_salary: 8800000,
+          status: 'paid',
+          created_at: '2024-01-31T00:00:00Z',
+          updated_at: '2024-01-31T00:00:00Z'
+        }
+      ],
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
   }
 };

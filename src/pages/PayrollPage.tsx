@@ -31,7 +31,7 @@ import {
   Chip,
 } from '@mui/material';
 import { AccountBalance, Person, Receipt, ExpandMore, AccessTime, Add, Delete } from '@mui/icons-material';
-import { employeesAPI, payrollAPI, overtimeAPI } from '../services/api';
+import { employeeAPI, payrollAPI } from '../services/api';
 import { Employee } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
@@ -78,9 +78,9 @@ const PayrollPage: React.FC = () => {
   const loadEmployees = async () => {
     try {
       setLoading(true);
-      const response = await employeesAPI.getAll();
+      const response = await employeeAPI.getEmployees();
       const apiData = response.data as any;
-      setEmployees(apiData.employees || apiData || []);
+      setEmployees(apiData || []);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Không thể tải danh sách nhân viên');
     } finally {
@@ -97,27 +97,31 @@ const PayrollPage: React.FC = () => {
       
       console.log('🔍 Loading payroll for employee:', selectedEmployeeId, 'month:', selectedMonth);
       
-      // Try to use real API first
+      // Try to use mock API first
       try {
-        const response = await payrollAPI.getEmployeePayroll(selectedEmployeeId, selectedMonth);
+        const response = await payrollAPI.getPayroll();
         const data = response.data;
         
         console.log('📊 Payroll data received from API:', data);
 
-        // Validate data structure
-        if (!data || !data.employee) {
-          throw new Error('Invalid payroll data structure from API');
+        // Find employee data
+        const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+        if (!selectedEmployee) {
+          throw new Error('Employee not found');
         }
 
+        // Find payroll record for this employee
+        const payrollRecord = data.find((record: any) => record.employee_id === selectedEmployeeId);
+        
         setPayrollData({
-          employee: data.employee,
-          baseSalary: data.baseSalary || 0,
-          invoices: Array.isArray(data.invoices) ? data.invoices : [],
-          totalCommission: data.totalCommission || 0,
-          totalOvertimeAmount: data.totalOvertimeAmount || 0,
-          totalSalary: data.totalSalary || 0,
-          overtime_records: Array.isArray(data.overtime_records) ? data.overtime_records : [],
-          period: data.period || selectedMonth
+          employee: selectedEmployee,
+          baseSalary: payrollRecord?.base_salary || selectedEmployee.salary || 0,
+          invoices: [],
+          totalCommission: payrollRecord?.bonus || 0,
+          totalOvertimeAmount: 0,
+          totalSalary: payrollRecord?.total_salary || selectedEmployee.salary || 0,
+          overtime_records: [],
+          period: selectedMonth
         });
         
         return; // Success with API
