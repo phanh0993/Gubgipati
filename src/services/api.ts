@@ -552,7 +552,17 @@ export const orderAPI = {
       return new Promise((resolve, reject) => {
         supabase
           .from('orders')
-          .select('*')
+          .select(`
+            *,
+            order_items (
+              id,
+              food_item_id,
+              service_name,
+              quantity,
+              unit_price,
+              total_price
+            )
+          `)
           .eq('id', id)
           .single()
           .then(async (res: any) => {
@@ -565,15 +575,15 @@ export const orderAPI = {
                 o.employee_id ? supabase.from('employees').select('name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
               ]);
 
-              // Đọc items từ cột items (JSONB) thay vì join order_items
-              const normalizedItems = (o.items || []).map((it: any) => ({
-                id: it.id || Math.random(),
+              // Đọc items từ order_items (fallback khi cột items chưa tồn tại)
+              const normalizedItems = (o.order_items || []).map((it: any) => ({
+                id: it.id,
                 order_id: o.id,
                 food_item_id: it.food_item_id,
-                name: it.name || 'Unknown Item',
+                name: it.service_name || 'Unknown Item',
                 quantity: Number(it.quantity || 0),
-                price: Number(it.price || 0),
-                total: Number(it.total || 0)
+                price: Number(it.unit_price || 0),
+                total: Number(it.total_price || 0)
               }));
 
               const normalized = {
@@ -608,13 +618,13 @@ export const orderAPI = {
         const orderPayload = { 
           order_number: orderNumber, 
           status: 'open', 
-          items: items || [], // Lưu items trực tiếp vào cột items
+          // items: items || [], // Tạm thời comment vì cột chưa tồn tại
           ...order 
         };
         supabase
           .from('orders')
           .insert(orderPayload)
-          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount, items')
+          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
@@ -645,7 +655,7 @@ export const orderAPI = {
         const { items, ...order } = data;
         const updatePayload = { 
           ...order,
-          items: items || [] // Cập nhật cột items
+          // items: items || [] // Tạm thời comment vì cột chưa tồn tại
         };
         supabase
           .from('orders')

@@ -1,12 +1,11 @@
-// Script đơn giản để thêm cột items vào bảng orders
-// Chạy trực tiếp trên Supabase SQL Editor
+-- Script để sửa bảng orders trong Supabase
+-- Copy và chạy trong Supabase SQL Editor
 
-console.log(`
--- Thêm cột items vào bảng orders
+-- 1. Thêm cột items vào bảng orders
 ALTER TABLE orders 
 ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb;
 
--- Cập nhật dữ liệu hiện tại từ order_items sang cột items
+-- 2. Cập nhật dữ liệu hiện tại từ order_items sang cột items
 UPDATE orders 
 SET items = (
   SELECT COALESCE(
@@ -25,8 +24,11 @@ SET items = (
   WHERE oi.order_id = orders.id
 );
 
--- Kiểm tra kết quả
+-- 3. Kiểm tra kết quả
 SELECT id, order_number, items FROM orders LIMIT 5;
-`);
 
-console.log('✅ Copy script trên và chạy trong Supabase SQL Editor');
+-- 4. Kiểm tra cấu trúc bảng
+SELECT column_name, data_type, is_nullable 
+FROM information_schema.columns 
+WHERE table_name = 'orders' 
+ORDER BY ordinal_position;
