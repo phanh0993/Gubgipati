@@ -115,11 +115,11 @@ const PayrollPage: React.FC = () => {
         
         setPayrollData({
           employee: selectedEmployee,
-          baseSalary: payrollRecord?.base_salary || selectedEmployee.salary || 0,
+          baseSalary: payrollRecord?.base_salary || selectedEmployee.base_salary || 0,
           invoices: [],
-          totalCommission: payrollRecord?.bonus || 0,
+          totalCommission: (payrollRecord?.commission_total ?? payrollRecord?.bonus_amount ?? payrollRecord?.bonus ?? 0),
           totalOvertimeAmount: 0,
-          totalSalary: payrollRecord?.total_salary || selectedEmployee.salary || 0,
+          totalSalary: payrollRecord?.total_salary || selectedEmployee.base_salary || 0,
           overtime_records: [],
           period: selectedMonth
         });
