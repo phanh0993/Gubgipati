@@ -565,6 +565,17 @@ export const orderAPI = {
                 o.employee_id ? supabase.from('employees').select('full_name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
               ]);
 
+              const normalizedItems = (o.items || []).map((it: any) => ({
+                id: it.id,
+                order_id: it.order_id,
+                food_item_id: it.food_item_id,
+                // Chuẩn hóa field cho UI
+                name: it.name || it.service_name || it.food_item?.name || 'Món',
+                price: Number(it.price ?? it.unit_price ?? 0),
+                quantity: Number(it.quantity ?? 0),
+                total: Number(it.total ?? it.total_price ?? ((it.unit_price || 0) * (it.quantity || 0)))
+              }));
+
               const normalized = {
                 ...o,
                 order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
@@ -574,7 +585,8 @@ export const orderAPI = {
                 table_number: tableRes.data?.table_number || '',
                 buffet_package_name: pkgRes.data?.name || 'Buffet Package',
                 buffet_package_price: Number(pkgRes.data?.price || 0),
-                employee_name: empRes.data?.full_name || 'Chưa xác định'
+                employee_name: empRes.data?.full_name || 'Chưa xác định',
+                items: normalizedItems
               };
 
               const axiosLike = { data: normalized, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
