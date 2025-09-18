@@ -69,7 +69,7 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (data: LoginRequest): Promise<AxiosResponse<AuthResponse>> => {
     if (IS_PRODUCTION) {
-      return mockAPI.login(data) as Promise<AxiosResponse<AuthResponse>>;
+      return mockAPI.login(data);
     }
     return api.post('/auth/login', data);
   },
@@ -80,7 +80,7 @@ export const authAPI = {
   getMe: (): Promise<AxiosResponse<{ user: User }>> => {
     if (IS_PRODUCTION) {
       const token = localStorage.getItem('spa_token') || '';
-      return mockAPI.getMe(token) as Promise<AxiosResponse<{ user: User }>>;
+      return mockAPI.getMe(token);
     }
     return api.get('/auth/me');
   },
@@ -287,7 +287,7 @@ export const payrollAPI = {
 export const dashboardAPI = {
   getOverview: (date?: string): Promise<AxiosResponse<DashboardOverview>> => {
     if (IS_PRODUCTION) {
-      return mockAPI.getDashboard() as Promise<AxiosResponse<DashboardOverview>>;
+      return mockAPI.getDashboard();
     }
     return api.get('/dashboard', { params: { date } });
   },

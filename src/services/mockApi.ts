@@ -1,7 +1,9 @@
+import { AxiosResponse } from 'axios';
+
 // Mock API for development/demo purposes
 export const mockAPI = {
   // Mock login endpoint
-  login: async (credentials: { username: string; password: string }) => {
+  login: async (credentials: { username: string; password: string }): Promise<AxiosResponse<any>> => {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -53,17 +55,23 @@ export const mockAPI = {
     // Remove password from response
     const { password, ...userWithoutPassword } = user;
     
-    return {
+    const mockResponse: AxiosResponse<any> = {
       data: {
         user: userWithoutPassword,
         token: `mock-jwt-token-${user.id}-${Date.now()}`,
         message: 'Login successful'
-      }
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
     };
+    
+    return mockResponse;
   },
 
   // Mock get user profile
-  getMe: async (token: string) => {
+  getMe: async (token: string): Promise<AxiosResponse<any>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Extract user ID from mock token
@@ -108,9 +116,15 @@ export const mockAPI = {
       throw new Error('User not found');
     }
 
-    return {
-      data: { user }
+    const mockResponse: AxiosResponse<any> = {
+      data: { user },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
     };
+
+    return mockResponse;
   },
 
   // Mock employees data
@@ -161,10 +175,10 @@ export const mockAPI = {
   },
 
   // Mock dashboard data
-  getDashboard: async () => {
+  getDashboard: async (): Promise<AxiosResponse<any>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    return {
+    const mockResponse: AxiosResponse<any> = {
       data: {
         totalRevenue: 50000000,
         totalAppointments: 125,
@@ -193,7 +207,13 @@ export const mockAPI = {
           { name: 'Trần Thị B', revenue: 7500000, appointments: 23 },
           { name: 'Lê Văn C', revenue: 6800000, appointments: 20 }
         ]
-      }
+      },
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
     };
+
+    return mockResponse;
   }
 };
