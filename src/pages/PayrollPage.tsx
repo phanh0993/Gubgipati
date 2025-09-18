@@ -127,7 +127,7 @@ const PayrollPage: React.FC = () => {
                 (payrollRecord?.base_salary || 0) +
                 (payrollRecord?.commission_total || 0) +
                 (0) -
-                (payrollRecord?.deductions || 0)
+                (0)
               )
             ) ?? (selectedEmployee.base_salary || 0)
           ),
