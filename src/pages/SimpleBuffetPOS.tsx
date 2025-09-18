@@ -285,7 +285,7 @@ const SimpleBuffetPOS: React.FC = () => {
       const packageTotal = selectedPackage.price * packageQuantity;
       const itemsTotal = orderItems.reduce((sum, item) => sum + (item.food_item.price * item.quantity), 0);
       const newSubtotal = packageTotal + itemsTotal;
-      const newTax_amount = newSubtotal * 0.1;
+      const newTax_amount = 0; // Bỏ thuế
       const newTotal_amount = newSubtotal + newTax_amount;
 
       if (currentOrder) {
@@ -293,9 +293,9 @@ const SimpleBuffetPOS: React.FC = () => {
         const employeeId = user?.id ? await getEmployeeId(user.id) : 14;
         
         // Gộp vào order cũ - tính toán đúng tổng tiền
-        const currentSubtotal = currentOrder.total_amount / 1.1; // Lấy subtotal cũ (trước thuế)
+        const currentSubtotal = currentOrder.total_amount; // Lấy subtotal cũ (không có thuế)
         const newCombinedSubtotal = currentSubtotal + newSubtotal;
-        const newCombinedTax = newCombinedSubtotal * 0.1;
+        const newCombinedTax = 0; // Bỏ thuế
         const newCombinedTotal = newCombinedSubtotal + newCombinedTax;
         
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ

@@ -220,7 +220,7 @@ const MobileOrderDetailsPage: React.FC = () => {
       });
       
       const newSubtotal = buffetTotal + itemsTotal;
-      const newTax = newSubtotal * 0.1;
+      const newTax = 0; // Bỏ thuế
       const newTotal = newSubtotal + newTax;
       
       // Cập nhật order
@@ -287,20 +287,15 @@ const MobileOrderDetailsPage: React.FC = () => {
             }
           ],
           discount_amount: 0,
-          tax_amount: order.tax_amount || 0,
+          tax_amount: 0, // Bỏ thuế
           payment_method: 'cash',
           notes: `Order: ${order.order_number || order.id}`
         };
         
-        const invoiceResponse = await fetch('http://localhost:8000/api/invoices', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(invoiceData),
-        });
+        const { invoicesAPI } = await import('../services/api');
+        const invoiceResponse = await invoicesAPI.create(invoiceData);
         
-        if (invoiceResponse.ok) {
+        if (invoiceResponse.status === 200) {
           // 3. In bill
           await handlePrint();
           

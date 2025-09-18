@@ -192,7 +192,7 @@ const MobileBillPage: React.FC = () => {
       const packageTotal = selectedPackage.price * packageQuantity;
       const itemsTotal = 0; // Buffet items are usually free
       const subtotal = packageTotal + itemsTotal;
-      const tax_amount = subtotal * 0.1;
+      const tax_amount = 0; // Bỏ thuế
       const total_amount = subtotal + tax_amount;
 
       // Tạo order data với đầy đủ các trường như PC version
@@ -334,20 +334,15 @@ const MobileBillPage: React.FC = () => {
             }
           ],
           discount_amount: 0,
-          tax_amount: currentOrder.tax_amount || 0,
+          tax_amount: 0, // Bỏ thuế
           payment_method: 'cash',
           notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id}`
         };
         
-        const invoiceResponse = await fetch('http://localhost:8000/api/invoices', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(invoiceData),
-        });
+        const { invoicesAPI } = await import('../services/api');
+        const invoiceResponse = await invoicesAPI.create(invoiceData);
         
-        if (invoiceResponse.ok) {
+        if (invoiceResponse.status === 200) {
           alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
         } else {
           alert('Thanh toán thành công nhưng lỗi khi tạo hóa đơn doanh thu');
@@ -389,7 +384,7 @@ const MobileBillPage: React.FC = () => {
       const packageTotal = selectedPackage.price * packageQuantity;
       const itemsTotal = 0; // Buffet items are usually free
       const subtotal = packageTotal + itemsTotal;
-      const tax_amount = subtotal * 0.1;
+      const tax_amount = 0; // Bỏ thuế
       const total_amount = subtotal + tax_amount;
 
       // Tạo order data với đầy đủ các trường như PC version

@@ -54,7 +54,7 @@ class OrderService {
     const now = new Date().toISOString();
     const subtotal = (data.buffet_quantity * data.buffet_price) + 
       data.items.reduce((sum, item) => sum + item.total, 0);
-    const tax_amount = subtotal * 0.1;
+    const tax_amount = 0; // Bỏ thuế
     const total_amount = subtotal + tax_amount;
 
     if (existingOrder) {

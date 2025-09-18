@@ -298,7 +298,7 @@ const BuffetTableSelection: React.FC = () => {
       }
       
       const newSubtotal = buffetTotal + itemsTotal;
-      const newTax = newSubtotal * 0.1;
+      const newTax = 0; // Bỏ thuế
       const newTotal = newSubtotal + newTax;
       
       // Cập nhật thông tin tổng của order
@@ -354,7 +354,7 @@ const BuffetTableSelection: React.FC = () => {
           }
         ],
         discount_amount: 0,
-        tax_amount: orderDetails.tax_amount || 0,
+        tax_amount: 0, // Bỏ thuế
         payment_method: 'cash',
         notes: `Buffet Order: ${orderDetails.order_number} - Table: ${orderDetails.table_name} (${orderDetails.area})`
       };
@@ -384,7 +384,7 @@ const BuffetTableSelection: React.FC = () => {
         area: selectedOrder.area,
         items: orderDetails.items || [],
         subtotal: orderDetails.subtotal || 0,
-        tax_amount: orderDetails.tax_amount || 0,
+        tax_amount: 0, // Bỏ thuế
         total_amount: orderDetails.total_amount || 0,
         buffet_package: orderDetails.buffet_package || 'Buffet',
         buffet_duration: orderDetails.buffet_duration_minutes || 0,
