@@ -134,13 +134,9 @@ const InvoicesPage: React.FC = () => {
       setLoading(true);
       setError('');
       
-      // Sử dụng fetch trực tiếp thay vì invoicesAPI
-      const response = await fetch('http://localhost:8000/invoices');
-      if (!response.ok) {
-        throw new Error('Failed to fetch invoices');
-      }
-      
-      const invoicesData = await response.json();
+      // Lấy dữ liệu qua service layer (tự động dùng Supabase trên Vercel)
+      const { data } = await invoicesAPI.getAll({ limit: 50, offset: 0 } as InvoiceFilters);
+      const invoicesData = (data as any)?.invoices || [];
       
       
       setInvoices(invoicesData);
