@@ -1,0 +1,20 @@
+# Copy nội dung này vào file .env trong thư mục server/
+
+# Database Configuration
+DATABASE_URL=postgresql://postgres.yydxhcvxkmxbohqtbbvw:Locphucanh0911@aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres
+
+# JWT Configuration
+JWT_SECRET=july-spa-secret-key-2024
+
+# Server Configuration
+PORT=8000
+NODE_ENV=development
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:3000
+
+# Supabase Configuration
+SUPABASE_URL=https://yydxhcvxkmxbohqtbbvw.supabase.co
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHhoY3Z4a214Ym9ocXRiYnZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMDM3NjAsImV4cCI6MjA3MzU3OTc2MH0.rVZq_iqRTUAiAu_FH1Qk7XzWurM1XsMVlgwaUjXT6Kk
+SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHhoY3Z4a214Ym9ocXRiYnZ3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1ODAwMzc2MCwiZXhwIjoyMDczNTc5NzYwfQ.h13AABZM9Sy9dM4sbTIlI8f6XHs_rDA0UNifwvQorqs
+

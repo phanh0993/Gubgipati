@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Timezone Fix</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🕐 Test Timezone Fix (+7 GMT)</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Thời Gian Hiện Tại</h2>
+        <button onclick="testCurrentTime()">Test Current Time</button>
+        <div id="current-time-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test API Orders với Timezone</h2>
+        <button onclick="testOrdersWithTimezone()">Test Orders API</button>
+        <div id="orders-timezone-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Timezone Conversion</h2>
+        <button onclick="testTimezoneConversion()">Test Conversion</button>
+        <div id="conversion-result"></div>
+    </div>
+
+    <script>
+        function testCurrentTime() {
+            const resultDiv = document.getElementById('current-time-result');
+            
+            const now = new Date();
+            const utcTime = now.toISOString();
+            const localTime = now.toLocaleString('vi-VN');
+            const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000)).toISOString();
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Current Time Test</h3>
+                    <p><strong>UTC Time:</strong> ${utcTime}</p>
+                    <p><strong>Local Time:</strong> ${localTime}</p>
+                    <p><strong>Vietnam Time (+7):</strong> ${vietnamTime}</p>
+                    <p><strong>Difference:</strong> ${now.getTimezoneOffset() / 60} hours from UTC</p>
+                </div>
+            `;
+        }
+        
+        async function testOrdersWithTimezone() {
+            const resultDiv = document.getElementById('orders-timezone-result');
+            try {
+                const response = await fetch('http://localhost:8000/api/orders');
+                const orders = await response.json();
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="error"><h3>❌ Không có orders</h3></div>';
+                    return;
+                }
+                
+                const order = orders[0];
+                const createdTime = new Date(order.created_at);
+                const vietnamTime = createdTime.toLocaleString('vi-VN', {
+                    timeZone: 'Asia/Ho_Chi_Minh',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <h3>✅ Orders Timezone Test</h3>
+                        <p><strong>Order ID:</strong> ${order.id}</p>
+                        <p><strong>Created At (UTC):</strong> ${order.created_at}</p>
+                        <p><strong>Vietnam Time:</strong> ${vietnamTime}</p>
+                        <p><strong>Buffet Start Time:</strong> ${order.buffet_start_time || 'N/A'}</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Lỗi</h3><p>${error.message}</p></div>`;
+            }
+        }
+        
+        function testTimezoneConversion() {
+            const resultDiv = document.getElementById('conversion-result');
+            
+            // Test với thời gian cụ thể
+            const testTime = '2025-09-17T10:03:29.947Z';
+            const date = new Date(testTime);
+            
+            const utcTime = date.toLocaleString('vi-VN', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const vietnamTime = date.toLocaleString('vi-VN', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            // Test function getVietnamTime
+            const now = new Date();
+            const vietnamTimeManual = new Date(now.getTime() + (7 * 60 * 60 * 1000)).toISOString();
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Timezone Conversion Test</h3>
+                    <p><strong>Test Time:</strong> ${testTime}</p>
+                    <p><strong>UTC Time:</strong> ${utcTime}</p>
+                    <p><strong>Vietnam Time:</strong> ${vietnamTime}</p>
+                    <p><strong>Manual Vietnam Time:</strong> ${vietnamTimeManual}</p>
+                    <p><strong>Difference:</strong> 7 hours ahead of UTC</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
