@@ -1,4 +1,5 @@
 import { AxiosResponse } from 'axios';
+import type { Employee, Customer, Payroll } from '../types/index';
 
 // Mock API for development/demo purposes
 export const mockAPI = {
@@ -556,11 +557,11 @@ export const mockAPI = {
   },
 
   // Mock customers
-  getCustomers: async () => {
+  getCustomers: async (): Promise<AxiosResponse<Customer[]>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    return {
-      data: [
+    const response: AxiosResponse<Customer[]> = {
+      data: ([
         {
           id: 1,
           fullname: 'Nguyễn Văn An',
@@ -593,20 +594,21 @@ export const mockAPI = {
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z'
         }
-      ],
+      ] as unknown as Customer[]),
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as any
     };
+    return response;
   },
 
   // Mock employees
-  getEmployees: async () => {
+  getEmployees: async (): Promise<AxiosResponse<Employee[]>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    return {
-      data: [
+    const response: AxiosResponse<Employee[]> = {
+      data: ([
         {
           id: 1,
           user_id: 1,
@@ -649,20 +651,21 @@ export const mockAPI = {
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z'
         }
-      ],
+      ] as unknown as Employee[]),
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as any
     };
+    return response;
   },
 
   // Mock payroll
-  getPayroll: async () => {
+  getPayroll: async (): Promise<AxiosResponse<Payroll[]>> => {
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    return {
-      data: [
+    const response: AxiosResponse<Payroll[]> = {
+      data: ([
         {
           id: 1,
           employee_id: 1,
@@ -701,11 +704,12 @@ export const mockAPI = {
           created_at: '2024-01-31T00:00:00Z',
           updated_at: '2024-01-31T00:00:00Z'
         }
-      ],
+      ] as unknown as Payroll[]),
       status: 200,
       statusText: 'OK',
       headers: {},
       config: {} as any
     };
+    return response;
   }
 };
