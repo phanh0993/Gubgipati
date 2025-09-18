@@ -575,6 +575,12 @@ export const orderAPI = {
                 o.employee_id ? supabase.from('employees').select('name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
               ]);
 
+              console.log('🔍 Join results:', {
+                table: tableRes.data,
+                package: pkgRes.data,
+                employee: empRes.data
+              });
+
               // Đọc items từ order_items (fallback khi cột items chưa tồn tại)
               console.log('🔍 Order data:', o);
               console.log('🔍 Order items from DB:', o.order_items);

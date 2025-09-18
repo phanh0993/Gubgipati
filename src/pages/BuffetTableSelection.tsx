@@ -252,6 +252,8 @@ const BuffetTableSelection: React.FC = () => {
   const handleQuantityChange = (type: 'buffet' | 'item', newQuantity: number, itemIndex?: number) => {
     if (!orderDetails) return;
     
+    console.log('🔍 Quantity change:', { type, newQuantity, itemIndex, currentQuantities: editingQuantities });
+    
     const newQuantities = { ...editingQuantities };
     
     if (type === 'buffet') {
@@ -260,6 +262,7 @@ const BuffetTableSelection: React.FC = () => {
       newQuantities[`item_${itemIndex}`] = Math.max(0, newQuantity);
     }
     
+    console.log('🔍 New quantities:', newQuantities);
     setEditingQuantities(newQuantities);
   };
 
@@ -656,16 +659,16 @@ const BuffetTableSelection: React.FC = () => {
                 Thông Tin Bàn
               </Typography>
               <Typography variant="body2">
-                Bàn: {selectedOrder?.table_name} - Khu {selectedOrder?.area}
+                Bàn: {orderDetails?.table_name || selectedOrder?.table_name || 'N/A'} - Khu {orderDetails?.area || selectedOrder?.area || 'N/A'}
               </Typography>
               <Typography variant="body2">
-                Thời gian: {selectedOrder ? getTimeElapsed(selectedOrder.buffet_start_time || selectedOrder.created_at) : ''}
+                Thời gian: {orderDetails ? getTimeElapsed(orderDetails.buffet_start_time || orderDetails.created_at) : (selectedOrder ? getTimeElapsed(selectedOrder.buffet_start_time || selectedOrder.created_at) : '')}
               </Typography>
               <Typography variant="body2">
-                Nhân viên order: {orderDetails.employee_name || 'Chưa xác định'}
+                Nhân viên order: {orderDetails?.employee_name || 'Chưa xác định'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Thời gian tạo: {selectedOrder ? formatDateTime(selectedOrder.created_at) : ''}
+                Thời gian tạo: {orderDetails ? formatDateTime(orderDetails.created_at) : (selectedOrder ? formatDateTime(selectedOrder.created_at) : '')}
               </Typography>
               
               <Divider sx={{ my: 2 }} />
@@ -674,6 +677,14 @@ const BuffetTableSelection: React.FC = () => {
               <Typography variant="h6" gutterBottom>
                 Loại Vé Buffet
               </Typography>
+              {(() => {
+                console.log('🔍 Buffet package info:', {
+                  name: orderDetails.buffet_package_name,
+                  price: orderDetails.buffet_package_price,
+                  quantity: orderDetails.buffet_quantity
+                });
+                return null;
+              })()}
               <Box sx={{ mb: 2, p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <Box>
@@ -736,7 +747,15 @@ const BuffetTableSelection: React.FC = () => {
               
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6">
-                  Tổng: {orderDetails.total_amount?.toLocaleString('vi-VN') || '0'} ₫
+                  Tổng: {(() => {
+                    console.log('🔍 Total amount calculation:', {
+                      total_amount: orderDetails.total_amount,
+                      buffet_price: orderDetails.buffet_package_price,
+                      buffet_quantity: orderDetails.buffet_quantity,
+                      items: orderDetails.items?.length || 0
+                    });
+                    return orderDetails.total_amount?.toLocaleString('vi-VN') || '0';
+                  })()} ₫
                 </Typography>
               </Box>
             </Box>
