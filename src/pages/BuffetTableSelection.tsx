@@ -72,6 +72,7 @@ const BuffetTableSelection: React.FC = () => {
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [editingQuantities, setEditingQuantities] = useState<any>({});
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     const employee = localStorage.getItem('pos_employee');
@@ -334,9 +335,10 @@ const BuffetTableSelection: React.FC = () => {
   };
 
   const handlePayment = async () => {
-    if (!selectedOrder || !orderDetails) return;
+    if (!selectedOrder || !orderDetails || paymentLoading) return;
     
     try {
+      setPaymentLoading(true);
       const { orderAPI, invoicesAPI } = await import('../services/api');
       
       // 1. Cập nhật order status thành paid
@@ -370,6 +372,8 @@ const BuffetTableSelection: React.FC = () => {
     } catch (error) {
       console.error('Error processing payment:', error);
       alert('Lỗi khi thanh toán');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -793,8 +797,13 @@ const BuffetTableSelection: React.FC = () => {
           <Button onClick={handlePrintBill} variant="outlined" color="info">
             In Bill
           </Button>
-          <Button onClick={handlePayment} variant="contained" color="success">
-            Thanh Toán
+          <Button 
+            onClick={handlePayment} 
+            variant="contained" 
+            color="success"
+            disabled={paymentLoading}
+          >
+            {paymentLoading ? 'Đang xử lý...' : 'Thanh Toán'}
           </Button>
         </DialogActions>
       </Dialog>

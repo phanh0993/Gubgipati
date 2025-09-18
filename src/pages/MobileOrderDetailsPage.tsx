@@ -63,6 +63,7 @@ const MobileOrderDetailsPage: React.FC = () => {
   const [table, setTable] = useState<Table | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingQuantities, setEditingQuantities] = useState<any>({});
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     if (orderId) {
@@ -224,29 +225,24 @@ const MobileOrderDetailsPage: React.FC = () => {
       const newTotal = newSubtotal + newTax;
       
       // Cập nhật order
-      const response = await fetch(`http://localhost:8000/api/orders/${order.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          buffet_quantity: newBuffetQuantity,
-          subtotal: newSubtotal,
-          tax_amount: newTax,
-          total_amount: newTotal,
-          items: updatedItems.map((item: any) => ({
-            food_item_id: item.food_item?.id || item.food_item_id || null,
-            name: item.food_item?.name || item.name,
-            price: item.price || 0,
-            quantity: item.quantity,
-            total: (item.price || 0) * item.quantity,
-            special_instructions: item.special_instructions || '',
-            printer_id: null
-          }))
-        }),
+      const { orderAPI } = await import('../services/api');
+      const response = await orderAPI.updateOrder(order.id, {
+        buffet_quantity: newBuffetQuantity,
+        subtotal: newSubtotal,
+        tax_amount: newTax,
+        total_amount: newTotal,
+        items: updatedItems.map((item: any) => ({
+          food_item_id: item.food_item?.id || item.food_item_id || null,
+          name: item.food_item?.name || item.name,
+          price: item.price || 0,
+          quantity: item.quantity,
+          total: (item.price || 0) * item.quantity,
+          special_instructions: item.special_instructions || '',
+          printer_id: null
+        }))
       });
       
-      if (response.ok) {
+      if (response.status === 200) {
         alert('Cập nhật thành công!');
         setEditingQuantities({});
         fetchOrderDetails();
@@ -260,21 +256,15 @@ const MobileOrderDetailsPage: React.FC = () => {
   };
 
   const handlePayment = async () => {
-    if (!order) return;
+    if (!order || paymentLoading) return;
     
     try {
+      setPaymentLoading(true);
       // 1. Cập nhật trạng thái order thành 'paid'
-      const response = await fetch(`http://localhost:8000/api/orders/${order.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'paid'
-        }),
-      });
+      const { orderAPI } = await import('../services/api');
+      const response = await orderAPI.updateOrder(order.id, { status: 'paid' });
 
-      if (response.ok) {
+      if (response.status === 200) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
           customer_id: order.customer_id || undefined,
@@ -310,6 +300,8 @@ const MobileOrderDetailsPage: React.FC = () => {
     } catch (error) {
       console.error('Error processing payment:', error);
       alert('Lỗi khi thanh toán');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -538,9 +530,10 @@ const MobileOrderDetailsPage: React.FC = () => {
               variant="contained"
               startIcon={<Receipt />}
               onClick={handlePayment}
+              disabled={paymentLoading}
               sx={{ flex: 1 }}
             >
-              Thanh Toán
+              {paymentLoading ? 'Đang xử lý...' : 'Thanh Toán'}
             </Button>
           </Box>
         </Box>
