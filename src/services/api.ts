@@ -646,16 +646,36 @@ export const orderAPI = {
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             if (Array.isArray(items) && items.length > 0) {
-              await supabase.from('order_items').insert(
-                items.map((it: any) => ({
-                  order_id: id,
-                  food_item_id: it.food_item_id,
-                  quantity: it.quantity,
-                  unit_price: it.price,
-                  total_price: it.total,
-                  service_name: it.name
-                }))
-              );
+              // Với từng món: nếu đã tồn tại trong order_items thì cộng dồn quantity & total, nếu chưa thì insert
+              for (const it of items) {
+                const foodId = it.food_item_id || null;
+                const name = it.name || null;
+                const sel = await supabase
+                  .from('order_items')
+                  .select('id, quantity, total_price, unit_price')
+                  .eq('order_id', id)
+                  .eq(foodId ? 'food_item_id' : 'service_name', foodId || name)
+                  .maybeSingle();
+
+                if (!sel.error && sel.data) {
+                  const newQty = Number(sel.data.quantity || 0) + Number(it.quantity || 0);
+                  const unitPrice = Number(sel.data.unit_price || it.price || 0);
+                  const newTotal = unitPrice * newQty;
+                  await supabase
+                    .from('order_items')
+                    .update({ quantity: newQty, total_price: newTotal })
+                    .eq('id', sel.data.id);
+                } else {
+                  await supabase.from('order_items').insert({
+                    order_id: id,
+                    food_item_id: foodId,
+                    service_name: name,
+                    quantity: Number(it.quantity || 0),
+                    unit_price: Number(it.price || 0),
+                    total_price: Number(it.total || 0)
+                  });
+                }
+              }
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
