@@ -291,6 +291,53 @@ export const mockAPI = {
     };
   },
 
+  getBuffetPackageById: async (id: number) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const packages = [
+      {
+        id: 1,
+        name: 'Buffet Cơ Bản',
+        description: 'Buffet cơ bản với các món ăn phổ biến',
+        price: 299000,
+        duration_minutes: 90,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 2,
+        name: 'Buffet Cao Cấp',
+        description: 'Buffet cao cấp với các món ăn đặc biệt',
+        price: 499000,
+        duration_minutes: 120,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 3,
+        name: 'Buffet Trẻ Em',
+        description: 'Buffet dành cho trẻ em',
+        price: 199000,
+        duration_minutes: 90,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      }
+    ];
+    
+    const packageData = packages.find(pkg => pkg.id === id) || packages[0];
+    
+    return {
+      data: packageData,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config: {} as any
+    };
+  },
+
   // Mock buffet package items
   getBuffetPackageItems: async (packageId: number) => {
     await new Promise(resolve => setTimeout(resolve, 500));

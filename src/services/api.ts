@@ -496,6 +496,27 @@ export const buffetAPI = {
     }
     return api.get('/food-items');
   },
+
+  getBuffetPackageById: (id: number): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('buffet_packages')
+          .select('*')
+          .eq('id', id)
+          .single()
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || {}, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    if (IS_PRODUCTION) {
+      return mockAPI.getBuffetPackageById(id);
+    }
+    return api.get(`/buffet-packages/${id}`);
+  },
 };
 
 // Table API
