@@ -332,24 +332,14 @@ const BuffetTableSelection: React.FC = () => {
     if (!selectedOrder) return;
     
     try {
-      const response = await fetch(`http://localhost:8000/api/orders/${selectedOrder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'paid' }),
-      });
-
-      if (response.ok) {
+      const { orderAPI } = await import('../services/api');
+      await orderAPI.updateOrder(selectedOrder.id, { status: 'paid' });
         // Tự động in bill sau khi thanh toán
         await handlePrintBill();
         
         alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
         setShowOrderDialog(false);
         fetchData(); // Reload all data
-      } else {
-        alert('Lỗi khi thanh toán');
-      }
     } catch (error) {
       console.error('Error processing payment:', error);
       alert('Lỗi khi thanh toán');

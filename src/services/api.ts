@@ -555,16 +555,33 @@ export const orderAPI = {
           .select('*, items:order_items(*)')
           .eq('id', id)
           .single()
-          .then((res: any) => {
+          .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const o = res.data || {};
-            const normalized = {
-              ...o,
-              order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
-              status: o.status === 'open' ? 'pending' : o.status
-            };
-            const axiosLike = { data: normalized, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
-            resolve(axiosLike);
+            try {
+              const [tableRes, pkgRes, empRes] = await Promise.all([
+                o.table_id ? supabase.from('tables').select('table_name, area, table_number').eq('id', o.table_id).single() : Promise.resolve({ data: null }),
+                o.buffet_package_id ? supabase.from('buffet_packages').select('name, price').eq('id', o.buffet_package_id).single() : Promise.resolve({ data: null }),
+                o.employee_id ? supabase.from('employees').select('full_name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
+              ]);
+
+              const normalized = {
+                ...o,
+                order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
+                status: o.status === 'open' ? 'pending' : o.status,
+                table_name: tableRes.data?.table_name || '',
+                area: tableRes.data?.area || '',
+                table_number: tableRes.data?.table_number || '',
+                buffet_package_name: pkgRes.data?.name || 'Buffet Package',
+                buffet_package_price: Number(pkgRes.data?.price || 0),
+                employee_name: empRes.data?.full_name || 'Chưa xác định'
+              };
+
+              const axiosLike = { data: normalized, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+              resolve(axiosLike);
+            } catch (e) {
+              reject(e);
+            }
           }, reject);
       });
     }
