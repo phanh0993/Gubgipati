@@ -40,20 +40,32 @@ const MobileLoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Tìm user theo username và password
-      const loginResponse = await fetch('/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      // Import mock API for production
+      const isProduction = process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL?.includes('localhost');
+      
+      let loginData;
+      
+      if (isProduction) {
+        // Use mock API in production
+        const { mockAPI } = await import('../services/mockApi');
+        const loginResponse = await mockAPI.login({ username, password });
+        loginData = loginResponse.data;
+      } else {
+        // Use real API in development
+        const loginResponse = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
 
-      if (!loginResponse.ok) {
-        throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+        if (!loginResponse.ok) {
+          throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
+        }
+
+        loginData = await loginResponse.json();
       }
-
-      const loginData = await loginResponse.json();
       
       // Lưu thông tin user vào localStorage
       localStorage.setItem('pos_employee', JSON.stringify(loginData.user));

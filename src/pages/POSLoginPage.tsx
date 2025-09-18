@@ -39,32 +39,46 @@ const POSLoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Tìm user theo username và password
-      const loginResponse = await fetch('/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      // Import mock API for production
+      const isProduction = process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL?.includes('localhost');
+      
+      let loginData, employeesData;
+      
+      if (isProduction) {
+        // Use mock API in production
+        const { mockAPI } = await import('../services/mockApi');
+        const loginResponse = await mockAPI.login({ username, password });
+        loginData = loginResponse.data;
+        employeesData = await mockAPI.getEmployees();
+      } else {
+        // Use real API in development
+        const loginResponse = await fetch('/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ username, password }),
+        });
 
-      if (!loginResponse.ok) {
-        const errorData = await loginResponse.json();
-        setError(errorData.error || 'Đăng nhập thất bại');
-        setLoading(false);
-        return;
+        if (!loginResponse.ok) {
+          const errorData = await loginResponse.json();
+          setError(errorData.error || 'Đăng nhập thất bại');
+          setLoading(false);
+          return;
+        }
+
+        loginData = await loginResponse.json();
+
+        // Tìm thông tin nhân viên từ user_id
+        const employeesResponse = await fetch('/api/employees');
+        if (!employeesResponse.ok) {
+          throw new Error('Không thể tải danh sách nhân viên');
+        }
+
+        employeesData = await employeesResponse.json();
       }
 
-      const loginData = await loginResponse.json();
       const user = loginData.user;
-
-      // Tìm thông tin nhân viên từ user_id
-      const employeesResponse = await fetch('/api/employees');
-      if (!employeesResponse.ok) {
-        throw new Error('Không thể tải danh sách nhân viên');
-      }
-
-      const employeesData = await employeesResponse.json();
       const employee = employeesData.find((emp: any) => emp.user_id === user.id);
 
       if (!employee) {

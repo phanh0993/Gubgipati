@@ -6,8 +6,10 @@ import {
   CustomerFilters, InvoiceFilters, AppointmentFilters,
   CreateInvoiceRequest, Shift, Schedule
 } from '../types';
+import { mockAPI } from './mockApi';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL?.includes('localhost');
 
 // Create axios instance
 const api = axios.create({
@@ -65,14 +67,23 @@ api.interceptors.response.use(
 
 // Auth API
 export const authAPI = {
-  login: (data: LoginRequest): Promise<AxiosResponse<AuthResponse>> =>
-    api.post('/auth/login', data),
+  login: (data: LoginRequest): Promise<AxiosResponse<AuthResponse>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.login(data) as Promise<AxiosResponse<AuthResponse>>;
+    }
+    return api.post('/auth/login', data);
+  },
     
   setup: (data: any): Promise<AxiosResponse<AuthResponse>> =>
     api.post('/auth/setup', data),
     
-  getMe: (): Promise<AxiosResponse<{ user: User }>> =>
-    api.get('/auth/me'),
+  getMe: (): Promise<AxiosResponse<{ user: User }>> => {
+    if (IS_PRODUCTION) {
+      const token = localStorage.getItem('spa_token') || '';
+      return mockAPI.getMe(token) as Promise<AxiosResponse<{ user: User }>>;
+    }
+    return api.get('/auth/me');
+  },
     
   changePassword: (data: { currentPassword: string; newPassword: string }): Promise<AxiosResponse<any>> =>
     api.put('/auth/change-password', data),
@@ -274,8 +285,12 @@ export const payrollAPI = {
 
 // Dashboard API
 export const dashboardAPI = {
-  getOverview: (date?: string): Promise<AxiosResponse<DashboardOverview>> =>
-    api.get('/dashboard', { params: { date } }),
+  getOverview: (date?: string): Promise<AxiosResponse<DashboardOverview>> => {
+    if (IS_PRODUCTION) {
+      return mockAPI.getDashboard() as Promise<AxiosResponse<DashboardOverview>>;
+    }
+    return api.get('/dashboard', { params: { date } });
+  },
     
   getRevenueChart: (days?: number): Promise<AxiosResponse<{ chartData: RevenueChartData[] }>> =>
     api.get('/dashboard/revenue-chart', { params: { days } }),
