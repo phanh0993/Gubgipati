@@ -318,7 +318,7 @@ const SimpleBuffetPOS: React.FC = () => {
 
         const { orderAPI } = await import('../services/api');
         const { data: updatedOrder } = await orderAPI.updateOrder(Number(currentOrder.id), updatedOrderData);
-          console.log('✅ Order updated in database:', updatedOrder);
+        console.log('✅ Order updated in database:', updatedOrder);
           
           // Cập nhật currentOrder - API đã gộp items rồi, chỉ cần fetch lại
           const convertedOrder: BuffetOrder = {
@@ -330,10 +330,6 @@ const SimpleBuffetPOS: React.FC = () => {
           
           setCurrentOrder(convertedOrder);
           alert('Đã thêm món vào order hiện tại!');
-        } else {
-          const errorData = await response.json();
-          console.error('Error updating order:', errorData);
-          alert(`Lỗi khi cập nhật order: ${errorData.message || 'Unknown error'}`);
         }
       } else {
         // Tạo order mới
