@@ -292,39 +292,26 @@ const BuffetTableSelection: React.FC = () => {
       const newTax = newSubtotal * 0.1;
       const newTotal = newSubtotal + newTax;
       
-      // Cập nhật order
-      const response = await fetch(`http://localhost:8000/api/orders/${selectedOrder.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          buffet_quantity: newBuffetQuantity,
-          subtotal: newSubtotal,
-          tax_amount: newTax,
-          total_amount: newTotal,
-          items: updatedItems.map((item: any) => ({
-            food_item_id: item.food_item_id || null,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            total: item.price * item.quantity,
-            special_instructions: item.special_instructions || '',
-            printer_id: null
-          }))
-        }),
+      // Cập nhật order qua Supabase
+      const { orderAPI } = await import('../services/api');
+      await orderAPI.updateOrder(selectedOrder.id, {
+        buffet_quantity: newBuffetQuantity,
+        total_amount: newTotal,
+        items: updatedItems.map((item: any) => ({
+          food_item_id: item.food_item_id || null,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          total: item.price * item.quantity
+        }))
       });
-      
-      if (response.ok) {
+
         alert('Cập nhật thành công!');
         setEditingQuantities({});
         // Cập nhật lại orderDetails với dữ liệu mới
         await fetchOrderDetails(selectedOrder.id);
         fetchData();
         setShowOrderDialog(false);
-      } else {
-        alert('Lỗi khi cập nhật order');
-      }
     } catch (error) {
       console.error('Error updating order:', error);
       alert('Lỗi khi cập nhật order');
@@ -333,11 +320,9 @@ const BuffetTableSelection: React.FC = () => {
 
   const fetchOrderDetails = async (orderId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/orders/${orderId}`);
-      if (response.ok) {
-        const details = await response.json();
-        setOrderDetails(details);
-      }
+      const { orderAPI } = await import('../services/api');
+      const res = await orderAPI.getOrderById(orderId);
+      setOrderDetails(res.data);
     } catch (error) {
       console.error('Error fetching order details:', error);
     }

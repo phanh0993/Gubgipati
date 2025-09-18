@@ -547,6 +547,29 @@ export const orderAPI = {
     }
     return api.get('/orders', { params });
   },
+  getOrderById: (id: number): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('orders')
+          .select('*, items:order_items(*)')
+          .eq('id', id)
+          .single()
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const o = res.data || {};
+            const normalized = {
+              ...o,
+              order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
+              status: o.status === 'open' ? 'pending' : o.status
+            };
+            const axiosLike = { data: normalized, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.get(`/orders/${id}`);
+  },
   createOrder: (data: any): Promise<AxiosResponse<any>> => {
     if (USE_SUPABASE) {
       return new Promise((resolve, reject) => {
