@@ -7,9 +7,11 @@ import {
   CreateInvoiceRequest, Shift, Schedule
 } from '../types';
 import { mockAPI } from './mockApi';
+import { supabase } from './supabaseClient';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL?.includes('localhost');
+const USE_SUPABASE = IS_PRODUCTION && !!process.env.REACT_APP_SUPABASE_URL && !!process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 // Create axios instance
 const api = axios.create({
@@ -214,8 +216,30 @@ export const schedulesAPI = {
 
 // Invoices API
 export const invoicesAPI = {
-  getAll: (params: InvoiceFilters): Promise<AxiosResponse<{ invoices: Invoice[]; total: number; limit: number; offset: number }>> =>
-    api.get('/invoices', { params }),
+  getAll: (params: InvoiceFilters): Promise<AxiosResponse<{ invoices: Invoice[]; total: number; limit: number; offset: number }>> => {
+    if (USE_SUPABASE) {
+      const limit = params.limit ?? 20;
+      const offset = params.offset ?? 0;
+      return supabase
+        .from('invoices')
+        .select('*', { count: 'exact' })
+        .order('invoice_date', { ascending: false })
+        .range(offset, offset + limit - 1)
+        .then((res: any) => ({
+          data: {
+            invoices: (res.data || []) as any,
+            total: res.count || 0,
+            limit,
+            offset,
+          },
+          status: 200,
+          statusText: 'OK',
+          headers: {},
+          config: {} as any,
+        }));
+    }
+    return api.get('/invoices', { params });
+  },
     
   getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> =>
     api.get(`/invoices/${id}`),
@@ -348,6 +372,14 @@ export const payrollAPI = {
 // Buffet API
 export const buffetAPI = {
   getPackages: (): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return supabase
+        .from('buffet_packages')
+        .select('*')
+        .eq('is_active', true)
+        .order('id', { ascending: true })
+        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getBuffetPackages();
     }
@@ -355,6 +387,13 @@ export const buffetAPI = {
   },
   
   getPackageItems: (packageId: number): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return supabase
+        .from('buffet_package_items')
+        .select('*, food_item:food_items(*)')
+        .eq('package_id', packageId)
+        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getBuffetPackageItems(packageId);
     }
@@ -362,6 +401,14 @@ export const buffetAPI = {
   },
   
   getFoodItems: (): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return supabase
+        .from('food_items')
+        .select('*')
+        .eq('is_available', true)
+        .order('id', { ascending: true })
+        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getFoodItems();
     }
@@ -372,6 +419,13 @@ export const buffetAPI = {
 // Table API
 export const tableAPI = {
   getTables: (): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return supabase
+        .from('tables')
+        .select('*')
+        .order('id', { ascending: true })
+        .then((res: any) => ({ data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any }));
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getTables();
     }
@@ -382,6 +436,9 @@ export const tableAPI = {
 // Order API
 export const orderAPI = {
   getOrders: (params?: any): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return Promise.resolve({ data: [], status: 200, statusText: 'OK', headers: {}, config: {} as any });
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getOrders();
     }
