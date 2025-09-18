@@ -227,6 +227,10 @@ export const invoicesAPI = {
           .order('invoice_date', { ascending: false })
           .range(offset, offset + limit - 1)
           .then((res: any) => {
+            if (res.error) {
+              reject(res.error);
+              return;
+            }
             const axiosLike = {
               data: {
                 invoices: (res.data || []) as any,
@@ -240,8 +244,7 @@ export const invoicesAPI = {
               config: {} as any,
             } as AxiosResponse<{ invoices: Invoice[]; total: number; limit: number; offset: number }>;
             resolve(axiosLike);
-          })
-          .catch(reject);
+          }, reject);
       });
     }
     return api.get('/invoices', { params });
