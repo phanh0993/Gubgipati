@@ -220,23 +220,29 @@ export const invoicesAPI = {
     if (USE_SUPABASE) {
       const limit = params.limit ?? 20;
       const offset = params.offset ?? 0;
-      return supabase
-        .from('invoices')
-        .select('*', { count: 'exact' })
-        .order('invoice_date', { ascending: false })
-        .range(offset, offset + limit - 1)
-        .then((res: any) => ({
-          data: {
-            invoices: (res.data || []) as any,
-            total: res.count || 0,
-            limit,
-            offset,
-          },
-          status: 200,
-          statusText: 'OK',
-          headers: {},
-          config: {} as any,
-        }));
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('invoices')
+          .select('*', { count: 'exact' })
+          .order('invoice_date', { ascending: false })
+          .range(offset, offset + limit - 1)
+          .then((res: any) => {
+            const axiosLike = {
+              data: {
+                invoices: (res.data || []) as any,
+                total: res.count || 0,
+                limit,
+                offset,
+              },
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {} as any,
+            } as AxiosResponse<{ invoices: Invoice[]; total: number; limit: number; offset: number }>;
+            resolve(axiosLike);
+          })
+          .catch(reject);
+      });
     }
     return api.get('/invoices', { params });
   },
