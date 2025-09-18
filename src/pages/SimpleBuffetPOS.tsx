@@ -319,17 +319,17 @@ const SimpleBuffetPOS: React.FC = () => {
         const { orderAPI } = await import('../services/api');
         const { data: updatedOrder } = await orderAPI.updateOrder(Number(currentOrder.id), updatedOrderData);
         console.log('✅ Order updated in database:', updatedOrder);
-          
-          // Cập nhật currentOrder - API đã gộp items rồi, chỉ cần fetch lại
-          const convertedOrder: BuffetOrder = {
-            ...currentOrder,
-            buffet_quantity: updatedOrder.buffet_quantity,
-            total_amount: updatedOrder.total_amount,
-            items: updatedOrder.items || currentOrder.items
-          };
-          
-          setCurrentOrder(convertedOrder);
-          alert('Đã thêm món vào order hiện tại!');
+
+        // Cập nhật currentOrder - API đã gộp items rồi, chỉ cần fetch lại
+        const convertedOrder: BuffetOrder = {
+          ...currentOrder,
+          buffet_quantity: updatedOrder.buffet_quantity,
+          total_amount: updatedOrder.total_amount,
+          items: updatedOrder.items || currentOrder.items
+        };
+
+        setCurrentOrder(convertedOrder);
+        alert('Đã thêm món vào order hiện tại!');
         }
       } else {
         // Tạo order mới
