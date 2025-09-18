@@ -46,7 +46,7 @@
     "server": "node local-server.js",
     "client": "react-scripts start",
     "setup": "node setup-database.js",
-    "vercel-build": "react-scripts build"
+    "vercel-build": "CI=false react-scripts build"
   },
   "eslintConfig": {
     "extends": [
