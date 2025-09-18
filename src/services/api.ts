@@ -531,7 +531,13 @@ export const orderAPI = {
         if (tableId) query = (query as any).eq('table_id', tableId);
         query.then((res: any) => {
           if (res.error) { reject(res.error); return; }
-          const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+          // Chuẩn hóa để tương thích UI hiện tại: set order_type='buffet' nếu có buffet_package_id, status 'pending' nếu 'open'
+          const list = (res.data || []).map((o: any) => ({
+            ...o,
+            order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
+            status: o.status === 'open' ? 'pending' : o.status
+          }));
+          const axiosLike = { data: list, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
           resolve(axiosLike);
         }, reject);
       });
@@ -546,7 +552,7 @@ export const orderAPI = {
       return new Promise((resolve, reject) => {
         const { items, ...order } = data;
         // Tạo order_number nếu bảng yêu cầu NOT NULL
-        const orderNumber = `ORD-${Date.now()}`;
+        const orderNumber = `BUF-${Date.now()}`;
         const orderPayload = { order_number: orderNumber, status: 'open', ...order };
         supabase
           .from('orders')
