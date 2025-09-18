@@ -552,7 +552,16 @@ export const orderAPI = {
       return new Promise((resolve, reject) => {
         supabase
           .from('orders')
-          .select('*')
+          .select(`
+            *,
+            order_items (
+              id,
+              food_item_id,
+              quantity,
+              unit_price,
+              total_price
+            )
+          `)
           .eq('id', id)
           .single()
           .then(async (res: any) => {
@@ -571,17 +580,17 @@ export const orderAPI = {
                 employee: empRes.data
               });
 
-              // Đọc items từ cột items (JSONB)
+              // Đọc items từ order_items (fallback)
               console.log('🔍 Order data:', o);
-              console.log('🔍 Items from orders.items:', o.items);
-              const normalizedItems = (o.items || []).map((it: any, index: number) => ({
+              console.log('🔍 Order items from DB:', o.order_items);
+              const normalizedItems = (o.order_items || []).map((it: any, index: number) => ({
                 id: it.id || index,
                 order_id: o.id,
                 food_item_id: it.food_item_id,
-                name: it.name || 'Unknown Item',
+                name: 'Food Item', // Tạm thời dùng tên cố định
                 quantity: Number(it.quantity || 0),
-                price: Number(it.price || 0),
-                total: Number(it.total || 0)
+                price: Number(it.unit_price || 0),
+                total: Number(it.total_price || 0)
               }));
               console.log('🔍 Normalized items:', normalizedItems);
 
@@ -617,19 +626,36 @@ export const orderAPI = {
         const orderPayload = { 
           order_number: orderNumber, 
           status: 'open', 
-          items: items || [], // Lưu items trực tiếp vào cột items
+          // items: items || [], // Tạm thời comment vì cột chưa tồn tại
           ...order 
         };
         supabase
           .from('orders')
           .insert(orderPayload)
-          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount, items')
+          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const orderId = res.data.id;
-            // Items đã được lưu trực tiếp vào cột items của orders
-            console.log('✅ Order created with items:', res.data.items);
+            // Tạm thời lưu vào order_items cho đến khi có cột items
+            if (Array.isArray(items) && items.length > 0) {
+              console.log('🔄 Inserting items into order_items:', items);
+              const orderItemsData = items.map((it: any) => ({
+                order_id: orderId,
+                food_item_id: it.food_item_id,
+                quantity: it.quantity,
+                unit_price: it.price,
+                total_price: it.total
+              }));
+              console.log('📝 Order items data:', orderItemsData);
+              
+              const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
+              if (itemsError) {
+                console.error('❌ Error inserting order_items:', itemsError);
+              } else {
+                console.log('✅ Order items inserted successfully');
+              }
+            }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
           }, reject);
@@ -643,7 +669,7 @@ export const orderAPI = {
         const { items, ...order } = data;
         const updatePayload = { 
           ...order,
-          items: items || [] // Cập nhật cột items
+          // items: items || [] // Tạm thời comment vì cột chưa tồn tại
         };
         supabase
           .from('orders')
@@ -653,8 +679,20 @@ export const orderAPI = {
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
-            // Items đã được cập nhật trực tiếp vào cột items của orders
-            console.log('✅ Order updated with items:', res.data.items);
+            // Cập nhật order_items nếu có items
+            if (Array.isArray(items) && items.length > 0) {
+              // Xóa items cũ và thêm mới
+              await supabase.from('order_items').delete().eq('order_id', id);
+              const orderItemsData = items.map((it: any) => ({
+                order_id: id,
+                food_item_id: it.food_item_id,
+                quantity: it.quantity,
+                unit_price: it.price,
+                total_price: it.total
+              }));
+              await supabase.from('order_items').insert(orderItemsData);
+              console.log('✅ Order items updated');
+            }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
           }, reject);
