@@ -394,11 +394,6 @@ const SimpleBuffetPOS: React.FC = () => {
           
           setCurrentOrder(convertedOrder);
           alert('Order thành công! Hóa đơn đã được lưu vào database.');
-        } else {
-          const errorData = await response.json();
-          console.error('Error creating order:', errorData);
-          alert(`Lỗi khi tạo order: ${errorData.message || 'Unknown error'}`);
-        }
       }
       
       // Reset form
