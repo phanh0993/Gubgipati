@@ -56,6 +56,8 @@ interface Order {
   total_amount?: number;
   subtotal?: number;
   tax_amount?: number;
+  customer_id?: number;
+  employee_id?: number;
 }
 
 const MobileBillPage: React.FC = () => {

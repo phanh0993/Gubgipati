@@ -37,6 +37,10 @@ interface Order {
   area?: string;
   employee_name?: string;
   total_amount?: number;
+  customer_id?: number;
+  employee_id?: number;
+  subtotal?: number;
+  tax_amount?: number;
   buffet_quantity?: number;
   buffet_package_name?: string;
   buffet_package_price?: number;
