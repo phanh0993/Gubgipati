@@ -277,7 +277,7 @@ const MobileOrderDetailsPage: React.FC = () => {
       if (response.ok) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
-          customer_id: order.customer_id || null,
+          customer_id: order.customer_id || undefined,
           employee_id: order.employee_id || 14,
           items: [
             {

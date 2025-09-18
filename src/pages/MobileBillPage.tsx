@@ -324,7 +324,7 @@ const MobileBillPage: React.FC = () => {
       if (response.ok) {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
-          customer_id: currentOrder.customer_id || null,
+          customer_id: currentOrder.customer_id || undefined,
           employee_id: currentOrder.employee_id || 14,
           items: [
             {

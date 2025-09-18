@@ -344,7 +344,7 @@ const BuffetTableSelection: React.FC = () => {
       
       // 2. Tạo invoice để ghi nhận doanh thu
       const invoiceData = {
-        customer_id: orderDetails.customer_id || null,
+        customer_id: orderDetails.customer_id || undefined,
         employee_id: orderDetails.employee_id || 14,
         items: [
           {
