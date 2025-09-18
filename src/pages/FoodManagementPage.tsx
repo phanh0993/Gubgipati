@@ -41,6 +41,7 @@ import {
   AddCircle as ToppingIcon,
   LocalDrink as DrinkIcon
 } from '@mui/icons-material';
+import { buffetAPI } from '../services/api';
 
 interface FoodCategory {
   id: number;
@@ -138,38 +139,22 @@ const FoodManagementPage: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      const [foodResponse, categoriesResponse, ingredientsResponse] = await Promise.all([
-        fetch('/api/food-items'),
-        fetch('/api/food-categories'),
-        fetch('/api/ingredients')
-      ]);
+      // Food items qua service layer để hỗ trợ mock
+      const foodRes = await buffetAPI.getFoodItems();
+      setFoodItems(foodRes.data || []);
 
-      if (foodResponse.ok) {
-        const foodData = await foodResponse.json();
-        setFoodItems(foodData);
-      }
-
-      if (categoriesResponse.ok) {
-        const categoriesData = await categoriesResponse.json();
-        setCategories(categoriesData);
-      }
-
-      if (ingredientsResponse.ok) {
-        const ingredientsData = await ingredientsResponse.json();
-        setIngredients(ingredientsData);
-      }
+      // Các API khác (categories, ingredients) không có mock → tắt tải và để rỗng với cảnh báo nhẹ
+      setCategories([]);
+      setIngredients([]);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
   };
 
-  const fetchRecipeIngredients = async (foodItemId: number) => {
+  const fetchRecipeIngredients = async (_foodItemId: number) => {
     try {
-      const response = await fetch(`/api/recipe-ingredients?food_item_id=${foodItemId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setRecipeIngredients(data);
-      }
+      // Không hỗ trợ trên mock
+      setRecipeIngredients([]);
     } catch (error) {
       console.error('Error fetching recipe ingredients:', error);
     }
@@ -225,36 +210,16 @@ const FoodManagementPage: React.FC = () => {
 
   const handleSaveFoodItem = async () => {
     try {
-      const url = editingFood ? `/api/food-items/${editingFood.id}` : '/api/food-items';
-      const method = editingFood ? 'PUT' : 'POST';
-      
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      if (response.ok) {
-        await fetchData();
-        handleCloseDialog();
-      }
+      alert('Tạo/cập nhật món ăn tạm vô hiệu trên bản Vercel (mock data).');
     } catch (error) {
       console.error('Error saving food item:', error);
     }
   };
 
-  const handleDeleteFoodItem = async (id: number) => {
+  const handleDeleteFoodItem = async (_id: number) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa món ăn này?')) {
       try {
-        const response = await fetch(`/api/food-items/${id}`, {
-          method: 'DELETE',
-        });
-
-        if (response.ok) {
-          await fetchData();
-        }
+        alert('Xóa món ăn tạm vô hiệu trên bản Vercel (mock data).');
       } catch (error) {
         console.error('Error deleting food item:', error);
       }
@@ -265,37 +230,15 @@ const FoodManagementPage: React.FC = () => {
     if (!selectedFoodForRecipe || !recipeForm.ingredient_id || !recipeForm.quantity) return;
 
     try {
-      const response = await fetch('/api/recipe-ingredients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          food_item_id: selectedFoodForRecipe.id,
-          ingredient_id: recipeForm.ingredient_id,
-          quantity: recipeForm.quantity,
-          unit: recipeForm.unit
-        }),
-      });
-
-      if (response.ok) {
-        await fetchRecipeIngredients(selectedFoodForRecipe.id);
-        setRecipeForm({ ingredient_id: 0, quantity: 0, unit: '' });
-      }
+      alert('Thêm nguyên liệu công thức tạm vô hiệu trên bản Vercel (mock data).');
     } catch (error) {
       console.error('Error adding recipe ingredient:', error);
     }
   };
 
-  const handleDeleteRecipeIngredient = async (id: number) => {
+  const handleDeleteRecipeIngredient = async (_id: number) => {
     try {
-      const response = await fetch(`/api/recipe-ingredients/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok && selectedFoodForRecipe) {
-        await fetchRecipeIngredients(selectedFoodForRecipe.id);
-      }
+      alert('Xóa nguyên liệu công thức tạm vô hiệu trên bản Vercel (mock data).');
     } catch (error) {
       console.error('Error deleting recipe ingredient:', error);
     }

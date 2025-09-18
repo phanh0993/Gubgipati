@@ -28,6 +28,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete, Restaurant, ArrowBack } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { buffetAPI } from '../services/api';
 
 interface BuffetPackage {
   id: number;
@@ -89,23 +90,19 @@ const BuffetFoodManagement: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch buffet packages
-      const packagesResponse = await fetch('/api/buffet-packages');
-      if (packagesResponse.ok) {
-        const packagesData = await packagesResponse.json();
-        setPackages(packagesData);
-        if (packagesData.length > 0) {
-          setSelectedPackage(packagesData[0]);
-          await fetchPackageItems(packagesData[0].id);
-        }
+      // Fetch buffet packages (qua service layer để hỗ trợ mock data)
+      const packagesResponse = await buffetAPI.getPackages();
+      const packagesData = packagesResponse.data || [];
+      setPackages(packagesData);
+      if (packagesData.length > 0) {
+        setSelectedPackage(packagesData[0]);
+        await fetchPackageItems(packagesData[0].id);
       }
 
       // Fetch all food items
-      const foodItemsResponse = await fetch('/api/food-items');
-      if (foodItemsResponse.ok) {
-        const foodItemsData = await foodItemsResponse.json();
-        setAllFoodItems(foodItemsData);
-      }
+      const foodItemsResponse = await buffetAPI.getFoodItems();
+      const foodItemsData = foodItemsResponse.data || [];
+      setAllFoodItems(foodItemsData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -115,11 +112,8 @@ const BuffetFoodManagement: React.FC = () => {
 
   const fetchPackageItems = async (packageId: number) => {
     try {
-      const response = await fetch(`/api/buffet-package-items?package_id=${packageId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setPackageItems(data);
-      }
+      const response = await buffetAPI.getPackageItems(packageId);
+      setPackageItems(response.data || []);
     } catch (error) {
       console.error('Error fetching package items:', error);
     }
@@ -166,61 +160,20 @@ const BuffetFoodManagement: React.FC = () => {
   const handleSaveItem = async () => {
     if (!selectedPackage || newItem.food_item_id === 0) return;
     
-    try {
-      const response = await fetch('/api/buffet-package-items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          package_id: selectedPackage.id,
-          food_item_id: newItem.food_item_id,
-          is_unlimited: newItem.is_unlimited,
-          max_quantity: newItem.max_quantity
-        }),
-      });
-
-      if (response.ok) {
-        await fetchPackageItems(selectedPackage.id);
-        setShowAddItemDialog(false);
-        setNewItem({
-          food_item_id: 0,
-          is_unlimited: true,
-          max_quantity: null
-        });
-      } else {
-        alert('Lỗi khi thêm món vào gói');
-      }
-    } catch (error) {
-      console.error('Error adding item:', error);
-      alert('Lỗi khi thêm món vào gói');
-    }
+    alert('Thêm món vào gói tạm vô hiệu trên bản Vercel (mock data).');
   };
 
-  const handleRemoveItem = async (itemId: number) => {
-    try {
-      const response = await fetch(`/api/buffet-package-items/${itemId}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        await fetchPackageItems(selectedPackage!.id);
-      } else {
-        alert('Lỗi khi xóa món khỏi gói');
-      }
-    } catch (error) {
-      console.error('Error removing item:', error);
-      alert('Lỗi khi xóa món khỏi gói');
-    }
+  const handleRemoveItem = async (_itemId: number) => {
+    alert('Xóa món khỏi gói tạm vô hiệu trên bản Vercel (mock data).');
   };
 
   const handleSavePackageItems = async () => {
     if (!selectedPackage) return;
     
     try {
-      // Refresh package items from database
+      // Trên mock, chỉ refresh lại dữ liệu
       await fetchPackageItems(selectedPackage.id);
-      alert('Đã lưu danh sách món ăn cho gói ' + selectedPackage.name);
+      alert('Đã cập nhật danh sách món ăn (mock).');
     } catch (error) {
       console.error('Error saving package:', error);
       alert('Lỗi khi lưu danh sách món ăn');
