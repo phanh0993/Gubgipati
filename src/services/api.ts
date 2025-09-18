@@ -273,6 +273,48 @@ export const invoicesAPI = {
 // Dashboard API
 export const dashboardAPI = {
   getOverview: (date?: string): Promise<AxiosResponse<DashboardOverview>> => {
+    if (USE_SUPABASE) {
+      // Tính doanh thu tháng theo invoices đã thanh toán
+      const now = date ? new Date(date) : new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startISO = startOfMonth.toISOString();
+      const endISO = now.toISOString();
+
+      return new Promise(async (resolve, reject) => {
+        try {
+          const [customersCnt, employeesCnt, foodCnt, ordersCnt, invoicesAgg] = await Promise.all([
+            supabase.from('customers').select('*', { count: 'exact', head: true }),
+            supabase.from('employees').select('*', { count: 'exact', head: true }),
+            supabase.from('food_items').select('*', { count: 'exact', head: true }),
+            supabase.from('orders').select('*', { count: 'exact', head: true }),
+            supabase
+              .from('invoices')
+              .select('total_amount')
+              .eq('payment_status', 'paid')
+              .gte('invoice_date', startISO)
+              .lte('invoice_date', endISO)
+          ]);
+
+          const monthlyRevenue = (invoicesAgg.data || []).reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0);
+
+          const data: DashboardOverview = {
+            stats: {
+              total_customers: String(customersCnt.count || 0),
+              total_employees: String(employeesCnt.count || 0),
+              total_food_items: String(foodCnt.count || 0),
+              total_orders: String(ordersCnt.count || 0),
+              paid_invoices: String((invoicesAgg.data || []).length),
+              total_revenue: String(monthlyRevenue)
+            },
+            recentInvoices: []
+          };
+          const axiosLike = { data, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<DashboardOverview>;
+          resolve(axiosLike);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
     if (IS_PRODUCTION) {
       return mockAPI.getDashboard();
     }
@@ -503,9 +545,12 @@ export const orderAPI = {
     if (USE_SUPABASE) {
       return new Promise((resolve, reject) => {
         const { items, ...order } = data;
+        // Tạo order_number nếu bảng yêu cầu NOT NULL
+        const orderNumber = `ORD-${Date.now()}`;
+        const orderPayload = { order_number: orderNumber, status: 'open', ...order };
         supabase
           .from('orders')
-          .insert(order)
+          .insert(orderPayload)
           .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
           .single()
           .then(async (res: any) => {

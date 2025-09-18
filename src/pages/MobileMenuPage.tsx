@@ -277,7 +277,11 @@ const MobileMenuPage: React.FC = () => {
                             mb: 0.5
                           }}
                         >
-                          <Restaurant sx={{ fontSize: 18, color: 'white' }} />
+                          <img
+                            src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent(item.food_item.name.charAt(0))}`}
+                            alt={item.food_item.name}
+                            style={{ width: 35, height: 35, borderRadius: 4 }}
+                          />
                         </Box>
                         <Typography 
                           variant="caption" 
