@@ -623,6 +623,7 @@ export const mockAPI = {
           salary: 15000000,
           base_salary: 15000000,
           commission_rate: 0.05,
+          skills: [],
           is_active: true,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z'
@@ -643,6 +644,7 @@ export const mockAPI = {
           salary: 8000000,
           base_salary: 8000000,
           commission_rate: 0.03,
+          skills: [],
           is_active: true,
           created_at: '2024-01-01T00:00:00Z',
           updated_at: '2024-01-01T00:00:00Z'
