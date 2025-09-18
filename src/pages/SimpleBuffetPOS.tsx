@@ -348,6 +348,7 @@ const SimpleBuffetPOS: React.FC = () => {
           items: orderItems.map(item => ({
             food_item_id: item.food_item_id,
             name: item.food_item.name,
+            service_name: item.food_item.name, // Thêm service_name cho order_items
             price: parseFloat(item.food_item.price.toString()),
             quantity: item.quantity,
             total: parseFloat(item.food_item.price.toString()) * item.quantity,

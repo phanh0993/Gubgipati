@@ -576,6 +576,8 @@ export const orderAPI = {
               ]);
 
               // Đọc items từ order_items (fallback khi cột items chưa tồn tại)
+              console.log('🔍 Order data:', o);
+              console.log('🔍 Order items from DB:', o.order_items);
               const normalizedItems = (o.order_items || []).map((it: any) => ({
                 id: it.id,
                 order_id: o.id,
@@ -585,6 +587,7 @@ export const orderAPI = {
                 price: Number(it.unit_price || 0),
                 total: Number(it.total_price || 0)
               }));
+              console.log('🔍 Normalized items:', normalizedItems);
 
               const normalized = {
                 ...o,
@@ -631,16 +634,23 @@ export const orderAPI = {
             const orderId = res.data.id;
             // Vẫn lưu vào order_items để tương thích với logic cũ
             if (Array.isArray(items) && items.length > 0) {
-              await supabase.from('order_items').insert(
-                items.map((it: any) => ({
-                  order_id: orderId,
-                  food_item_id: it.food_item_id,
-                  quantity: it.quantity,
-                  unit_price: it.price,
-                  total_price: it.total,
-                  service_name: it.name
-                }))
-              );
+              console.log('🔄 Inserting items into order_items:', items);
+              const orderItemsData = items.map((it: any) => ({
+                order_id: orderId,
+                food_item_id: it.food_item_id,
+                quantity: it.quantity,
+                unit_price: it.price,
+                total_price: it.total,
+                service_name: it.service_name || it.name
+              }));
+              console.log('📝 Order items data:', orderItemsData);
+              
+              const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
+              if (itemsError) {
+                console.error('❌ Error inserting order_items:', itemsError);
+              } else {
+                console.log('✅ Order items inserted successfully');
+              }
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
