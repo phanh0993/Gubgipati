@@ -552,7 +552,7 @@ export const orderAPI = {
       return new Promise((resolve, reject) => {
         supabase
           .from('orders')
-          .select('*, items:order_items(*)')
+          .select('*')
           .eq('id', id)
           .single()
           .then(async (res: any) => {
@@ -562,18 +562,18 @@ export const orderAPI = {
               const [tableRes, pkgRes, empRes] = await Promise.all([
                 o.table_id ? supabase.from('tables').select('table_name, area, table_number').eq('id', o.table_id).single() : Promise.resolve({ data: null }),
                 o.buffet_package_id ? supabase.from('buffet_packages').select('name, price').eq('id', o.buffet_package_id).single() : Promise.resolve({ data: null }),
-                o.employee_id ? supabase.from('employees').select('full_name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
+                o.employee_id ? supabase.from('employees').select('name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
               ]);
 
+              // Đọc items từ cột items (JSONB) thay vì join order_items
               const normalizedItems = (o.items || []).map((it: any) => ({
-                id: it.id,
-                order_id: it.order_id,
+                id: it.id || Math.random(),
+                order_id: o.id,
                 food_item_id: it.food_item_id,
-                // Chuẩn hóa field cho UI
-                name: it.name || it.service_name || it.food_item?.name || 'Món',
-                price: Number(it.price ?? it.unit_price ?? 0),
-                quantity: Number(it.quantity ?? 0),
-                total: Number(it.total ?? it.total_price ?? ((it.unit_price || 0) * (it.quantity || 0)))
+                name: it.name || 'Unknown Item',
+                quantity: Number(it.quantity || 0),
+                price: Number(it.price || 0),
+                total: Number(it.total || 0)
               }));
 
               const normalized = {
@@ -585,7 +585,7 @@ export const orderAPI = {
                 table_number: tableRes.data?.table_number || '',
                 buffet_package_name: pkgRes.data?.name || 'Buffet Package',
                 buffet_package_price: Number(pkgRes.data?.price || 0),
-                employee_name: empRes.data?.full_name || 'Chưa xác định',
+                employee_name: empRes.data?.name || 'Chưa xác định',
                 items: normalizedItems
               };
 
@@ -605,15 +605,21 @@ export const orderAPI = {
         const { items, ...order } = data;
         // Tạo order_number nếu bảng yêu cầu NOT NULL
         const orderNumber = `BUF-${Date.now()}`;
-        const orderPayload = { order_number: orderNumber, status: 'open', ...order };
+        const orderPayload = { 
+          order_number: orderNumber, 
+          status: 'open', 
+          items: items || [], // Lưu items trực tiếp vào cột items
+          ...order 
+        };
         supabase
           .from('orders')
           .insert(orderPayload)
-          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
+          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount, items')
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const orderId = res.data.id;
+            // Vẫn lưu vào order_items để tương thích với logic cũ
             if (Array.isArray(items) && items.length > 0) {
               await supabase.from('order_items').insert(
                 items.map((it: any) => ({
@@ -637,9 +643,13 @@ export const orderAPI = {
     if (USE_SUPABASE) {
       return new Promise((resolve, reject) => {
         const { items, ...order } = data;
+        const updatePayload = { 
+          ...order,
+          items: items || [] // Cập nhật cột items
+        };
         supabase
           .from('orders')
-          .update(order)
+          .update(updatePayload)
           .eq('id', id)
           .select('*')
           .single()
