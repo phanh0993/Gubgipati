@@ -559,7 +559,10 @@ export const orderAPI = {
               food_item_id,
               quantity,
               unit_price,
-              total_price
+              total_price,
+              food_items (
+                name
+              )
             )
           `)
           .eq('id', id)
@@ -580,14 +583,14 @@ export const orderAPI = {
                 employee: empRes.data
               });
 
-              // Đọc items từ order_items (fallback)
+              // Đọc items từ order_items và join với food_items để lấy tên
               console.log('🔍 Order data:', o);
               console.log('🔍 Order items from DB:', o.order_items);
               const normalizedItems = (o.order_items || []).map((it: any, index: number) => ({
                 id: it.id || index,
                 order_id: o.id,
                 food_item_id: it.food_item_id,
-                name: 'Food Item', // Tạm thời dùng tên cố định
+                name: it.food_items?.name || 'Unknown Item',
                 quantity: Number(it.quantity || 0),
                 price: Number(it.unit_price || 0),
                 total: Number(it.total_price || 0)
@@ -637,23 +640,45 @@ export const orderAPI = {
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const orderId = res.data.id;
-            // Tạm thời lưu vào order_items cho đến khi có cột items
+            // Lưu items vào order_items với logic gộp số lượng
             if (Array.isArray(items) && items.length > 0) {
-              console.log('🔄 Inserting items into order_items:', items);
-              const orderItemsData = items.map((it: any) => ({
-                order_id: orderId,
-                food_item_id: it.food_item_id,
-                quantity: it.quantity,
-                unit_price: it.price,
-                total_price: it.total
-              }));
-              console.log('📝 Order items data:', orderItemsData);
+              console.log('🔄 Processing items for order_items:', items);
               
-              const { error: itemsError } = await supabase.from('order_items').insert(orderItemsData);
-              if (itemsError) {
-                console.error('❌ Error inserting order_items:', itemsError);
-              } else {
-                console.log('✅ Order items inserted successfully');
+              for (const item of items) {
+                // Kiểm tra xem món đã tồn tại chưa
+                const { data: existingItem } = await supabase
+                  .from('order_items')
+                  .select('id, quantity, unit_price, total_price')
+                  .eq('order_id', orderId)
+                  .eq('food_item_id', item.food_item_id)
+                  .maybeSingle();
+
+                if (existingItem) {
+                  // Món đã tồn tại - cộng dồn số lượng
+                  const newQuantity = existingItem.quantity + item.quantity;
+                  const newTotal = existingItem.unit_price * newQuantity;
+                  
+                  await supabase
+                    .from('order_items')
+                    .update({ 
+                      quantity: newQuantity, 
+                      total_price: newTotal 
+                    })
+                    .eq('id', existingItem.id);
+                  
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} + ${item.quantity} = ${newQuantity}`);
+                } else {
+                  // Món mới - thêm mới
+                  await supabase.from('order_items').insert({
+                    order_id: orderId,
+                    food_item_id: item.food_item_id,
+                    quantity: item.quantity,
+                    unit_price: item.price,
+                    total_price: item.total
+                  });
+                  
+                  console.log(`✅ Added new item ${item.food_item_id}: ${item.quantity}`);
+                }
               }
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
@@ -679,19 +704,46 @@ export const orderAPI = {
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
-            // Cập nhật order_items nếu có items
+            // Cập nhật order_items với logic gộp số lượng
             if (Array.isArray(items) && items.length > 0) {
-              // Xóa items cũ và thêm mới
-              await supabase.from('order_items').delete().eq('order_id', id);
-              const orderItemsData = items.map((it: any) => ({
-                order_id: id,
-                food_item_id: it.food_item_id,
-                quantity: it.quantity,
-                unit_price: it.price,
-                total_price: it.total
-              }));
-              await supabase.from('order_items').insert(orderItemsData);
-              console.log('✅ Order items updated');
+              console.log('🔄 Updating items for order_items:', items);
+              
+              for (const item of items) {
+                // Kiểm tra xem món đã tồn tại chưa
+                const { data: existingItem } = await supabase
+                  .from('order_items')
+                  .select('id, quantity, unit_price, total_price')
+                  .eq('order_id', id)
+                  .eq('food_item_id', item.food_item_id)
+                  .maybeSingle();
+
+                if (existingItem) {
+                  // Món đã tồn tại - cộng dồn số lượng
+                  const newQuantity = existingItem.quantity + item.quantity;
+                  const newTotal = existingItem.unit_price * newQuantity;
+                  
+                  await supabase
+                    .from('order_items')
+                    .update({ 
+                      quantity: newQuantity, 
+                      total_price: newTotal 
+                    })
+                    .eq('id', existingItem.id);
+                  
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} + ${item.quantity} = ${newQuantity}`);
+                } else {
+                  // Món mới - thêm mới
+                  await supabase.from('order_items').insert({
+                    order_id: id,
+                    food_item_id: item.food_item_id,
+                    quantity: item.quantity,
+                    unit_price: item.price,
+                    total_price: item.total
+                  });
+                  
+                  console.log(`✅ Added new item ${item.food_item_id}: ${item.quantity}`);
+                }
+              }
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
@@ -699,6 +751,54 @@ export const orderAPI = {
       });
     }
     return api.put(`/orders/${id}`, data);
+  },
+  updateOrderItemQuantity: (orderId: number, foodItemId: number, newQuantity: number): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        if (newQuantity <= 0) {
+          // Xóa item nếu số lượng <= 0
+          supabase
+            .from('order_items')
+            .delete()
+            .eq('order_id', orderId)
+            .eq('food_item_id', foodItemId)
+            .then((res: any) => {
+              if (res.error) { reject(res.error); return; }
+              const axiosLike = { data: { deleted: true }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+              resolve(axiosLike);
+            }, reject);
+        } else {
+          // Cập nhật số lượng - cần lấy unit_price trước
+          supabase
+            .from('order_items')
+            .select('unit_price')
+            .eq('order_id', orderId)
+            .eq('food_item_id', foodItemId)
+            .single()
+            .then(async (priceRes: any) => {
+              if (priceRes.error) { reject(priceRes.error); return; }
+              
+              const unitPrice = priceRes.data?.unit_price || 0;
+              const newTotal = unitPrice * newQuantity;
+              
+              supabase
+                .from('order_items')
+                .update({ 
+                  quantity: newQuantity,
+                  total_price: newTotal
+                })
+                .eq('order_id', orderId)
+                .eq('food_item_id', foodItemId)
+                .then((res: any) => {
+                  if (res.error) { reject(res.error); return; }
+                  const axiosLike = { data: res.data, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+                  resolve(axiosLike);
+                }, reject);
+            }, reject);
+        }
+      });
+    }
+    return api.put(`/orders/${id}/items/${foodItemId}`, { quantity: newQuantity });
   },
 };
 
