@@ -253,8 +253,52 @@ export const invoicesAPI = {
   getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> =>
     api.get(`/invoices/${id}`),
     
-  create: (data: CreateInvoiceRequest): Promise<AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>> =>
-    api.post('/invoices', data),
+  create: (data: CreateInvoiceRequest): Promise<AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        try {
+          const items = Array.isArray(data.items) ? data.items : [];
+          const subtotal = items.reduce((sum: number, it: any) => sum + Number(it.unit_price || 0) * Number(it.quantity || 0), 0);
+          const discount = Number((data as any).discount_amount || 0);
+          const tax = 0; // per requirement: remove tax calculation
+          const total = subtotal - discount + tax;
+
+          const payload: any = {
+            customer_id: (data as any).customer_id ?? null,
+            employee_id: (data as any).employee_id ?? null,
+            subtotal: subtotal,
+            discount_amount: discount,
+            tax_amount: tax,
+            total_amount: total,
+            payment_method: (data as any).payment_method || 'cash',
+            payment_status: 'paid',
+            invoice_date: new Date().toISOString(),
+            notes: (data as any).notes || null,
+          };
+
+          supabase
+            .from('invoices')
+            .insert(payload)
+            .select('*')
+            .single()
+            .then((res: any) => {
+              if (res.error) { reject(res.error); return; }
+              const axiosLike = {
+                data: { invoice: res.data as any, items: [], message: 'Invoice created' },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config: {} as any,
+              } as AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>;
+              resolve(axiosLike);
+            }, reject);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+    return api.post('/invoices', data);
+  },
     
   update: (id: number, data: Partial<Invoice>): Promise<AxiosResponse<{ message: string }>> =>
     api.put(`/invoices/${id}`, data),
