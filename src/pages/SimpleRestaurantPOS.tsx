@@ -386,7 +386,7 @@ const SimpleRestaurantPOS: React.FC = () => {
         if (invoiceResponse.status === 200) {
           setSnackbar({ open: true, message: 'Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.', severity: 'success' });
         } else {
-          setSnackbar({ open: true, message: 'Thanh toán thành công nhưng lỗi tạo hóa đơn', severity: 'warning' });
+          setSnackbar({ open: true, message: 'Thanh toán thành công nhưng lỗi tạo hóa đơn', severity: 'error' });
         }
         
         // 3. Refresh data để cập nhật trạng thái bàn
