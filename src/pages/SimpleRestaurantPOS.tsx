@@ -88,6 +88,8 @@ interface Order {
   items: OrderItem[];
   created_at: string;
   order_count: number;
+  customer_id?: number;
+  employee_id?: number;
 }
 
 const SimpleRestaurantPOS: React.FC = () => {
@@ -368,15 +370,32 @@ const SimpleRestaurantPOS: React.FC = () => {
       });
 
       if (response.ok) {
-        // Refresh data để cập nhật trạng thái bàn
+        // 2. Tạo invoice để ghi nhận doanh thu
+        const { invoicesAPI } = await import('../services/api');
+        const invoiceData = {
+          customer_id: selectedOrder.customer_id || undefined,
+          employee_id: selectedOrder.employee_id || 1,
+          items: [{ service_id: 1, quantity: 1, unit_price: selectedOrder.total_amount || 0 }],
+          discount_amount: 0,
+          tax_amount: 0,
+          payment_method: paymentMethod,
+          notes: `Restaurant Order: ${selectedOrder.order_number || selectedOrder.id}`
+        };
+        
+        const invoiceResponse = await invoicesAPI.create(invoiceData);
+        if (invoiceResponse.status === 200) {
+          setSnackbar({ open: true, message: 'Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.', severity: 'success' });
+        } else {
+          setSnackbar({ open: true, message: 'Thanh toán thành công nhưng lỗi tạo hóa đơn', severity: 'warning' });
+        }
+        
+        // 3. Refresh data để cập nhật trạng thái bàn
         await fetchData();
         
         setSelectedOrder(null);
         setCurrentOrder(null);
         setSelectedTable(null);
         setOpenPaymentDialog(false);
-        
-        setSnackbar({ open: true, message: 'Thanh toán thành công!', severity: 'success' });
       } else {
         throw new Error('Payment failed');
       }

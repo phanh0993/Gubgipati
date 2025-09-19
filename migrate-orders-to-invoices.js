@@ -60,8 +60,8 @@ async function migrateOrdersToInvoices() {
     
     for (const order of ordersToMigrate) {
       try {
-        // Tính tổng tiền từ order_items
-        const totalAmount = order.order_items?.reduce((sum, item) => sum + (item.total_price || 0), 0) || 0;
+        // Sử dụng total_amount từ orders thay vì tính từ order_items
+        const totalAmount = order.total_amount || 0;
         
         // Tạo invoice data
         const invoiceData = {
@@ -96,7 +96,6 @@ async function migrateOrdersToInvoices() {
           const invoiceItems = order.order_items.map(item => ({
             invoice_id: newInvoice.id,
             service_id: item.food_item_id,
-            service_name: item.food_items?.name || 'Food Item',
             quantity: item.quantity,
             unit_price: item.unit_price,
             total_price: item.total_price
@@ -108,6 +107,8 @@ async function migrateOrdersToInvoices() {
           
           if (itemsError) {
             console.error(`⚠️ Lỗi tạo invoice items cho order ${order.id}:`, itemsError.message);
+          } else {
+            console.log(`✅ Tạo ${invoiceItems.length} invoice items cho order ${order.id}`);
           }
         }
         
