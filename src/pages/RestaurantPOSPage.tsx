@@ -85,6 +85,7 @@ const RestaurantPOSPage: React.FC = () => {
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [loading, setLoading] = useState(false);
 
   const categories = [
     { value: 'all', label: 'Tất cả' },
