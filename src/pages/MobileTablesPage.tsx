@@ -60,8 +60,21 @@ const MobileTablesPage: React.FC = () => {
   useEffect(() => {
     const employee = localStorage.getItem('pos_employee');
     if (employee) {
-      setCurrentEmployee(JSON.parse(employee));
+      const empData = JSON.parse(employee);
+      setCurrentEmployee(empData);
+      
+      // Check if user has permission to access mobile POS
+      if (empData.role && empData.role !== 'staff' && empData.role !== 'manager') {
+        console.log('Access denied: Invalid role for mobile POS');
+        navigate('/mobile-login');
+        return;
+      }
+    } else {
+      // No employee data, redirect to login
+      navigate('/mobile-login');
+      return;
     }
+    
     fetchData();
     
     // Auto-refresh every 5 seconds
@@ -70,7 +83,7 @@ const MobileTablesPage: React.FC = () => {
     }, 5000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [navigate]);
 
   const fetchData = async (showIndicator = false) => {
     try {

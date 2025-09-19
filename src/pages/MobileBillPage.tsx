@@ -257,11 +257,17 @@ const MobileBillPage: React.FC = () => {
       } else {
         // Tạo order mới
         const { orderAPI } = await import('../services/api');
+        
+        // Lấy thông tin nhân viên từ localStorage
+        const employee = localStorage.getItem('pos_employee');
+        const employeeData = employee ? JSON.parse(employee) : null;
+        
         const response = await orderAPI.createOrder({
             ...orderData,
             table_id: selectedTable.id,
             order_type: 'buffet',
-            status: 'pending'
+            status: 'pending',
+            employee_id: employeeData?.id || null
           });
 
         if (response.status === 200) {
@@ -287,8 +293,14 @@ const MobileBillPage: React.FC = () => {
     if (currentOrder && packageQuantity === 0) {
       // 1. Cập nhật order status thành paid
       const { orderAPI } = await import('../services/api');
+      
+      // Lấy thông tin nhân viên từ localStorage
+      const employee = localStorage.getItem('pos_employee');
+      const employeeData = employee ? JSON.parse(employee) : null;
+      
       const response = await orderAPI.updateOrder(currentOrder.id, {
         status: 'paid',
+        employee_id: employeeData?.id || null,
         items: selectedItems
           .filter(item => itemQuantities[item.id] > 0)
           .map(item => ({
@@ -306,7 +318,7 @@ const MobileBillPage: React.FC = () => {
         // 2. Tạo invoice để ghi nhận doanh thu
         const invoiceData = {
           customer_id: currentOrder.customer_id || undefined,
-          employee_id: currentOrder.employee_id || 14,
+          employee_id: employeeData?.id || currentOrder.employee_id || 14,
           items: [
             {
               service_id: 1, // Dummy service ID for buffet orders
@@ -317,7 +329,7 @@ const MobileBillPage: React.FC = () => {
           discount_amount: 0,
           tax_amount: 0, // Bỏ thuế
           payment_method: 'cash',
-          notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id}`
+          notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id} - NV: ${employeeData?.full_name || 'Unknown'}`
         };
         
         const { invoicesAPI } = await import('../services/api');

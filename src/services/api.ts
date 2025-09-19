@@ -455,6 +455,16 @@ export const employeeAPI = {
             // Remove password from response
             const { password, ...employeeWithoutPassword } = employee;
             
+            // Determine role based on position
+            let role = 'staff';
+            if (employee.position && (
+              employee.position.toLowerCase().includes('manager') || 
+              employee.position.toLowerCase().includes('quản lý') ||
+              employee.position.toLowerCase().includes('admin')
+            )) {
+              role = 'manager';
+            }
+            
             const response = {
               data: {
                 user: {
@@ -463,7 +473,7 @@ export const employeeAPI = {
                   full_name: employee.fullname || employee.full_name,
                   email: employee.email,
                   phone: employee.phone,
-                  role: 'staff',
+                  role: role,
                   is_active: employee.is_active,
                   employee_code: employee.employee_code,
                   position: employee.position,
