@@ -49,9 +49,6 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/vi';
 
@@ -419,8 +416,7 @@ const NewDashboard: React.FC = () => {
   }
 
   return (
-    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="vi">
-      <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 3 }}>
         {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold' }}>
@@ -476,19 +472,23 @@ const NewDashboard: React.FC = () => {
               {timeRange === 'custom' && (
                 <>
                   <Grid item xs={12} sm={3} md={2}>
-                    <DatePicker
+                    <TextField
                       label="Từ ngày"
-                      value={customStartDate}
-                      onChange={(newValue) => setCustomStartDate(newValue)}
-                      slotProps={{ textField: { fullWidth: true } }}
+                      type="date"
+                      value={customStartDate?.format('YYYY-MM-DD') || ''}
+                      onChange={(e) => setCustomStartDate(dayjs(e.target.value))}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
                   <Grid item xs={12} sm={3} md={2}>
-                    <DatePicker
+                    <TextField
                       label="Đến ngày"
-                      value={customEndDate}
-                      onChange={(newValue) => setCustomEndDate(newValue)}
-                      slotProps={{ textField: { fullWidth: true } }}
+                      type="date"
+                      value={customEndDate?.format('YYYY-MM-DD') || ''}
+                      onChange={(e) => setCustomEndDate(dayjs(e.target.value))}
+                      fullWidth
+                      InputLabelProps={{ shrink: true }}
                     />
                   </Grid>
                 </>
@@ -683,7 +683,6 @@ const NewDashboard: React.FC = () => {
           </Grid>
         </Grid>
       </Box>
-    </LocalizationProvider>
   );
 };
 

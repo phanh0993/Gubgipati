@@ -272,61 +272,51 @@ const RestaurantPOSPage: React.FC = () => {
     if (!currentOrder) return;
 
     try {
-      // Create invoice
-      const invoiceResponse = await fetch('/api/invoices', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          invoice_number: `INV-${Date.now()}`,
-          customer_id: null,
-          employee_id: 1, // Default employee
-          subtotal: currentOrder.subtotal,
-          tax_amount: currentOrder.tax_amount,
-          total_amount: currentOrder.total_amount,
-          payment_method: 'cash',
-          payment_status: 'paid',
-          notes: currentOrder.notes
-        }),
-      });
-
-      if (invoiceResponse.ok) {
-        setSnackbar({ open: true, message: 'Thanh toán thành công', severity: 'success' });
+      setLoading(true);
+      
+      // 1. Tạo invoice để ghi nhận doanh thu
+      const { invoicesAPI } = await import('../services/api');
+      const invoiceData = {
+        customer_id: currentOrder.customer_id || undefined,
+        employee_id: currentOrder.employee_id || 1,
+        items: [
+          {
+            service_id: 1, // Dummy service ID for restaurant orders
+            quantity: 1,
+            unit_price: currentOrder.total_amount || 0,
+          }
+        ],
+        discount_amount: 0,
+        tax_amount: 0, // Bỏ thuế
+        payment_method: 'cash',
+        notes: `Restaurant Order: ${currentOrder.order_number || currentOrder.id}`
+      };
+      
+      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      
+      if (invoiceResponse.status === 200) {
+        setSnackbar({ open: true, message: 'Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.', severity: 'success' });
         
-        // Update order status
-        await fetch(`/api/orders/${currentOrder.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...currentOrder,
-            status: 'served'
-          }),
+        // 2. Cập nhật order status thành 'served'
+        const { orderAPI } = await import('../services/api');
+        await orderAPI.updateOrder(currentOrder.id, {
+          ...currentOrder,
+          status: 'served'
         });
 
-        // Update table status
-        await fetch('/api/tables', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: selectedTable?.id,
-            status: 'available'
-          }),
-        });
-
-        // Reset
+        // 3. Reset
         setCurrentOrder(null);
         setSelectedTable(null);
         setOpenPaymentDialog(false);
         await fetchTables();
+      } else {
+        setSnackbar({ open: true, message: 'Lỗi khi tạo hóa đơn', severity: 'error' });
       }
     } catch (error) {
       console.error('Error processing payment:', error);
       setSnackbar({ open: true, message: 'Lỗi khi thanh toán', severity: 'error' });
+    } finally {
+      setLoading(false);
     }
   };
 
