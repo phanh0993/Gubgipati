@@ -263,42 +263,43 @@ const MobileOrderDetailsPage: React.FC = () => {
     
     try {
       setPaymentLoading(true);
-      // 1. Cập nhật trạng thái order thành 'paid'
-      const { orderAPI } = await import('../services/api');
-      const response = await orderAPI.updateOrder(order.id, { status: 'paid' });
+      
+      // 1. Tạo invoice trước để ghi nhận doanh thu
+      const invoiceData = {
+        customer_id: order.customer_id || undefined,
+        employee_id: order.employee_id || 14,
+        items: [
+          {
+            service_id: 1, // Dummy service ID for orders
+            quantity: 1,
+            unit_price: order.total_amount || 0,
+          }
+        ],
+        discount_amount: 0,
+        tax_amount: 0, // Bỏ thuế
+        payment_method: 'cash',
+        notes: `Order: ${order.order_number || order.id}`
+      };
+      
+      const { invoicesAPI } = await import('../services/api');
+      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      
+      if (invoiceResponse.status === 200) {
+        // 2. Cập nhật trạng thái order thành 'paid' sau khi tạo invoice thành công
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.updateOrder(order.id, { status: 'paid' });
 
-      if (response.status === 200) {
-        // 2. Tạo invoice để ghi nhận doanh thu
-        const invoiceData = {
-          customer_id: order.customer_id || undefined,
-          employee_id: order.employee_id || 14,
-          items: [
-            {
-              service_id: 1, // Dummy service ID for orders
-              quantity: 1,
-              unit_price: order.total_amount || 0,
-            }
-          ],
-          discount_amount: 0,
-          tax_amount: 0, // Bỏ thuế
-          payment_method: 'cash',
-          notes: `Order: ${order.order_number || order.id}`
-        };
-        
-        const { invoicesAPI } = await import('../services/api');
-        const invoiceResponse = await invoicesAPI.create(invoiceData);
-        
-        if (invoiceResponse.status === 200) {
+        if (response.status === 200) {
           // 3. In bill
           await handlePrint();
           
           alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
           navigate('/mobile-invoices');
         } else {
-          alert('Thanh toán thành công nhưng lỗi khi tạo hóa đơn doanh thu');
+          alert('Hóa đơn đã được tạo nhưng lỗi khi cập nhật trạng thái order');
         }
       } else {
-        alert('Lỗi khi thanh toán');
+        alert('Lỗi khi tạo hóa đơn doanh thu');
       }
     } catch (error) {
       console.error('Error processing payment:', error);

@@ -291,58 +291,57 @@ const MobileBillPage: React.FC = () => {
 
     // Nếu có order cũ và packageQuantity = 0, chỉ cập nhật món ăn và thanh toán
     if (currentOrder && packageQuantity === 0) {
-      // 1. Cập nhật order status thành paid
-      const { orderAPI } = await import('../services/api');
-      
       // Lấy thông tin nhân viên từ localStorage
       const employee = localStorage.getItem('pos_employee');
       const employeeData = employee ? JSON.parse(employee) : null;
       
-      const response = await orderAPI.updateOrder(currentOrder.id, {
-        status: 'paid',
-        employee_id: employeeData?.id || null,
-        items: selectedItems
-          .filter(item => itemQuantities[item.id] > 0)
-          .map(item => ({
-            food_item_id: item.food_item.id,
-            name: item.food_item.name,
-            price: 0,
-            quantity: itemQuantities[item.id],
-            total: 0,
-            special_instructions: 'Gọi thoải mái',
-            printer_id: null
-          }))
-      });
+      // 1. Tạo invoice trước để ghi nhận doanh thu
+      const invoiceData = {
+        customer_id: currentOrder.customer_id || undefined,
+        employee_id: employeeData?.id || currentOrder.employee_id || 14,
+        items: [
+          {
+            service_id: 1, // Dummy service ID for buffet orders
+            quantity: 1,
+            unit_price: currentOrder.total_amount || 0,
+          }
+        ],
+        discount_amount: 0,
+        tax_amount: 0, // Bỏ thuế
+        payment_method: 'cash',
+        notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id} - NV: ${employeeData?.full_name || 'Unknown'}`
+      };
+      
+      const { invoicesAPI } = await import('../services/api');
+      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      
+      if (invoiceResponse.status === 200) {
+        // 2. Cập nhật order status thành paid sau khi tạo invoice thành công
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.updateOrder(currentOrder.id, {
+          status: 'paid',
+          employee_id: employeeData?.id || null,
+          items: selectedItems
+            .filter(item => itemQuantities[item.id] > 0)
+            .map(item => ({
+              food_item_id: item.food_item.id,
+              name: item.food_item.name,
+              price: 0,
+              quantity: itemQuantities[item.id],
+              total: 0,
+              special_instructions: 'Gọi thoải mái',
+              printer_id: null
+            }))
+        });
 
-      if (response.status === 200) {
-        // 2. Tạo invoice để ghi nhận doanh thu
-        const invoiceData = {
-          customer_id: currentOrder.customer_id || undefined,
-          employee_id: employeeData?.id || currentOrder.employee_id || 14,
-          items: [
-            {
-              service_id: 1, // Dummy service ID for buffet orders
-              quantity: 1,
-              unit_price: currentOrder.total_amount || 0,
-            }
-          ],
-          discount_amount: 0,
-          tax_amount: 0, // Bỏ thuế
-          payment_method: 'cash',
-          notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id} - NV: ${employeeData?.full_name || 'Unknown'}`
-        };
-        
-        const { invoicesAPI } = await import('../services/api');
-        const invoiceResponse = await invoicesAPI.create(invoiceData);
-        
-        if (invoiceResponse.status === 200) {
+        if (response.status === 200) {
           alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
+          navigate('/mobile-tables');
         } else {
-          alert('Thanh toán thành công nhưng lỗi khi tạo hóa đơn doanh thu');
+          alert('Hóa đơn đã được tạo nhưng lỗi khi cập nhật trạng thái order');
         }
-        navigate('/mobile-tables');
       } else {
-        alert('Lỗi khi thanh toán');
+        alert('Lỗi khi tạo hóa đơn doanh thu');
       }
       return;
     }
