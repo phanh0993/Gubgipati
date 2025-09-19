@@ -40,10 +40,10 @@ const MobileLoginPage: React.FC = () => {
     setError(null);
 
     try {
-      // Always use mock API for mobile login
+      // Use Supabase employee API for mobile login
       console.log('Mobile login attempt:', { username, password });
-      const { mockAPI } = await import('../services/mockApi');
-      const loginResponse = await mockAPI.login({ username, password });
+      const { employeeAPI } = await import('../services/api');
+      const loginResponse = await employeeAPI.mobileLogin({ username, password });
       const loginData = loginResponse.data;
       
       // Lưu thông tin user vào localStorage

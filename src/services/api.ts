@@ -421,6 +421,76 @@ export const employeeAPI = {
     }
     return api.get('/employees');
   },
+
+  // Mobile login authentication using Supabase
+  mobileLogin: (credentials: { username: string; password: string }): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('employees')
+          .select('*')
+          .eq('username', credentials.username)
+          .eq('is_active', true)
+          .single()
+          .then((res: any) => {
+            if (res.error) {
+              console.log('Employee not found or inactive:', credentials.username);
+              reject(new Error('Invalid credentials'));
+              return;
+            }
+
+            const employee = res.data;
+            console.log('Found employee:', employee);
+
+            // For mobile login, allow empty password or any password
+            // For desktop login, would require password verification
+            const isMobileLogin = credentials.password === '' || credentials.password === undefined;
+            
+            if (!isMobileLogin && employee.password && employee.password !== credentials.password) {
+              console.log('Password mismatch');
+              reject(new Error('Invalid credentials'));
+              return;
+            }
+
+            // Remove password from response
+            const { password, ...employeeWithoutPassword } = employee;
+            
+            const response = {
+              data: {
+                user: {
+                  id: employee.id,
+                  username: employee.username,
+                  full_name: employee.fullname || employee.full_name,
+                  email: employee.email,
+                  phone: employee.phone,
+                  role: 'staff',
+                  is_active: employee.is_active,
+                  employee_code: employee.employee_code,
+                  position: employee.position,
+                  created_at: employee.created_at,
+                  updated_at: employee.updated_at
+                },
+                token: `mobile-token-${employee.id}-${Date.now()}`,
+                message: 'Mobile login successful'
+              },
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {} as any
+            } as AxiosResponse<any>;
+
+            console.log('Mobile login successful for:', employee.username);
+            resolve(response);
+          }, (error) => {
+            console.error('Mobile login error:', error);
+            reject(new Error('Invalid credentials'));
+          });
+      });
+    }
+    
+    // Fallback to mock API if not using Supabase
+    return mockAPI.login(credentials);
+  },
 };
 
 // Payroll API
