@@ -274,6 +274,7 @@ export const invoicesAPI = {
           const total = subtotal - discount + tax;
 
           const payload: any = {
+            invoice_number: `INV-${Date.now()}`,
             customer_id: (data as any).customer_id ?? null,
             employee_id: (data as any).employee_id ?? null,
             subtotal: subtotal,

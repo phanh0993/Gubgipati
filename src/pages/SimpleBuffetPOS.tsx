@@ -394,6 +394,9 @@ const SimpleBuffetPOS: React.FC = () => {
           
           setCurrentOrder(convertedOrder);
           alert('Order thành công! Hóa đơn đã được lưu vào database.');
+          
+          // Quay về bảng tables
+          navigate('/buffet-tables');
       }
       
       // Reset form
@@ -402,6 +405,76 @@ const SimpleBuffetPOS: React.FC = () => {
     } catch (error) {
       console.error('Error creating order:', error);
       alert('Lỗi khi tạo order');
+    }
+  };
+
+  const handleDirectPayment = async () => {
+    if (!selectedPackage || !selectedTable) {
+      alert('Vui lòng chọn vé và bàn');
+      return;
+    }
+
+    try {
+      // 1. Tạo order trước
+      const orderData = {
+        order_type: 'buffet',
+        table_id: selectedTable.id,
+        customer_id: null,
+        employee_id: 14, // Default employee
+        subtotal: calculateTotal(),
+        tax_amount: 0,
+        total_amount: calculateTotal(),
+        buffet_package_id: selectedPackage.id,
+        buffet_duration_minutes: 90,
+        buffet_start_time: new Date().toISOString(),
+        buffet_quantity: packageQuantity,
+        notes: `Buffet ${selectedPackage.name} x${packageQuantity} - ${selectedTable.area}${selectedTable.table_number}`,
+        items: orderItems.map(item => ({
+          food_item_id: item.food_item_id,
+          name: item.food_item.name,
+          price: 0, // Buffet items are free
+          quantity: item.quantity,
+          total: 0,
+          special_instructions: 'Gọi thoải mái',
+          printer_id: null
+        }))
+      };
+
+      const { orderAPI } = await import('../services/api');
+      const { data: newOrder } = await orderAPI.createOrder(orderData);
+      
+      // 2. Tạo invoice để ghi nhận doanh thu
+      const invoiceData = {
+        customer_id: undefined,
+        employee_id: 14,
+        items: [
+          {
+            service_id: 1,
+            quantity: 1,
+            unit_price: newOrder.total_amount || 0,
+          }
+        ],
+        discount_amount: 0,
+        tax_amount: 0,
+        payment_method: 'cash',
+        notes: `Buffet Order: ${newOrder.order_number || newOrder.id}`
+      };
+      
+      const { invoicesAPI } = await import('../services/api');
+      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      
+      if (invoiceResponse.status === 200) {
+        // 3. Cập nhật order status thành 'paid'
+        await orderAPI.updateOrder(newOrder.id, { status: 'paid' });
+        
+        alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
+        navigate('/buffet-tables');
+      } else {
+        alert('Lỗi khi tạo hóa đơn doanh thu');
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      alert('Lỗi khi thanh toán');
     }
   };
 
@@ -648,7 +721,8 @@ const SimpleBuffetPOS: React.FC = () => {
                   variant="contained"
                   color="success"
                   fullWidth
-                  onClick={() => navigate('/buffet-tables')}
+                  onClick={handleDirectPayment}
+                  disabled={!selectedPackage || (packageQuantity < 1 && orderItems.length === 0)}
                   sx={{ fontWeight: 'bold' }}
                 >
                   Thanh Toán
