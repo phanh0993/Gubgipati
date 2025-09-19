@@ -221,10 +221,20 @@ export const invoicesAPI = {
       const limit = params.limit ?? 20;
       const offset = params.offset ?? 0;
       return new Promise((resolve, reject) => {
-        supabase
+        let query = supabase
           .from('invoices')
           .select('*', { count: 'exact' })
-          .order('invoice_date', { ascending: false })
+          .order('invoice_date', { ascending: false });
+        
+        // Add date filtering if provided
+        if (params.start_date) {
+          query = query.gte('invoice_date', params.start_date);
+        }
+        if (params.end_date) {
+          query = query.lte('invoice_date', params.end_date);
+        }
+        
+        query
           .range(offset, offset + limit - 1)
           .then((res: any) => {
             if (res.error) {
