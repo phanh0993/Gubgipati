@@ -301,11 +301,13 @@ const RestaurantPOSPage: React.FC = () => {
         setSnackbar({ open: true, message: 'Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.', severity: 'success' });
         
         // 2. Cập nhật order status thành 'served'
-        const { orderAPI } = await import('../services/api');
-        await orderAPI.updateOrder(currentOrder.id, {
-          ...currentOrder,
-          status: 'served'
-        });
+        if (currentOrder.id) {
+          const { orderAPI } = await import('../services/api');
+          await orderAPI.updateOrder(currentOrder.id, {
+            ...currentOrder,
+            status: 'served'
+          });
+        }
 
         // 3. Reset
         setCurrentOrder(null);
