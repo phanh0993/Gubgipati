@@ -14,7 +14,7 @@ import Layout from './components/Layout';
 // Pages
 import LoginPage from './pages/LoginPage';
 import SetupPage from './pages/SetupPage';
-import DashboardPage from './pages/SimpleDashboard';
+import DashboardPage from './pages/NewDashboard';
 import CustomersPage from './pages/CustomersPage';
 import EmployeesPage from './pages/EmployeesPage';
 import AppointmentsPage from './pages/AppointmentsPage';

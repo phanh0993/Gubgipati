@@ -364,6 +364,107 @@ export const dashboardAPI = {
     }
     return api.get('/dashboard', { params: { date } });
   },
+
+  // Get revenue by date range
+  getRevenueByDateRange: (startDate: string, endDate: string): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          const invoicesRes = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('payment_status', 'paid')
+            .gte('invoice_date', startDate)
+            .lte('invoice_date', endDate)
+            .order('invoice_date', { ascending: true });
+
+          if (invoicesRes.error) {
+            reject(invoicesRes.error);
+            return;
+          }
+
+          const invoices = invoicesRes.data || [];
+          const totalRevenue = invoices.reduce((sum: number, inv: any) => sum + Number(inv.total_amount || 0), 0);
+
+          const data = {
+            invoices,
+            totalRevenue,
+            count: invoices.length
+          };
+
+          const axiosLike = { data, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+          resolve(axiosLike);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+    return api.get('/dashboard/revenue', { params: { start_date: startDate, end_date: endDate } });
+  },
+
+  // Get top foods by date range
+  getTopFoods: (startDate: string, endDate: string): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          // Get orders in date range
+          const ordersRes = await supabase
+            .from('orders')
+            .select(`
+              *,
+              order_items (
+                food_item_id,
+                quantity,
+                total_price,
+                food_items (
+                  name
+                )
+              )
+            `)
+            .gte('created_at', startDate)
+            .lte('created_at', endDate);
+
+          if (ordersRes.error) {
+            reject(ordersRes.error);
+            return;
+          }
+
+          const orders = ordersRes.data || [];
+          const foodCounts: { [key: string]: { quantity: number; revenue: number } } = {};
+
+          // Count food items
+          orders.forEach((order: any) => {
+            if (order.order_items && Array.isArray(order.order_items)) {
+              order.order_items.forEach((item: any) => {
+                const foodName = item.food_items?.name || 'Unknown Food';
+                if (!foodCounts[foodName]) {
+                  foodCounts[foodName] = { quantity: 0, revenue: 0 };
+                }
+                foodCounts[foodName].quantity += Number(item.quantity || 0);
+                foodCounts[foodName].revenue += Number(item.total_price || 0);
+              });
+            }
+          });
+
+          // Convert to array and sort
+          const topFoods = Object.entries(foodCounts)
+            .map(([name, data]) => ({
+              name,
+              quantity: data.quantity,
+              revenue: data.revenue
+            }))
+            .sort((a, b) => b.quantity - a.quantity)
+            .slice(0, 10);
+
+          const axiosLike = { data: topFoods, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+          resolve(axiosLike);
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+    return api.get('/dashboard/top-foods', { params: { start_date: startDate, end_date: endDate } });
+  },
     
   getRevenueChart: (days?: number): Promise<AxiosResponse<{ chartData: RevenueChartData[] }>> =>
     api.get('/dashboard/revenue-chart', { params: { days } }),
