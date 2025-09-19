@@ -8,6 +8,7 @@ import 'dayjs/locale/vi';
 
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import MobileProtectedRoute from './components/MobileProtectedRoute';
 import Layout from './components/Layout';
 
 // Pages
@@ -108,41 +109,41 @@ function App() {
               <Route 
                 path="/mobile-tables" 
                 element={
-                  <ProtectedRoute>
+                  <MobileProtectedRoute>
                     <MobileTablesPage />
-                  </ProtectedRoute>
+                  </MobileProtectedRoute>
                 } 
               />
               <Route 
                 path="/mobile-menu" 
                 element={
-                  <ProtectedRoute>
+                  <MobileProtectedRoute>
                     <MobileMenuPage />
-                  </ProtectedRoute>
+                  </MobileProtectedRoute>
                 } 
               />
         <Route
           path="/mobile-bill"
           element={
-            <ProtectedRoute>
+            <MobileProtectedRoute>
               <MobileBillPage />
-            </ProtectedRoute>
+            </MobileProtectedRoute>
           }
         />
         <Route
           path="/mobile-invoices"
           element={
-            <ProtectedRoute>
+            <MobileProtectedRoute>
               <MobileInvoicesPage />
-            </ProtectedRoute>
+            </MobileProtectedRoute>
           }
         />
         <Route
           path="/mobile-order-details/:orderId"
           element={
-            <ProtectedRoute>
+            <MobileProtectedRoute>
               <MobileOrderDetailsPage />
-            </ProtectedRoute>
+            </MobileProtectedRoute>
           }
         />
               

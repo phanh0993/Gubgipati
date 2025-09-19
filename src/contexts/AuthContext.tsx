@@ -77,11 +77,25 @@ const initialState: AuthState = {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Load user on app start
+  // Load user on start
   useEffect(() => {
     const loadUser = async () => {
       const token = localStorage.getItem('spa_token');
       const savedUser = localStorage.getItem('spa_user');
+      const mobileEmployee = localStorage.getItem('pos_employee');
+
+      // Check for mobile employee first
+      if (mobileEmployee) {
+        try {
+          const employee = JSON.parse(mobileEmployee);
+          dispatch({ type: 'LOGIN_SUCCESS', payload: { user: employee, token: `mobile-token-${employee.id}` } });
+          console.log('✅ Restored mobile employee session');
+          return;
+        } catch (error) {
+          console.error('Error parsing mobile employee:', error);
+          localStorage.removeItem('pos_employee');
+        }
+      }
 
       if (token && savedUser) {
         try {
@@ -129,6 +143,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('spa_user');
       localStorage.removeItem('spa_token_expiry');
       localStorage.removeItem('spa_remember');
+      localStorage.removeItem('pos_employee');
     };
 
     loadUser();
