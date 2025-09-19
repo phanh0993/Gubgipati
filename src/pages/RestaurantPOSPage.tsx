@@ -75,6 +75,8 @@ interface Order {
   total_amount: number;
   status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'served' | 'cancelled';
   notes: string;
+  customer_id?: number;
+  employee_id?: number;
 }
 
 const RestaurantPOSPage: React.FC = () => {
