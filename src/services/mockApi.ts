@@ -71,6 +71,7 @@ export const mockAPI = {
     const user = mockUsers.find(u => u.username === credentials.username);
 
     if (!user) {
+      console.log('User not found:', credentials.username);
       throw new Error('Invalid credentials');
     }
 
@@ -79,12 +80,23 @@ export const mockAPI = {
     const isMobileLogin = credentials.password === '' || credentials.password === undefined;
     const isCorrectPassword = user.password === credentials.password;
     
+    console.log('Login attempt:', {
+      username: credentials.username,
+      password: credentials.password,
+      isMobileLogin,
+      isCorrectPassword,
+      userPassword: user.password
+    });
+    
     // Allow login if:
     // 1. Mobile login (empty password) - always allow
     // 2. Desktop login with correct password
     if (!isMobileLogin && !isCorrectPassword) {
+      console.log('Login failed: incorrect password');
       throw new Error('Invalid credentials');
     }
+    
+    console.log('Login successful for user:', user.username);
 
     // Remove password from response
     const { password, ...userWithoutPassword } = user;
