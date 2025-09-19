@@ -42,14 +42,47 @@ export const mockAPI = {
         is_active: true,
         created_at: '2024-01-01T00:00:00Z',
         updated_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 4,
+        username: 'ly',
+        password: '',
+        email: 'ly@gubgipati.com',
+        full_name: 'Lý Nhân Viên',
+        role: 'staff',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
+      },
+      {
+        id: 5,
+        username: 'nhanvien1',
+        password: '',
+        email: 'nhanvien1@gubgipati.com',
+        full_name: 'Nhân Viên 1',
+        role: 'staff',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z'
       }
     ];
 
-    const user = mockUsers.find(u => 
-      u.username === credentials.username && u.password === credentials.password
-    );
+    // Find user by username only (password can be empty for mobile)
+    const user = mockUsers.find(u => u.username === credentials.username);
 
     if (!user) {
+      throw new Error('Invalid credentials');
+    }
+
+    // For mobile login, allow empty password or any password
+    // For desktop login, still require correct password
+    const isMobileLogin = credentials.password === '' || credentials.password === undefined;
+    const isCorrectPassword = user.password === credentials.password;
+    
+    // Allow login if:
+    // 1. Mobile login (empty password) - always allow
+    // 2. Desktop login with correct password
+    if (!isMobileLogin && !isCorrectPassword) {
       throw new Error('Invalid credentials');
     }
 
