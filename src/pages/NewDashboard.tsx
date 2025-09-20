@@ -141,11 +141,12 @@ const NewDashboard: React.FC = () => {
   const getDateRange = () => {
     const now = dayjs().tz('Asia/Ho_Chi_Minh');
     let startDate: Dayjs;
-    let endDate: Dayjs = now;
+    let endDate: Dayjs;
 
     switch (timeRange) {
       case 'today':
         startDate = now.startOf('day');
+        endDate = now.endOf('day'); // Sửa: endOf('day') thay vì now
         break;
       case 'yesterday':
         startDate = now.subtract(1, 'day').startOf('day');
@@ -153,16 +154,19 @@ const NewDashboard: React.FC = () => {
         break;
       case 'week':
         startDate = now.startOf('week');
+        endDate = now.endOf('week'); // Sửa: endOf('week') thay vì now
         break;
       case 'month':
         startDate = now.startOf('month');
+        endDate = now.endOf('month'); // Sửa: endOf('month') thay vì now
         break;
       case 'custom':
         startDate = customStartDate || now.startOf('day');
-        endDate = customEndDate || now;
+        endDate = customEndDate || now.endOf('day'); // Sửa: endOf('day') thay vì now
         break;
       default:
         startDate = now.startOf('day');
+        endDate = now.endOf('day'); // Sửa: endOf('day') thay vì now
     }
 
     return {
@@ -180,6 +184,14 @@ const NewDashboard: React.FC = () => {
       
       const { start, end, startISO, endISO } = getDateRange();
       console.log('📊 Loading dashboard data for:', { start, end, timeRange });
+      console.log('📅 Date range details:', { 
+        start, 
+        end, 
+        startISO, 
+        endISO,
+        startTime: new Date(startISO).toLocaleString('vi-VN'),
+        endTime: new Date(endISO).toLocaleString('vi-VN')
+      });
 
       // Load all data in parallel
       const [
