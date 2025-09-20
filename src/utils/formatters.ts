@@ -2,10 +2,17 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 
 dayjs.extend(relativeTime);
 dayjs.extend(customParseFormat);
+dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.locale('vi');
+
+// Set default timezone to Vietnam (+7 UTC)
+const VIETNAM_TIMEZONE = 'Asia/Ho_Chi_Minh';
 
 // Currency formatter
 export const formatCurrency = (amount: number): string => {
@@ -25,21 +32,53 @@ export const formatNumber = (num: number): string => {
   return new Intl.NumberFormat('vi-VN').format(num);
 };
 
-// Date formatters
+// Date formatters with Vietnam timezone
 export const formatDate = (date: string | Date, format = 'DD/MM/YYYY'): string => {
-  return dayjs(date).format(format);
+  return dayjs(date).tz(VIETNAM_TIMEZONE).format(format);
 };
 
 export const formatDateTime = (date: string | Date, format = 'DD/MM/YYYY HH:mm'): string => {
-  return dayjs(date).format(format);
+  return dayjs(date).tz(VIETNAM_TIMEZONE).format(format);
 };
 
 export const formatTime = (time: string): string => {
-  return dayjs(time, 'HH:mm:ss').format('HH:mm');
+  return dayjs(time, 'HH:mm:ss').tz(VIETNAM_TIMEZONE).format('HH:mm');
 };
 
 export const formatRelativeTime = (date: string | Date): string => {
-  return dayjs(date).fromNow();
+  return dayjs(date).tz(VIETNAM_TIMEZONE).fromNow();
+};
+
+// Vietnam timezone utilities
+export const getVietnamTime = (): string => {
+  return dayjs().tz(VIETNAM_TIMEZONE).toISOString();
+};
+
+export const getVietnamNow = () => {
+  return dayjs().tz(VIETNAM_TIMEZONE);
+};
+
+export const formatVietnamDateTime = (date: string | Date, format = 'DD/MM/YYYY HH:mm:ss'): string => {
+  return dayjs(date).tz(VIETNAM_TIMEZONE).format(format);
+};
+
+export const getTimeElapsed = (startTime: string): string => {
+  const start = dayjs(startTime).tz(VIETNAM_TIMEZONE);
+  const now = dayjs().tz(VIETNAM_TIMEZONE);
+  
+  const diffMinutes = now.diff(start, 'minute');
+  
+  if (diffMinutes < 0) {
+    return 'Vừa tạo';
+  }
+  
+  if (diffMinutes < 60) {
+    return `${diffMinutes} phút`;
+  } else {
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    return `${hours}h ${minutes}p`;
+  }
 };
 
 // Phone formatter

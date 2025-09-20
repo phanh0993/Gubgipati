@@ -33,6 +33,7 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { getTimeElapsed, formatVietnamDateTime } from '../utils/formatters';
 
 interface Table {
   id: number;
@@ -151,47 +152,7 @@ const BuffetTableSelection: React.FC = () => {
     );
   };
 
-  const getTimeElapsed = (startTime: string) => {
-    // Sử dụng buffet_start_time thay vì created_at để tính thời gian
-    const start = new Date(startTime);
-    const now = new Date();
-    
-    // Điều chỉnh timezone về GMT+7 (Việt Nam)
-    const vietnamOffset = 7 * 60; // +7 giờ = 420 phút
-    const startVietnam = new Date(start.getTime() + (start.getTimezoneOffset() + vietnamOffset) * 60000);
-    const nowVietnam = new Date(now.getTime() + (now.getTimezoneOffset() + vietnamOffset) * 60000);
-    
-    // Tính toán chênh lệch thời gian chính xác
-    const diffMs = nowVietnam.getTime() - startVietnam.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
-    // Nếu thời gian âm, sử dụng thời gian hiện tại
-    if (diffMinutes < 0) {
-      return 'Vừa tạo';
-    }
-    
-    if (diffMinutes < 60) {
-      return `${diffMinutes} phút`;
-    } else {
-      const hours = Math.floor(diffMinutes / 60);
-      const minutes = diffMinutes % 60;
-      return `${hours}h ${minutes}p`;
-    }
-  };
-
-  const formatDateTime = (dateTime: string) => {
-    // Sửa lỗi timezone - hiển thị đúng giờ địa phương
-    const date = new Date(dateTime);
-    return date.toLocaleString('vi-VN', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
+  // getTimeElapsed and formatDateTime are now imported from formatters
 
   // Function gộp món trùng nhau
   const mergeDuplicateItems = (items: any[]) => {

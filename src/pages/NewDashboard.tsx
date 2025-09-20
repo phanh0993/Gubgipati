@@ -129,10 +129,17 @@ const NewDashboard: React.FC = () => {
 
   useEffect(() => {
     loadDashboardData();
+    
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(() => {
+      loadDashboardData();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [timeRange, customStartDate, customEndDate]);
 
   const getDateRange = () => {
-    const now = dayjs();
+    const now = dayjs().tz('Asia/Ho_Chi_Minh');
     let startDate: Dayjs;
     let endDate: Dayjs = now;
 
