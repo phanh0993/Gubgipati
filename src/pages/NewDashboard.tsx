@@ -209,32 +209,43 @@ const NewDashboard: React.FC = () => {
       
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-      // 1. Lấy tất cả invoices trong khoảng thời gian
+      // 1. Lấy tất cả invoices trong khoảng thời gian - SỬA: Sử dụng date string thay vì ISO
       console.log('🔍 Fetching invoices directly from Supabase...');
-      const { data: invoices, error: invoicesError } = await supabase
+      const { data: allInvoices, error: allInvoicesError } = await supabase
         .from('invoices')
         .select('id, invoice_number, created_at, invoice_date, payment_status, total_amount, subtotal, tax_amount')
-        .gte('created_at', startISO)
-        .lte('created_at', endISO)
         .order('created_at', { ascending: false });
 
-      if (invoicesError) {
-        throw new Error(`Error fetching invoices: ${invoicesError.message}`);
+      if (allInvoicesError) {
+        throw new Error(`Error fetching all invoices: ${allInvoicesError.message}`);
       }
+
+      // Filter invoices by date range manually to avoid timezone issues
+      const invoices = allInvoices?.filter((inv: any) => {
+        const invDate = dayjs(inv.created_at).tz('Asia/Ho_Chi_Minh');
+        const invDateStr = invDate.format('YYYY-MM-DD');
+        return invDateStr >= start && invDateStr <= end;
+      }) || [];
 
       console.log('📋 Raw invoices data:', invoices?.length || 0, 'invoices');
       console.log('📋 Sample invoice:', invoices?.[0]);
 
-      // 2. Lấy tất cả orders để hiển thị số lượng
-      const { data: orders, error: ordersError } = await supabase
+      // 2. Lấy tất cả orders để hiển thị số lượng - SỬA: Sử dụng date string thay vì ISO
+      const { data: allOrders, error: allOrdersError } = await supabase
         .from('orders')
-        .select('id, status, created_at')
-        .gte('created_at', startISO)
-        .lte('created_at', endISO);
+        .select('id, status, created_at, total_amount')
+        .order('created_at', { ascending: false });
 
-      if (ordersError) {
-        console.warn('Warning: Could not fetch orders:', ordersError.message);
+      if (allOrdersError) {
+        console.warn('Warning: Could not fetch orders:', allOrdersError.message);
       }
+
+      // Filter orders by date range manually to avoid timezone issues
+      const orders = allOrders?.filter((order: any) => {
+        const orderDate = dayjs(order.created_at).tz('Asia/Ho_Chi_Minh');
+        const orderDateStr = orderDate.format('YYYY-MM-DD');
+        return orderDateStr >= start && orderDateStr <= end;
+      }) || [];
 
       // 3. Lấy thống kê tổng quan
       const { data: statsData, error: statsError } = await supabase
@@ -305,11 +316,12 @@ const NewDashboard: React.FC = () => {
       
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-      // Lấy invoices với invoice_items trong khoảng thời gian
-      const { data: invoices, error: invoicesError } = await supabase
+      // Lấy tất cả invoices với invoice_items - SỬA: Sử dụng date string thay vì ISO
+      const { data: allInvoices, error: allInvoicesError } = await supabase
         .from('invoices')
         .select(`
           id,
+          created_at,
           payment_status,
           total_amount,
           invoice_items (
@@ -320,13 +332,22 @@ const NewDashboard: React.FC = () => {
           )
         `)
         .eq('payment_status', 'paid')
-        .gte('created_at', startISO)
-        .lte('created_at', endISO);
+        .order('created_at', { ascending: false });
 
-      if (invoicesError) {
-        console.error('Error fetching invoices for top foods:', invoicesError);
+      if (allInvoicesError) {
+        console.error('Error fetching invoices for top foods:', allInvoicesError);
         return [];
       }
+
+      // Filter invoices by date range manually to avoid timezone issues
+      const startDate = dayjs(startISO).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD');
+      const endDate = dayjs(endISO).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD');
+      
+      const invoices = allInvoices?.filter((inv: any) => {
+        const invDate = dayjs(inv.created_at).tz('Asia/Ho_Chi_Minh');
+        const invDateStr = invDate.format('YYYY-MM-DD');
+        return invDateStr >= startDate && invDateStr <= endDate;
+      }) || [];
 
       const foodCounts: { [key: string]: { quantity: number; revenue: number } } = {};
       
@@ -381,18 +402,27 @@ const NewDashboard: React.FC = () => {
       
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-      // Lấy invoices trong khoảng thời gian
-      const { data: invoices, error: invoicesError } = await supabase
+      // Lấy tất cả invoices - SỬA: Sử dụng date string thay vì ISO
+      const { data: allInvoices, error: allInvoicesError } = await supabase
         .from('invoices')
         .select('id, created_at, total_amount, payment_status')
         .eq('payment_status', 'paid')
-        .gte('created_at', startISO)
-        .lte('created_at', endISO);
+        .order('created_at', { ascending: false });
 
-      if (invoicesError) {
-        console.error('Error fetching invoices for hourly data:', invoicesError);
+      if (allInvoicesError) {
+        console.error('Error fetching invoices for hourly data:', allInvoicesError);
         return;
       }
+
+      // Filter invoices by date range manually to avoid timezone issues
+      const startDate = dayjs(startISO).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD');
+      const endDate = dayjs(endISO).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD');
+      
+      const invoices = allInvoices?.filter((inv: any) => {
+        const invDate = dayjs(inv.created_at).tz('Asia/Ho_Chi_Minh');
+        const invDateStr = invDate.format('YYYY-MM-DD');
+        return invDateStr >= startDate && invDateStr <= endDate;
+      }) || [];
 
       const hourlyStats: { [key: string]: { customers: number; revenue: number; orders: number } } = {};
       
@@ -462,21 +492,27 @@ const NewDashboard: React.FC = () => {
             const dayStart = dayjs(day).startOf('day').toISOString();
             const dayEnd = dayjs(day).endOf('day').toISOString();
             
-            const { data: invoices, error: invoicesError } = await supabase
+            const { data: allInvoices, error: allInvoicesError } = await supabase
               .from('invoices')
-              .select('id, total_amount, payment_status')
+              .select('id, created_at, total_amount, payment_status')
               .eq('payment_status', 'paid')
-              .gte('created_at', dayStart)
-              .lte('created_at', dayEnd);
+              .order('created_at', { ascending: false });
             
-            if (invoicesError) {
-              console.error(`Error fetching invoices for ${day}:`, invoicesError);
+            if (allInvoicesError) {
+              console.error(`Error fetching invoices for ${day}:`, allInvoicesError);
               return {
                 date: dayjs(day).format('DD/MM'),
                 revenue: 0,
                 invoices: 0
               };
             }
+
+            // Filter invoices by date manually to avoid timezone issues
+            const invoices = allInvoices?.filter((inv: any) => {
+              const invDate = dayjs(inv.created_at).tz('Asia/Ho_Chi_Minh');
+              const invDateStr = invDate.format('YYYY-MM-DD');
+              return invDateStr === day;
+            }) || [];
             
             const paidInvoices = invoices || [];
             const revenue = paidInvoices.reduce((sum: number, inv: any) => 
