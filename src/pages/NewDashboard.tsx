@@ -146,7 +146,7 @@ const NewDashboard: React.FC = () => {
     switch (timeRange) {
       case 'today':
         startDate = now.startOf('day');
-        endDate = now.endOf('day'); // Sửa: endOf('day') thay vì now
+        endDate = now.endOf('day');
         break;
       case 'yesterday':
         startDate = now.subtract(1, 'day').startOf('day');
@@ -154,26 +154,30 @@ const NewDashboard: React.FC = () => {
         break;
       case 'week':
         startDate = now.startOf('week');
-        endDate = now.endOf('week'); // Sửa: endOf('week') thay vì now
+        endDate = now.endOf('week');
         break;
       case 'month':
         startDate = now.startOf('month');
-        endDate = now.endOf('month'); // Sửa: endOf('month') thay vì now
+        endDate = now.endOf('month');
         break;
       case 'custom':
         startDate = customStartDate || now.startOf('day');
-        endDate = customEndDate || now.endOf('day'); // Sửa: endOf('day') thay vì now
+        endDate = customEndDate || now.endOf('day');
         break;
       default:
         startDate = now.startOf('day');
-        endDate = now.endOf('day'); // Sửa: endOf('day') thay vì now
+        endDate = now.endOf('day');
     }
+
+    // SỬA: Sử dụng UTC để tránh timezone issues
+    const startUTC = startDate.utc();
+    const endUTC = endDate.utc();
 
     return {
       start: startDate.format('YYYY-MM-DD'),
       end: endDate.format('YYYY-MM-DD'),
-      startISO: startDate.toISOString(),
-      endISO: endDate.toISOString()
+      startISO: startUTC.toISOString(),
+      endISO: endUTC.toISOString()
     };
   };
 
@@ -190,7 +194,8 @@ const NewDashboard: React.FC = () => {
         startISO, 
         endISO,
         startTime: new Date(startISO).toLocaleString('vi-VN'),
-        endTime: new Date(endISO).toLocaleString('vi-VN')
+        endTime: new Date(endISO).toLocaleString('vi-VN'),
+        timeRange
       });
 
       // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
