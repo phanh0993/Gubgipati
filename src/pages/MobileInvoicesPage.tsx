@@ -252,7 +252,8 @@ const MobileInvoicesPage: React.FC = () => {
                       Nhân viên: {(() => {
                         const employee = localStorage.getItem('pos_employee');
                         const employeeData = employee ? JSON.parse(employee) : null;
-                        return employeeData?.fullname || employeeData?.full_name || group.orders[0].employee_name || 'Chưa xác định';
+                        console.log('Employee data from localStorage:', employeeData);
+                        return employeeData?.full_name || employeeData?.fullname || group.orders[0].employee_name || 'Chưa xác định';
                       })()}
                     </Typography>
                   </CardContent>

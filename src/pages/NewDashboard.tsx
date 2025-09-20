@@ -204,10 +204,16 @@ const NewDashboard: React.FC = () => {
 
       // Process invoices data - DASHBOARD CHỈ DỰA VÀO BẢNG INVOICES
       const invoices = invoicesRes.data.invoices || [];
+      console.log('📋 Raw invoices data:', invoices.length, 'invoices');
+      console.log('📋 Sample invoice:', invoices[0]);
+      
       const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
+      console.log('💰 Paid invoices:', paidInvoices.length);
+      
       const totalRevenue = paidInvoices.reduce((sum: number, inv: any) => 
         sum + Number(inv.total_amount || 0), 0
       );
+      console.log('💰 Total revenue:', totalRevenue);
 
       // Process orders data - CHỈ ĐỂ HIỂN THỊ SỐ LƯỢNG ĐƠN HÀNG
       const orders = ordersRes.data || [];
