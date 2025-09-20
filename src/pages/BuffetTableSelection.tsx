@@ -341,10 +341,7 @@ const BuffetTableSelection: React.FC = () => {
       setPaymentLoading(true);
       const { orderAPI, invoicesAPI } = await import('../services/api');
       
-      // 1. Cập nhật order status thành paid
-      await orderAPI.updateOrder(selectedOrder.id, { status: 'paid' });
-      
-      // 2. Tạo invoice để ghi nhận doanh thu
+      // 1. Tạo invoice trước để ghi nhận doanh thu
       const invoiceData = {
         customer_id: orderDetails.customer_id || undefined,
         employee_id: orderDetails.employee_id || 14,
@@ -361,14 +358,21 @@ const BuffetTableSelection: React.FC = () => {
         notes: `Buffet Order: ${orderDetails.order_number} - Table: ${orderDetails.table_name} (${orderDetails.area})`
       };
       
-      await invoicesAPI.create(invoiceData);
+      const invoiceResponse = await invoicesAPI.create(invoiceData);
       
-      // 3. Tự động in bill sau khi thanh toán
-      await handlePrintBill();
-      
-      alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
-      setShowOrderDialog(false);
-      fetchData(); // Reload all data
+      if (invoiceResponse.status === 200) {
+        // 2. Cập nhật order status thành paid sau khi tạo invoice thành công
+        await orderAPI.updateOrder(selectedOrder.id, { status: 'paid' });
+        
+        // 3. Tự động in bill sau khi thanh toán
+        await handlePrintBill();
+        
+        alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
+        setShowOrderDialog(false);
+        fetchData(); // Reload all data
+      } else {
+        alert('Lỗi khi tạo hóa đơn doanh thu');
+      }
     } catch (error) {
       console.error('Error processing payment:', error);
       alert('Lỗi khi thanh toán');
