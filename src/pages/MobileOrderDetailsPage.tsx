@@ -428,7 +428,7 @@ const MobileOrderDetailsPage: React.FC = () => {
                   {(() => {
                     const employee = localStorage.getItem('pos_employee');
                     const employeeData = employee ? JSON.parse(employee) : null;
-                    return employeeData?.fullname || order.employee_name || 'Chưa xác định';
+                    return employeeData?.fullname || employeeData?.full_name || order.employee_name || 'Chưa xác định';
                   })()}
                 </Typography>
               </Grid>

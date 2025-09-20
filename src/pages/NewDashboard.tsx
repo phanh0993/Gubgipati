@@ -202,18 +202,18 @@ const NewDashboard: React.FC = () => {
         loadTopFoods(startISO, endISO)
       ]);
 
-      // Process invoices data
+      // Process invoices data - DASHBOARD CHỈ DỰA VÀO BẢNG INVOICES
       const invoices = invoicesRes.data.invoices || [];
       const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
       const totalRevenue = paidInvoices.reduce((sum: number, inv: any) => 
         sum + Number(inv.total_amount || 0), 0
       );
 
-      // Process orders data
+      // Process orders data - CHỈ ĐỂ HIỂN THỊ SỐ LƯỢNG ĐƠN HÀNG
       const orders = ordersRes.data || [];
       const paidOrders = orders.filter((order: any) => order.status === 'paid');
       const totalOrders = orders.length;
-      const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+      const averageOrderValue = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
 
       // Process dashboard overview
       const dashboardData = dashboardRes.data;
@@ -221,16 +221,16 @@ const NewDashboard: React.FC = () => {
       const totalEmployees = Number(dashboardData.stats?.total_employees || 0);
       const totalFoodItems = Number(dashboardData.stats?.total_food_items || 0);
 
-      // Update stats
+      // Update stats - DASHBOARD DỰA VÀO INVOICES
       setStats({
-        totalRevenue,
-        totalInvoices: invoices.length,
-        totalOrders,
+        totalRevenue, // Từ invoices
+        totalInvoices: invoices.length, // Tổng số invoices
+        totalOrders, // Tổng số orders (chỉ để hiển thị)
         totalCustomers,
         totalEmployees,
         totalFoodItems,
-        averageOrderValue,
-        paidInvoices: paidInvoices.length
+        averageOrderValue, // Tính từ invoices
+        paidInvoices: paidInvoices.length // Số invoices đã thanh toán
       });
 
       // Load hourly data
@@ -251,25 +251,28 @@ const NewDashboard: React.FC = () => {
 
   const loadTopFoods = async (startISO: string, endISO: string): Promise<TopFoodItem[]> => {
     try {
-      // Get all orders in date range
-      const ordersRes = await orderAPI.getOrders({
-        start_date: startISO,
-        end_date: endISO
+      // Get all invoices in date range - DASHBOARD DỰA VÀO INVOICES
+      const invoicesRes = await invoicesAPI.getAll({
+        limit: 1000,
+        offset: 0,
+        start_date: startISO.split('T')[0],
+        end_date: endISO.split('T')[0]
       });
       
-      const orders = ordersRes.data || [];
+      const invoices = invoicesRes.data.invoices || [];
+      const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
       const foodCounts: { [key: string]: { quantity: number; revenue: number } } = {};
       
-      // Count food items from all orders
-      orders.forEach((order: any) => {
-        if (order.items && Array.isArray(order.items)) {
-          order.items.forEach((item: any) => {
-            const foodName = item.name || 'Unknown Food';
+      // Count food items from all paid invoices
+      paidInvoices.forEach((invoice: any) => {
+        if (invoice.items && Array.isArray(invoice.items)) {
+          invoice.items.forEach((item: any) => {
+            const foodName = item.service_name || item.name || 'Unknown Food';
             if (!foodCounts[foodName]) {
               foodCounts[foodName] = { quantity: 0, revenue: 0 };
             }
             foodCounts[foodName].quantity += Number(item.quantity || 0);
-            foodCounts[foodName].revenue += Number(item.total || 0);
+            foodCounts[foodName].revenue += Number(item.total_price || item.unit_price * item.quantity || 0);
           });
         }
       });

@@ -504,7 +504,7 @@ const MobileBillPage: React.FC = () => {
               NV: {(() => {
                 const employee = localStorage.getItem('pos_employee');
                 const employeeData = employee ? JSON.parse(employee) : null;
-                return employeeData?.fullname || 'Unknown';
+                return employeeData?.fullname || employeeData?.full_name || 'Unknown';
               })()}
             </Typography>
           </Box>

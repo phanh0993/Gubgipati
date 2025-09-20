@@ -252,7 +252,7 @@ const MobileInvoicesPage: React.FC = () => {
                       Nhân viên: {(() => {
                         const employee = localStorage.getItem('pos_employee');
                         const employeeData = employee ? JSON.parse(employee) : null;
-                        return employeeData?.fullname || group.orders[0].employee_name || 'Chưa xác định';
+                        return employeeData?.fullname || employeeData?.full_name || group.orders[0].employee_name || 'Chưa xác định';
                       })()}
                     </Typography>
                   </CardContent>
