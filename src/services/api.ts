@@ -226,12 +226,12 @@ export const invoicesAPI = {
           .select('*', { count: 'exact' })
           .order('invoice_date', { ascending: false });
         
-        // Add date filtering if provided
+        // Add date filtering if provided - SỬA: filter theo created_at thay vì invoice_date
         if (params.start_date) {
-          query = query.gte('invoice_date', params.start_date);
+          query = query.gte('created_at', params.start_date);
         }
         if (params.end_date) {
-          query = query.lte('invoice_date', params.end_date);
+          query = query.lte('created_at', params.end_date);
         }
         
         query
@@ -385,9 +385,9 @@ export const dashboardAPI = {
             .from('invoices')
             .select('*')
             .eq('payment_status', 'paid')
-            .gte('invoice_date', startDate)
-            .lte('invoice_date', endDate)
-            .order('invoice_date', { ascending: true });
+            .gte('created_at', startDate)
+            .lte('created_at', endDate)
+            .order('created_at', { ascending: true });
 
           if (invoicesRes.error) {
             reject(invoicesRes.error);
@@ -418,36 +418,35 @@ export const dashboardAPI = {
     if (USE_SUPABASE) {
       return new Promise(async (resolve, reject) => {
         try {
-          // Get orders in date range
-          const ordersRes = await supabase
-            .from('orders')
+          // Get invoices in date range - SỬA: đọc từ invoices thay vì orders
+          const invoicesRes = await supabase
+            .from('invoices')
             .select(`
               *,
-              order_items (
-                food_item_id,
+              invoice_items (
+                service_id,
                 quantity,
-                total_price,
-                food_items (
-                  name
-                )
+                unit_price,
+                total_price
               )
             `)
+            .eq('payment_status', 'paid')
             .gte('created_at', startDate)
             .lte('created_at', endDate);
 
-          if (ordersRes.error) {
-            reject(ordersRes.error);
+          if (invoicesRes.error) {
+            reject(invoicesRes.error);
             return;
           }
 
-          const orders = ordersRes.data || [];
+          const invoices = invoicesRes.data || [];
           const foodCounts: { [key: string]: { quantity: number; revenue: number } } = {};
 
-          // Count food items
-          orders.forEach((order: any) => {
-            if (order.order_items && Array.isArray(order.order_items)) {
-              order.order_items.forEach((item: any) => {
-                const foodName = item.food_items?.name || 'Unknown Food';
+          // Count food items from invoices
+          invoices.forEach((invoice: any) => {
+            if (invoice.invoice_items && Array.isArray(invoice.invoice_items)) {
+              invoice.invoice_items.forEach((item: any) => {
+                const foodName = `Service ${item.service_id}` || 'Unknown Food';
                 if (!foodCounts[foodName]) {
                   foodCounts[foodName] = { quantity: 0, revenue: 0 };
                 }
