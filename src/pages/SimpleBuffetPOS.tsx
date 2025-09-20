@@ -248,7 +248,7 @@ const SimpleBuffetPOS: React.FC = () => {
     const packageTotal = (selectedPackage?.price || 0) * packageQuantity;
     const itemsTotal = orderItems.reduce((sum, item) => sum + (item.food_item.price * (item.quantity || 1)), 0);
     const subtotal = packageTotal + itemsTotal;
-    const tax_amount = subtotal * 0.1;
+    const tax_amount = 0; // Bỏ thuế
     const total_amount = subtotal + tax_amount;
     return total_amount;
   };

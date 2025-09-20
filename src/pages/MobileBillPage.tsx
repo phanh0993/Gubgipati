@@ -496,9 +496,18 @@ const MobileBillPage: React.FC = () => {
           <IconButton color="inherit" onClick={handleBack}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h6" sx={{ flexGrow: 1, textAlign: 'center' }}>
-            BÀN {selectedTable.area}{selectedTable.table_number}
-          </Typography>
+          <Box sx={{ flexGrow: 1, textAlign: 'center' }}>
+            <Typography variant="h6">
+              BÀN {selectedTable.area}{selectedTable.table_number}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.8 }}>
+              NV: {(() => {
+                const employee = localStorage.getItem('pos_employee');
+                const employeeData = employee ? JSON.parse(employee) : null;
+                return employeeData?.fullname || 'Unknown';
+              })()}
+            </Typography>
+          </Box>
         </Toolbar>
       </AppBar>
 

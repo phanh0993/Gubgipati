@@ -192,7 +192,7 @@ const RestaurantPOSPage: React.FC = () => {
     if (!currentOrder) return;
 
     const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const tax_amount = subtotal * 0.1; // 10% VAT
+    const tax_amount = 0; // Bỏ thuế
     const total_amount = subtotal + tax_amount;
 
     setCurrentOrder({

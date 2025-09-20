@@ -264,10 +264,14 @@ const MobileOrderDetailsPage: React.FC = () => {
     try {
       setPaymentLoading(true);
       
+      // Lấy thông tin nhân viên từ localStorage
+      const employee = localStorage.getItem('pos_employee');
+      const employeeData = employee ? JSON.parse(employee) : null;
+      
       // 1. Tạo invoice trước để ghi nhận doanh thu
       const invoiceData = {
         customer_id: order.customer_id || undefined,
-        employee_id: order.employee_id || 14,
+        employee_id: employeeData?.id || order.employee_id || 14,
         items: [
           {
             service_id: 1, // Dummy service ID for orders
@@ -278,7 +282,7 @@ const MobileOrderDetailsPage: React.FC = () => {
         discount_amount: 0,
         tax_amount: 0, // Bỏ thuế
         payment_method: 'cash',
-        notes: `Order: ${order.order_number || order.id}`
+        notes: `Order: ${order.order_number || order.id} - NV: ${employeeData?.fullname || 'Unknown'}`
       };
       
       const { invoicesAPI } = await import('../services/api');
@@ -421,7 +425,11 @@ const MobileOrderDetailsPage: React.FC = () => {
                   Nhân viên
                 </Typography>
                 <Typography variant="h6">
-                  {order.employee_name || 'Chưa xác định'}
+                  {(() => {
+                    const employee = localStorage.getItem('pos_employee');
+                    const employeeData = employee ? JSON.parse(employee) : null;
+                    return employeeData?.fullname || order.employee_name || 'Chưa xác định';
+                  })()}
                 </Typography>
               </Grid>
             </Grid>

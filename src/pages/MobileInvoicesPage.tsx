@@ -273,11 +273,13 @@ const MobileInvoicesPage: React.FC = () => {
                       />
                     </Box>
                     
-                    {group.orders[0].employee_name && (
-                      <Typography variant="caption" color="text.secondary">
-                        Nhân viên: {group.orders[0].employee_name}
-                      </Typography>
-                    )}
+                    <Typography variant="caption" color="text.secondary">
+                      Nhân viên: {(() => {
+                        const employee = localStorage.getItem('pos_employee');
+                        const employeeData = employee ? JSON.parse(employee) : null;
+                        return employeeData?.fullname || group.orders[0].employee_name || 'Chưa xác định';
+                      })()}
+                    </Typography>
                   </CardContent>
                 </Card>
               );
