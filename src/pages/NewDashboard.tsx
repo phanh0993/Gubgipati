@@ -193,33 +193,60 @@ const NewDashboard: React.FC = () => {
         endTime: new Date(endISO).toLocaleString('vi-VN')
       });
 
-      // Load all data in parallel
-      const [
-        invoicesRes,
-        ordersRes,
-        dashboardRes,
-        topFoodsRes
-      ] = await Promise.all([
-        invoicesAPI.getAll({ 
-          limit: 1000, 
-          offset: 0,
-          start_date: start,
-          end_date: end
-        }),
-        orderAPI.getOrders({ 
-          start_date: start,
-          end_date: end
-        }),
-        dashboardAPI.getOverview(),
-        loadTopFoods(startISO, endISO)
-      ]);
-
-      // Process invoices data - DASHBOARD CHỈ DỰA VÀO BẢNG INVOICES
-      const invoices = invoicesRes.data.invoices || [];
-      console.log('📋 Raw invoices data:', invoices.length, 'invoices');
-      console.log('📋 Sample invoice:', invoices[0]);
+      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
       
-      const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
+      if (!supabaseUrl || !supabaseAnonKey) {
+        throw new Error('Missing Supabase configuration');
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // 1. Lấy tất cả invoices trong khoảng thời gian
+      console.log('🔍 Fetching invoices directly from Supabase...');
+      const { data: invoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('id, invoice_number, created_at, invoice_date, payment_status, total_amount, subtotal, tax_amount')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO)
+        .order('created_at', { ascending: false });
+
+      if (invoicesError) {
+        throw new Error(`Error fetching invoices: ${invoicesError.message}`);
+      }
+
+      console.log('📋 Raw invoices data:', invoices?.length || 0, 'invoices');
+      console.log('📋 Sample invoice:', invoices?.[0]);
+
+      // 2. Lấy tất cả orders để hiển thị số lượng
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, status, created_at')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      if (ordersError) {
+        console.warn('Warning: Could not fetch orders:', ordersError.message);
+      }
+
+      // 3. Lấy thống kê tổng quan
+      const { data: statsData, error: statsError } = await supabase
+        .from('customers')
+        .select('id', { count: 'exact', head: true });
+
+      const { data: employeesData, error: employeesError } = await supabase
+        .from('employees')
+        .select('id', { count: 'exact', head: true });
+
+      const { data: foodItemsData, error: foodItemsError } = await supabase
+        .from('food_items')
+        .select('id', { count: 'exact', head: true });
+
+      // 4. Xử lý dữ liệu invoices
+      const allInvoices = invoices || [];
+      const paidInvoices = allInvoices.filter((inv: any) => inv.payment_status === 'paid');
       console.log('💰 Paid invoices:', paidInvoices.length);
       
       const totalRevenue = paidInvoices.reduce((sum: number, inv: any) => 
@@ -227,26 +254,19 @@ const NewDashboard: React.FC = () => {
       );
       console.log('💰 Total revenue:', totalRevenue);
 
-      // Process orders data - CHỈ ĐỂ HIỂN THỊ SỐ LƯỢNG ĐƠN HÀNG
-      const orders = ordersRes.data || [];
-      const paidOrders = orders.filter((order: any) => order.status === 'paid');
-      const totalOrders = orders.length;
+      // 5. Xử lý dữ liệu orders
+      const allOrders = orders || [];
+      const totalOrders = allOrders.length;
       const averageOrderValue = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
 
-      // Process dashboard overview
-      const dashboardData = dashboardRes.data;
-      const totalCustomers = Number(dashboardData.stats?.total_customers || 0);
-      const totalEmployees = Number(dashboardData.stats?.total_employees || 0);
-      const totalFoodItems = Number(dashboardData.stats?.total_food_items || 0);
-
-      // Update stats - DASHBOARD DỰA VÀO INVOICES
+      // 6. Cập nhật stats
       setStats({
         totalRevenue, // Từ invoices
-        totalInvoices: invoices.length, // Tổng số invoices
-        totalOrders, // Tổng số orders (chỉ để hiển thị)
-        totalCustomers,
-        totalEmployees,
-        totalFoodItems,
+        totalInvoices: allInvoices.length, // Tổng số invoices
+        totalOrders, // Tổng số orders
+        totalCustomers: statsData?.length || 0,
+        totalEmployees: employeesData?.length || 0,
+        totalFoodItems: foodItemsData?.length || 0,
         averageOrderValue, // Tính từ invoices
         paidInvoices: paidInvoices.length // Số invoices đã thanh toán
       });
@@ -269,28 +289,52 @@ const NewDashboard: React.FC = () => {
 
   const loadTopFoods = async (startISO: string, endISO: string): Promise<TopFoodItem[]> => {
     try {
-      // Get all invoices in date range - DASHBOARD DỰA VÀO INVOICES
-      const invoicesRes = await invoicesAPI.getAll({
-        limit: 1000,
-        offset: 0,
-        start_date: startISO.split('T')[0],
-        end_date: endISO.split('T')[0]
-      });
+      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
       
-      const invoices = invoicesRes.data.invoices || [];
-      const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return [];
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // Lấy invoices với invoice_items trong khoảng thời gian
+      const { data: invoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select(`
+          id,
+          payment_status,
+          total_amount,
+          invoice_items (
+            service_id,
+            quantity,
+            unit_price,
+            total_price
+          )
+        `)
+        .eq('payment_status', 'paid')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      if (invoicesError) {
+        console.error('Error fetching invoices for top foods:', invoicesError);
+        return [];
+      }
+
       const foodCounts: { [key: string]: { quantity: number; revenue: number } } = {};
       
       // Count food items from all paid invoices
-      paidInvoices.forEach((invoice: any) => {
-        if (invoice.items && Array.isArray(invoice.items)) {
-          invoice.items.forEach((item: any) => {
-            const foodName = item.service_name || item.name || 'Unknown Food';
+      invoices?.forEach((invoice: any) => {
+        if (invoice.invoice_items && Array.isArray(invoice.invoice_items)) {
+          invoice.invoice_items.forEach((item: any) => {
+            const foodName = `Service ${item.service_id}` || 'Unknown Food';
             if (!foodCounts[foodName]) {
               foodCounts[foodName] = { quantity: 0, revenue: 0 };
             }
             foodCounts[foodName].quantity += Number(item.quantity || 0);
-            foodCounts[foodName].revenue += Number(item.total_price || item.unit_price * item.quantity || 0);
+            foodCounts[foodName].revenue += Number(item.total_price || 0);
           });
         }
       });
@@ -321,13 +365,30 @@ const NewDashboard: React.FC = () => {
 
   const loadHourlyData = async (startISO: string, endISO: string) => {
     try {
-      // Get orders grouped by hour
-      const ordersRes = await orderAPI.getOrders({
-        start_date: startISO,
-        end_date: endISO
-      });
+      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
       
-      const orders = ordersRes.data || [];
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return;
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+      // Lấy invoices trong khoảng thời gian
+      const { data: invoices, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('id, created_at, total_amount, payment_status')
+        .eq('payment_status', 'paid')
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      if (invoicesError) {
+        console.error('Error fetching invoices for hourly data:', invoicesError);
+        return;
+      }
+
       const hourlyStats: { [key: string]: { customers: number; revenue: number; orders: number } } = {};
       
       // Initialize all hours from 8:00 to 22:00
@@ -335,16 +396,16 @@ const NewDashboard: React.FC = () => {
         hourlyStats[`${hour}:00`] = { customers: 0, revenue: 0, orders: 0 };
       }
       
-      // Process orders
-      orders.forEach((order: any) => {
-        const orderDate = new Date(order.created_at || order.buffet_start_time);
-        const hour = orderDate.getHours();
+      // Process invoices
+      invoices?.forEach((invoice: any) => {
+        const invoiceDate = new Date(invoice.created_at);
+        const hour = invoiceDate.getHours();
         const hourKey = `${hour}:00`;
         
         if (hourlyStats[hourKey]) {
           hourlyStats[hourKey].orders += 1;
-          hourlyStats[hourKey].revenue += Number(order.total_amount || 0);
-          // Estimate customers (assuming 1 customer per order for simplicity)
+          hourlyStats[hourKey].revenue += Number(invoice.total_amount || 0);
+          // Estimate customers (assuming 1 customer per invoice for simplicity)
           hourlyStats[hourKey].customers += 1;
         }
       });
@@ -367,6 +428,17 @@ const NewDashboard: React.FC = () => {
 
   const loadDailyRevenueData = async (start: string, end: string) => {
     try {
+      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        return;
+      }
+      
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
       // Generate daily data for the selected range
       const startDate = dayjs(start);
       const endDate = dayjs(end);
@@ -378,22 +450,30 @@ const NewDashboard: React.FC = () => {
         current = current.add(1, 'day');
       }
       
-      // For each day, get revenue
+      // For each day, get revenue directly from Supabase
       const dailyData = await Promise.all(
         days.map(async (day) => {
           try {
             const dayStart = dayjs(day).startOf('day').toISOString();
             const dayEnd = dayjs(day).endOf('day').toISOString();
             
-            const invoicesRes = await invoicesAPI.getAll({
-              limit: 1000,
-              offset: 0,
-              start_date: day,
-              end_date: day
-            });
+            const { data: invoices, error: invoicesError } = await supabase
+              .from('invoices')
+              .select('id, total_amount, payment_status')
+              .eq('payment_status', 'paid')
+              .gte('created_at', dayStart)
+              .lte('created_at', dayEnd);
             
-            const invoices = invoicesRes.data.invoices || [];
-            const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
+            if (invoicesError) {
+              console.error(`Error fetching invoices for ${day}:`, invoicesError);
+              return {
+                date: dayjs(day).format('DD/MM'),
+                revenue: 0,
+                invoices: 0
+              };
+            }
+            
+            const paidInvoices = invoices || [];
             const revenue = paidInvoices.reduce((sum: number, inv: any) => 
               sum + Number(inv.total_amount || 0), 0
             );
