@@ -299,8 +299,8 @@ const MobileTablesPage: React.FC = () => {
                 </Typography>
                 <Box sx={{ 
                   display: 'grid', 
-                  gridTemplateColumns: 'repeat(3, 1fr)', 
-                  gap: 1,
+                  gridTemplateColumns: 'repeat(2, 1fr)', 
+                  gap: '10px 8px',
                   height: 'calc(100% - 40px)',
                   overflow: 'auto'
                 }}>
