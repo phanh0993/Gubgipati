@@ -270,8 +270,7 @@ const NewDashboard: React.FC = () => {
       console.log('💰 Total revenue:', totalRevenue);
 
       // 5. Xử lý dữ liệu orders
-      const allOrders = orders || [];
-      const totalOrders = allOrders.length;
+      const totalOrders = orders.length;
       const averageOrderValue = paidInvoices.length > 0 ? totalRevenue / paidInvoices.length : 0;
 
       // 6. Cập nhật stats
