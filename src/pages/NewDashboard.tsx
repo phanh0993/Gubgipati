@@ -261,8 +261,7 @@ const NewDashboard: React.FC = () => {
         .select('id', { count: 'exact', head: true });
 
       // 4. Xử lý dữ liệu invoices
-      const allInvoices = invoices || [];
-      const paidInvoices = allInvoices.filter((inv: any) => inv.payment_status === 'paid');
+      const paidInvoices = invoices.filter((inv: any) => inv.payment_status === 'paid');
       console.log('💰 Paid invoices:', paidInvoices.length);
       
       const totalRevenue = paidInvoices.reduce((sum: number, inv: any) => 
