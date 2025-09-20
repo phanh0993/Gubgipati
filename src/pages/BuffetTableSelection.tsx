@@ -33,7 +33,7 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { getTimeElapsed, formatVietnamDateTime } from '../utils/formatters';
+import { getTimeElapsed, formatVietnamDateTime, formatDateTime } from '../utils/formatters';
 
 interface Table {
   id: number;
