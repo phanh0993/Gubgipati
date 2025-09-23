@@ -115,7 +115,43 @@ export const servicesAPI = {
 // Customers API
 export const customersAPI = {
   getAll: (params: CustomerFilters): Promise<AxiosResponse<{ customers: Customer[]; total: number; limit: number; offset: number }>> =>
-    api.get('/customers', { params }),
+    {
+      if (USE_SUPABASE) {
+        const limit = (params as any)?.limit ?? 100;
+        const offset = (params as any)?.offset ?? 0;
+        const search = (params as any)?.search || '';
+        return new Promise((resolve, reject) => {
+          let query = supabase
+            .from('customers')
+            .select('*', { count: 'exact' })
+            .order('id', { ascending: false });
+
+          if (search) {
+            query = query.ilike('name', `%${search}%`);
+          }
+
+          query
+            .range(offset, offset + limit - 1)
+            .then((res: any) => {
+              if (res.error) { reject(res.error); return; }
+              const axiosLike = {
+                data: {
+                  customers: (res.data || []) as any,
+                  total: res.count || 0,
+                  limit,
+                  offset,
+                },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config: {} as any,
+              } as AxiosResponse<{ customers: Customer[]; total: number; limit: number; offset: number }>;
+              resolve(axiosLike);
+            }, reject);
+        });
+      }
+      return api.get('/customers', { params });
+    },
     
   getById: (id: number): Promise<AxiosResponse<{ customer: Customer; history: any[] }>> =>
     api.get(`/customers/${id}`),
@@ -139,7 +175,24 @@ export const customersAPI = {
 // Employees API
 export const employeesAPI = {
   getAll: (params?: { active?: boolean; position?: string }): Promise<AxiosResponse<{ employees: Employee[] }>> =>
-    api.get('/employees', { params }),
+    {
+      if (USE_SUPABASE) {
+        return new Promise((resolve, reject) => {
+          let query = supabase
+            .from('employees')
+            .select('*')
+            .order('id', { ascending: true });
+          if (params?.active !== undefined) query = (query as any).eq('is_active', params.active);
+          if (params?.position) query = (query as any).ilike('position', `%${params.position}%`);
+          query.then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: { employees: res.data || [] }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<{ employees: Employee[] }>;
+            resolve(axiosLike);
+          }, reject);
+        });
+      }
+      return api.get('/employees', { params });
+    },
     
   getById: (id: number): Promise<AxiosResponse<{ employee: Employee; stats: any }>> =>
     api.get(`/employees/${id}`),
@@ -260,46 +313,34 @@ export const invoicesAPI = {
     return api.get('/invoices', { params });
   },
     
-  getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> => {
-    if (USE_SUPABASE) {
-      return new Promise(async (resolve, reject) => {
-        try {
-          const invoiceRes = await supabase
+  getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> =>
+    {
+      if (USE_SUPABASE) {
+        return new Promise((resolve, reject) => {
+          supabase
             .from('invoices')
-            .select('*')
+            .select(`
+              *,
+              invoice_items (* )
+            `)
             .eq('id', id)
-            .single();
-
-          if (invoiceRes.error || !invoiceRes.data) {
-            reject(invoiceRes.error || new Error('Invoice not found'));
-            return;
-          }
-
-          const itemsRes = await supabase
-            .from('invoice_items')
-            .select('*')
-            .eq('invoice_id', id);
-
-          if (itemsRes.error) {
-            reject(itemsRes.error);
-            return;
-          }
-
-          const axiosLike = {
-            data: { invoice: invoiceRes.data as Invoice, items: itemsRes.data || [] },
-            status: 200,
-            statusText: 'OK',
-            headers: {},
-            config: {} as any,
-          } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
-          resolve(axiosLike);
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }
-    return api.get(`/invoices/${id}`);
-  },
+            .single()
+            .then((res: any) => {
+              if (res.error) { reject(res.error); return; }
+              const data = res.data || {};
+              const axiosLike = {
+                data: { invoice: data as any, items: (data.invoice_items || []) as any[] },
+                status: 200,
+                statusText: 'OK',
+                headers: {},
+                config: {} as any,
+              } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
+              resolve(axiosLike);
+            }, reject);
+        });
+      }
+      return api.get(`/invoices/${id}`);
+    },
     
   create: (data: CreateInvoiceRequest): Promise<AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>> => {
     if (USE_SUPABASE) {

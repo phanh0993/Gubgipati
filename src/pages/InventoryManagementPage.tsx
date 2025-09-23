@@ -34,7 +34,6 @@ import {
   TrendingDown as TrendingDownIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
-// Revert: remove direct Supabase calls from this page to avoid affecting global API behavior
 
 interface Ingredient {
   id: number;
@@ -110,8 +109,6 @@ const InventoryManagementPage: React.FC = () => {
       console.error('Error fetching transactions:', error);
     }
   };
-
-  // Reverted: order items aggregation will be re-implemented later without affecting global API
 
   const handleOpenDialog = (ingredient?: Ingredient) => {
     if (ingredient) {
@@ -248,7 +245,6 @@ const InventoryManagementPage: React.FC = () => {
         </Alert>
       )}
 
-      {/* Reverted temporary order items summary section */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
           <Tab label="Danh Sách Nguyên Liệu" />
