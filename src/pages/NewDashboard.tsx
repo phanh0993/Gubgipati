@@ -667,7 +667,7 @@ const NewDashboard: React.FC = () => {
           <Grid item xs={12} sm={6} md={3}>
             <StatCard
               title="Tổng hóa đơn"
-              value={stats.totalInvoices}
+              value={stats.paidInvoices}
               icon={<Receipt />}
               color="#2196f3"
               subtitle={`${stats.paidInvoices} đã thanh toán`}
