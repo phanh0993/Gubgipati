@@ -34,8 +34,7 @@ import {
   TrendingDown as TrendingDownIcon,
   Warning as WarningIcon
 } from '@mui/icons-material';
-import dayjs from 'dayjs';
-import { createClient } from '@supabase/supabase-js';
+// Revert: remove direct Supabase calls from this page to avoid affecting global API behavior
 
 interface Ingredient {
   id: number;
@@ -83,16 +82,10 @@ const InventoryManagementPage: React.FC = () => {
     notes: ''
   });
 
-  // New: Order items aggregation state
-  const [orderItemsAgg, setOrderItemsAgg] = useState<Array<{ food_item_id: number; name: string; quantity: number }>>([]);
-  const [startDate, setStartDate] = useState<string>(dayjs().startOf('month').format('YYYY-MM-DD'));
-  const [endDate, setEndDate] = useState<string>(dayjs().endOf('month').format('YYYY-MM-DD'));
-
   useEffect(() => {
     fetchIngredients();
     fetchTransactions();
-    fetchOrderItemsSummary();
-  }, [startDate, endDate]);
+  }, []);
 
   const fetchIngredients = async () => {
     try {
@@ -118,43 +111,7 @@ const InventoryManagementPage: React.FC = () => {
     }
   };
 
-  // New: fetch order_items summary by date range (default current month)
-  const fetchOrderItemsSummary = async () => {
-    try {
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL as string;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY as string;
-      if (!supabaseUrl || !supabaseAnonKey) return;
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-      // Read orders in date range to get ids
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('id, created_at')
-        .gte('created_at', dayjs(startDate).startOf('day').toISOString())
-        .lte('created_at', dayjs(endDate).endOf('day').toISOString());
-
-      if (ordersError) return;
-      const orderIds = (orders || []).map(o => o.id);
-      if (orderIds.length === 0) { setOrderItemsAgg([]); return; }
-
-      // Fetch order_items for those orders with join food_items
-      const { data: items, error: itemsError } = await supabase
-        .from('order_items')
-        .select('food_item_id, quantity, food_items(name)')
-        .in('order_id', orderIds);
-      if (itemsError) return;
-
-      const map: Record<number, { food_item_id: number; name: string; quantity: number }> = {};
-      (items || []).forEach((it: any) => {
-        const id = it.food_item_id;
-        if (!map[id]) map[id] = { food_item_id: id, name: it.food_items?.name || `ID ${id}`, quantity: 0 };
-        map[id].quantity += Number(it.quantity || 0);
-      });
-      setOrderItemsAgg(Object.values(map).sort((a, b) => b.quantity - a.quantity));
-    } catch (e) {
-      console.error('Error loading order items summary:', e);
-    }
-  };
+  // Reverted: order items aggregation will be re-implemented later without affecting global API
 
   const handleOpenDialog = (ingredient?: Ingredient) => {
     if (ingredient) {
@@ -291,53 +248,7 @@ const InventoryManagementPage: React.FC = () => {
         </Alert>
       )}
 
-      <Paper sx={{ mb: 3, p: 2 }}>
-        {/* Date range filter for order items aggregation */}
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6">Tổng hợp món đã order</Typography>
-          <TextField
-            type="date"
-            label="Từ ngày"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-        <TextField
-            type="date"
-            label="Đến ngày"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <Chip label={`Khoảng: ${startDate} → ${endDate}`} />
-        </Box>
-
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Món</TableCell>
-                <TableCell align="right">Số lượng đã order</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {orderItemsAgg.map(row => (
-                <TableRow key={row.food_item_id}>
-                  <TableCell>{row.name}</TableCell>
-                  <TableCell align="right">{row.quantity}</TableCell>
-                </TableRow>
-              ))}
-              {orderItemsAgg.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={2} align="center">
-                    <Typography variant="body2" color="text.secondary">Không có dữ liệu trong khoảng đã chọn</Typography>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+      {/* Reverted temporary order items summary section */}
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
           <Tab label="Danh Sách Nguyên Liệu" />
