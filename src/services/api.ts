@@ -517,7 +517,8 @@ export const invoicesAPI = {
             console.log('📦 [INVOICE CREATE] Creating invoice_items from provided items:', items.length);
             const insertItems = items.map((it: any) => ({
               invoice_id: inv.id,
-              service_id: it.service_id || it.food_item_id || it.id,
+              service_id: null, // Set to null since we don't have services for food items
+              employee_id: payload.employee_id,
               quantity: Number(it.quantity || 0),
               unit_price: Number(it.unit_price || it.price || 0)
               // total_price is generated column, don't include it
@@ -559,13 +560,30 @@ export const invoicesAPI = {
                 }
               }
               
-              // Parse notes dạng "Order: 55"/"Buffet Order: 55"
+              // Parse notes dạng "Order: 55"/"Buffet Order: 55" hoặc "BUF-xxx"
               if (!fallbackOrderId && payload.notes) {
                 console.log('🔍 [INVOICE CREATE] Strategy 3 - Parsing notes:', payload.notes);
-                const match = String(payload.notes).match(/order\s*[:#-]?\s*(\d+)/i);
+                // Thử parse order_id trực tiếp
+                let match = String(payload.notes).match(/order\s*[:#-]?\s*(\d+)/i);
                 if (match) {
                   fallbackOrderId = Number(match[1]);
                   console.log('✅ [INVOICE CREATE] Found order_id from notes:', fallbackOrderId);
+                } else {
+                  // Thử parse order_number từ notes (BUF-xxx)
+                  match = String(payload.notes).match(/BUF-(\d+)/i);
+                  if (match) {
+                    const orderNumber = `BUF-${match[1]}`;
+                    console.log('🔍 [INVOICE CREATE] Found order_number in notes:', orderNumber);
+                    const byNumber = await supabase
+                      .from('orders')
+                      .select('id')
+                      .eq('order_number', orderNumber)
+                      .maybeSingle();
+                    if (byNumber.data?.id) {
+                      fallbackOrderId = byNumber.data.id;
+                      console.log('✅ [INVOICE CREATE] Found order_id from order_number:', fallbackOrderId);
+                    }
+                  }
                 }
               }
 
@@ -582,7 +600,8 @@ export const invoicesAPI = {
                   console.log('✅ [INVOICE CREATE] Found order_items:', orderItems.length);
                   const fromOrder = orderItems.map((it: any) => ({
                     invoice_id: inv.id,
-                    service_id: it.food_item_id,
+                    service_id: null, // Set to null since we don't have services for food items
+                    employee_id: payload.employee_id,
                     quantity: Number(it.quantity || 0),
                     unit_price: Number(it.unit_price || 0)
                     // total_price is generated column, don't include it
@@ -633,7 +652,8 @@ export const invoicesAPI = {
                     console.log('✅ [INVOICE CREATE] Found order_items from recent order:', orderItems2.length);
                     const fromOrder2 = orderItems2.map((it: any) => ({
                       invoice_id: inv.id,
-                      service_id: it.food_item_id,
+                      service_id: null, // Set to null since we don't have services for food items
+                      employee_id: payload.employee_id,
                       quantity: Number(it.quantity || 0),
                       unit_price: Number(it.unit_price || 0)
                       // total_price is generated column, don't include it
