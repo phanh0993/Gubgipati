@@ -12,4 +12,13 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false }
 });
 
+if (process.env.NODE_ENV !== 'production') {
+  const mask = (key: string) => (key ? `${key.slice(0, 6)}...${key.slice(-6)}` : 'undefined');
+  // Log rút gọn để xác nhận ENV đã nạp đúng khi dev
+  console.log('Supabase ENV:', {
+    url: SUPABASE_URL || 'undefined',
+    anonKey: mask(SUPABASE_ANON_KEY)
+  });
+}
+
 

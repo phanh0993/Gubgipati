@@ -313,34 +313,73 @@ export const invoicesAPI = {
     return api.get('/invoices', { params });
   },
     
-  getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> =>
-    {
-      if (USE_SUPABASE) {
-        return new Promise((resolve, reject) => {
-          supabase
-            .from('invoices')
-            .select(`
-              *,
-              invoice_items (* )
-            `)
-            .eq('id', id)
-            .single()
-            .then((res: any) => {
-              if (res.error) { reject(res.error); return; }
-              const data = res.data || {};
-              const axiosLike = {
-                data: { invoice: data as any, items: (data.invoice_items || []) as any[] },
-                status: 200,
-                statusText: 'OK',
-                headers: {},
-                config: {} as any,
-              } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
-              resolve(axiosLike);
-            }, reject);
-        });
-      }
-      return api.get(`/invoices/${id}`);
-    },
+  getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('invoices')
+          .select(`
+            *,
+            invoice_items (
+              id,
+              service_id,
+              quantity,
+              unit_price,
+              total_price,
+              food_items (
+                name,
+                price
+              )
+            )
+          `)
+          .eq('id', id)
+          .single()
+          .then(async (res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const data = res.data || {};
+            
+            // Lấy thông tin nhân viên từ employee_id
+            let employeeName = '';
+            if (data.employee_id) {
+              try {
+                const empRes = await supabase
+                  .from('employees')
+                  .select('fullname, full_name')
+                  .eq('id', data.employee_id)
+                  .single();
+                if (empRes.data) {
+                  employeeName = empRes.data.fullname || empRes.data.full_name || '';
+                }
+              } catch (e) {
+                console.warn('Could not fetch employee name:', e);
+              }
+            }
+            
+            // Chuẩn hóa invoice items với tên món ăn
+            const normalizedItems = (data.invoice_items || []).map((item: any) => ({
+              ...item,
+              service_name: item.food_items?.name || `Service ${item.service_id}`,
+              employee_name: employeeName
+            }));
+            
+            const invoiceWithEmployee = {
+              ...data,
+              employee_name: employeeName
+            };
+            
+            const axiosLike = {
+              data: { invoice: invoiceWithEmployee as any, items: normalizedItems as any[] },
+              status: 200,
+              statusText: 'OK',
+              headers: {},
+              config: {} as any,
+            } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.get(`/invoices/${id}`);
+  },
     
   create: (data: CreateInvoiceRequest): Promise<AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>> => {
     if (USE_SUPABASE) {
