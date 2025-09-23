@@ -558,6 +558,44 @@ export const invoicesAPI = {
                   }
                 }
               }
+
+              // Thử chiến lược 2: tìm order mới nhất của nhân viên trong 15 phút gần đây
+              if (!createdItems.length && payload.employee_id) {
+                const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+                const { data: recentOrders, error: roErr } = await supabase
+                  .from('orders')
+                  .select('id, created_at, status, employee_id')
+                  .eq('employee_id', payload.employee_id)
+                  .in('status', ['paid', 'served', 'completed', 'open'])
+                  .gte('created_at', fifteenMinAgo)
+                  .order('created_at', { ascending: false })
+                  .limit(1);
+                if (!roErr && Array.isArray(recentOrders) && recentOrders[0]?.id) {
+                  const roId = recentOrders[0].id;
+                  const { data: orderItems2 } = await supabase
+                    .from('order_items')
+                    .select('food_item_id, quantity, unit_price, total_price')
+                    .eq('order_id', roId);
+                  if (Array.isArray(orderItems2) && orderItems2.length) {
+                    const fromOrder2 = orderItems2.map((it: any) => ({
+                      invoice_id: inv.id,
+                      service_id: it.food_item_id,
+                      quantity: Number(it.quantity || 0),
+                      unit_price: Number(it.unit_price || 0),
+                      total_price: Number(it.total_price || 0)
+                    }));
+                    const { data: inserted3, error: ins3Err } = await supabase
+                      .from('invoice_items')
+                      .insert(fromOrder2)
+                      .select('*');
+                    if (!ins3Err) {
+                      createdItems = inserted3 || [];
+                    } else {
+                      console.error('invoice_items recent order insert error:', ins3Err);
+                    }
+                  }
+                }
+              }
             } catch (fallbackErr) {
               console.warn('invoice_items fallback failed:', fallbackErr);
             }
