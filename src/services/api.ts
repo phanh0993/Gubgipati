@@ -1101,6 +1101,12 @@ export const orderAPI = {
               console.log('🔄 Processing items for order_items:', items);
               
               for (const item of items) {
+                const unitPrice = Number(item.price || item.unit_price || 0);
+                const quantity = Number(item.quantity || 0);
+                const totalPrice = unitPrice * quantity;
+                
+                console.log(`Processing item: food_item_id=${item.food_item_id}, quantity=${quantity}, price=${unitPrice}, total=${totalPrice}`);
+                
                 // Kiểm tra xem món đã tồn tại chưa
                 const { data: existingItem } = await supabase
                   .from('order_items')
@@ -1111,31 +1117,34 @@ export const orderAPI = {
 
                 if (existingItem) {
                   // Món đã tồn tại - thay thế số lượng (không cộng dồn)
-                  const newQuantity = item.quantity;
-                  const newTotal = existingItem.unit_price * newQuantity;
-                  
                   await supabase
                     .from('order_items')
                     .update({ 
-                      quantity: newQuantity, 
-                      total_price: newTotal 
+                      quantity: quantity, 
+                      total_price: totalPrice 
                     })
                     .eq('id', existingItem.id);
                   
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${newQuantity}`);
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${quantity}`);
                 } else {
                   // Món mới - thêm mới
-                  await supabase.from('order_items').insert({
+                  const insertResult = await supabase.from('order_items').insert({
                     order_id: orderId,
                     food_item_id: item.food_item_id,
-                    quantity: item.quantity,
-                    unit_price: item.price,
-                    total_price: item.total
+                    quantity: quantity,
+                    unit_price: unitPrice,
+                    total_price: totalPrice
                   });
                   
-                  console.log(`✅ Added new item ${item.food_item_id}: ${item.quantity}`);
+                  if (insertResult.error) {
+                    console.error(`❌ Failed to insert item ${item.food_item_id}:`, insertResult.error);
+                  } else {
+                    console.log(`✅ Added new item ${item.food_item_id}: ${quantity} x ${unitPrice} = ${totalPrice}`);
+                  }
                 }
               }
+            } else {
+              console.log('⚠️ No items to process or items is not an array');
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
@@ -1165,6 +1174,12 @@ export const orderAPI = {
               console.log('🔄 Updating items for order_items:', items);
               
               for (const item of items) {
+                const unitPrice = Number(item.price || item.unit_price || 0);
+                const quantity = Number(item.quantity || 0);
+                const totalPrice = unitPrice * quantity;
+                
+                console.log(`Updating item: food_item_id=${item.food_item_id}, quantity=${quantity}, price=${unitPrice}, total=${totalPrice}`);
+                
                 // Kiểm tra xem món đã tồn tại chưa
                 const { data: existingItem } = await supabase
                   .from('order_items')
@@ -1175,31 +1190,34 @@ export const orderAPI = {
 
                 if (existingItem) {
                   // Món đã tồn tại - thay thế số lượng (không cộng dồn)
-                  const newQuantity = item.quantity;
-                  const newTotal = existingItem.unit_price * newQuantity;
-                  
                   await supabase
                     .from('order_items')
                     .update({ 
-                      quantity: newQuantity, 
-                      total_price: newTotal 
+                      quantity: quantity, 
+                      total_price: totalPrice 
                     })
                     .eq('id', existingItem.id);
                   
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${newQuantity}`);
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${quantity}`);
                 } else {
                   // Món mới - thêm mới
-                  await supabase.from('order_items').insert({
+                  const insertResult = await supabase.from('order_items').insert({
                     order_id: id,
                     food_item_id: item.food_item_id,
-                    quantity: item.quantity,
-                    unit_price: item.price,
-                    total_price: item.total
+                    quantity: quantity,
+                    unit_price: unitPrice,
+                    total_price: totalPrice
                   });
                   
-                  console.log(`✅ Added new item ${item.food_item_id}: ${item.quantity}`);
+                  if (insertResult.error) {
+                    console.error(`❌ Failed to insert item ${item.food_item_id}:`, insertResult.error);
+                  } else {
+                    console.log(`✅ Added new item ${item.food_item_id}: ${quantity} x ${unitPrice} = ${totalPrice}`);
+                  }
                 }
               }
+            } else {
+              console.log('⚠️ No items to update or items is not an array');
             }
             const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
