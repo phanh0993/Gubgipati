@@ -514,6 +514,55 @@ export const invoicesAPI = {
             createdItems = inserted || [];
           }
 
+          // Fallback: nếu chưa có invoice_items, cố gắng copy từ order_items
+          if (!createdItems.length) {
+            try {
+              let fallbackOrderId: number | undefined = (data as any).order_id;
+              // Ưu tiên match theo order_number nếu được truyền
+              const maybeOrderNumber = (data as any).order_number;
+              if (!fallbackOrderId && maybeOrderNumber) {
+                const byNumber = await supabase
+                  .from('orders')
+                  .select('id')
+                  .eq('order_number', maybeOrderNumber)
+                  .maybeSingle();
+                if (byNumber.data?.id) fallbackOrderId = byNumber.data.id;
+              }
+              // Parse notes dạng "Order: 55"/"Buffet Order: 55"
+              if (!fallbackOrderId && payload.notes) {
+                const match = String(payload.notes).match(/order\s*[:#-]?\s*(\d+)/i);
+                if (match) fallbackOrderId = Number(match[1]);
+              }
+
+              if (fallbackOrderId) {
+                const { data: orderItems, error: oiErr } = await supabase
+                  .from('order_items')
+                  .select('food_item_id, quantity, unit_price, total_price')
+                  .eq('order_id', fallbackOrderId);
+                if (!oiErr && Array.isArray(orderItems) && orderItems.length) {
+                  const fromOrder = orderItems.map((it: any) => ({
+                    invoice_id: inv.id,
+                    service_id: it.food_item_id,
+                    quantity: Number(it.quantity || 0),
+                    unit_price: Number(it.unit_price || 0),
+                    total_price: Number(it.total_price || 0)
+                  }));
+                  const { data: inserted2, error: ins2Err } = await supabase
+                    .from('invoice_items')
+                    .insert(fromOrder)
+                    .select('*');
+                  if (!ins2Err) {
+                    createdItems = inserted2 || [];
+                  } else {
+                    console.error('invoice_items fallback insert error:', ins2Err);
+                  }
+                }
+              }
+            } catch (fallbackErr) {
+              console.warn('invoice_items fallback failed:', fallbackErr);
+            }
+          }
+
           // 3) Xác nhận
           const axiosLike = {
             data: { invoice: inv as any, items: createdItems, message: 'Invoice created' },
