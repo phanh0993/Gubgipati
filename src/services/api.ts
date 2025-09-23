@@ -329,15 +329,32 @@ export const invoicesAPI = {
             return;
           }
 
-          // Thử lấy invoice_items trước (nếu schema có liên kết invoice_id)
+          // Lấy invoice_items với thông tin đầy đủ
           let itemsData: any[] = [];
           try {
             const itemsRes = await supabase
               .from('invoice_items')
-              .select('id, service_id, quantity, unit_price, total_price')
-              .eq('invoice_id', id);
+              .select(`
+                id, 
+                service_id, 
+                quantity, 
+                unit_price, 
+                total_price
+              `)
+              .eq('invoice_id', id)
+              .order('unit_price', { ascending: false }); // Sắp xếp theo giá giảm dần
+              
             if (!itemsRes.error && Array.isArray(itemsRes.data)) {
-              itemsData = itemsRes.data;
+              // Phân biệt vé vs món ăn dựa trên giá
+              // Vé thường có giá cao (199k, 169k, 229k), món ăn có giá thấp (0-50k)
+              itemsData = itemsRes.data.map((item: any) => {
+                const isTicket = item.unit_price >= 100000; // Vé từ 100k trở lên
+                return {
+                  ...item,
+                  service_name: isTicket ? `VÉ ${item.unit_price.toLocaleString()}K` : 'Món ăn',
+                  service_type: isTicket ? 'buffet_ticket' : 'food_item'
+                };
+              });
             }
           } catch (e) {
             console.warn('invoice_items by invoice_id not available:', e);
@@ -588,7 +605,16 @@ export const invoicesAPI = {
               }
 
               if (fallbackOrderId) {
-                console.log('📋 [INVOICE CREATE] Fetching order_items for order_id:', fallbackOrderId);
+                console.log('📋 [INVOICE CREATE] Fetching order and order_items for order_id:', fallbackOrderId);
+                
+                // Lấy thông tin order để có buffet_package_id
+                const { data: orderInfo, error: orderErr } = await supabase
+                  .from('orders')
+                  .select('buffet_package_id, buffet_quantity')
+                  .eq('id', fallbackOrderId)
+                  .single();
+                
+                // Lấy order_items
                 const { data: orderItems, error: oiErr } = await supabase
                   .from('order_items')
                   .select('food_item_id, quantity, unit_price, total_price')
@@ -596,31 +622,61 @@ export const invoicesAPI = {
                 
                 if (oiErr) {
                   console.error('❌ [INVOICE CREATE] Error fetching order_items:', oiErr);
-                } else if (Array.isArray(orderItems) && orderItems.length) {
-                  console.log('✅ [INVOICE CREATE] Found order_items:', orderItems.length);
-                  const fromOrder = orderItems.map((it: any) => ({
-                    invoice_id: inv.id,
-                    service_id: null, // Set to null since we don't have services for food items
-                    employee_id: payload.employee_id,
-                    quantity: Number(it.quantity || 0),
-                    unit_price: Number(it.unit_price || 0)
-                    // total_price is generated column, don't include it
-                  }));
-                  
-                  console.log('💾 [INVOICE CREATE] Inserting invoice_items:', fromOrder);
-                  const { data: inserted2, error: ins2Err } = await supabase
-                    .from('invoice_items')
-                    .insert(fromOrder)
-                    .select('*');
-                  
-                  if (!ins2Err) {
-                    createdItems = inserted2 || [];
-                    console.log('✅ [INVOICE CREATE] Successfully created invoice_items from order_items:', createdItems.length);
-                  } else {
-                    console.error('❌ [INVOICE CREATE] invoice_items fallback insert error:', ins2Err);
-                  }
                 } else {
-                  console.log('⚠️ [INVOICE CREATE] No order_items found for order_id:', fallbackOrderId);
+                  let itemsToInsert: any[] = [];
+                  
+                  // 1. Thêm vé buffet nếu có (lưu như món ăn đặc biệt với service_id = null)
+                  if (orderInfo?.buffet_package_id) {
+                    console.log('🎫 [INVOICE CREATE] Adding buffet package:', orderInfo.buffet_package_id);
+                    const { data: buffetPackage, error: buffetErr } = await supabase
+                      .from('buffet_packages')
+                      .select('id, name, price')
+                      .eq('id', orderInfo.buffet_package_id)
+                      .single();
+                    
+                    if (!buffetErr && buffetPackage) {
+                      itemsToInsert.push({
+                        invoice_id: inv.id,
+                        service_id: null, // Vé buffet lưu với service_id = null
+                        employee_id: payload.employee_id,
+                        quantity: Number(orderInfo.buffet_quantity || 1),
+                        unit_price: Number(buffetPackage.price || 0)
+                        // Thêm custom field để phân biệt vé vs món ăn (nếu cần)
+                      });
+                      console.log('✅ [INVOICE CREATE] Added buffet ticket:', buffetPackage.name, buffetPackage.price);
+                    }
+                  }
+                  
+                  // 2. Thêm các món ăn từ order_items
+                  if (Array.isArray(orderItems) && orderItems.length) {
+                    console.log('🍽️ [INVOICE CREATE] Adding food items:', orderItems.length);
+                    const foodItems = orderItems.map((it: any) => ({
+                      invoice_id: inv.id,
+                      service_id: null, // Món ăn không có service_id
+                      employee_id: payload.employee_id,
+                      quantity: Number(it.quantity || 0),
+                      unit_price: Number(it.unit_price || 0)
+                    }));
+                    itemsToInsert.push(...foodItems);
+                  }
+                  
+                  // 3. Insert tất cả items
+                  if (itemsToInsert.length > 0) {
+                    console.log('💾 [INVOICE CREATE] Inserting invoice_items:', itemsToInsert.length, 'items');
+                    const { data: inserted2, error: ins2Err } = await supabase
+                      .from('invoice_items')
+                      .insert(itemsToInsert)
+                      .select('*');
+                    
+                    if (!ins2Err) {
+                      createdItems = inserted2 || [];
+                      console.log('✅ [INVOICE CREATE] Successfully created invoice_items:', createdItems.length);
+                    } else {
+                      console.error('❌ [INVOICE CREATE] invoice_items insert error:', ins2Err);
+                    }
+                  } else {
+                    console.log('⚠️ [INVOICE CREATE] No items to insert for order_id:', fallbackOrderId);
+                  }
                 }
               }
 
