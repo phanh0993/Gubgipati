@@ -467,6 +467,14 @@ export const invoicesAPI = {
     if (USE_SUPABASE) {
       return new Promise(async (resolve, reject) => {
         try {
+          console.log('🔍 [INVOICE CREATE] Starting invoice creation with data:', {
+            items: data.items,
+            order_id: (data as any).order_id,
+            order_number: (data as any).order_number,
+            employee_id: (data as any).employee_id,
+            notes: (data as any).notes
+          });
+
           const items = Array.isArray(data.items) ? data.items : [];
           const subtotal = items.reduce((sum: number, it: any) => sum + Number(it.unit_price || it.price || 0) * Number(it.quantity || 0), 0);
           const discount = Number((data as any).discount_amount || 0);
@@ -487,17 +495,26 @@ export const invoicesAPI = {
             notes: (data as any).notes || null,
           };
 
+          console.log('📝 [INVOICE CREATE] Invoice payload:', payload);
+
           // 1) Tạo invoice
           const { data: inv, error: invErr } = await supabase
             .from('invoices')
             .insert(payload)
             .select('*')
             .single();
-          if (invErr) { reject(invErr); return; }
+          if (invErr) { 
+            console.error('❌ [INVOICE CREATE] Invoice creation failed:', invErr);
+            reject(invErr); 
+            return; 
+          }
+
+          console.log('✅ [INVOICE CREATE] Invoice created with ID:', inv.id);
 
           // 2) Tạo invoice_items nếu có items
           let createdItems: any[] = [];
           if (items.length > 0) {
+            console.log('📦 [INVOICE CREATE] Creating invoice_items from provided items:', items.length);
             const insertItems = items.map((it: any) => ({
               invoice_id: inv.id,
               service_id: it.service_id || it.food_item_id || it.id,
@@ -510,36 +527,59 @@ export const invoicesAPI = {
               .from('invoice_items')
               .insert(insertItems)
               .select('*');
-            if (itemsErr) { console.error('invoice_items insert error:', itemsErr); }
+            if (itemsErr) { 
+              console.error('❌ [INVOICE CREATE] invoice_items insert error:', itemsErr); 
+            } else {
+              console.log('✅ [INVOICE CREATE] invoice_items created:', inserted?.length || 0);
+            }
             createdItems = inserted || [];
+          } else {
+            console.log('⚠️ [INVOICE CREATE] No items provided, will try fallback strategies');
           }
 
           // Fallback: nếu chưa có invoice_items, cố gắng copy từ order_items
           if (!createdItems.length) {
+            console.log('🔄 [INVOICE CREATE] Starting fallback strategies to find order_items...');
             try {
               let fallbackOrderId: number | undefined = (data as any).order_id;
+              console.log('🔍 [INVOICE CREATE] Strategy 1 - Direct order_id:', fallbackOrderId);
+              
               // Ưu tiên match theo order_number nếu được truyền
               const maybeOrderNumber = (data as any).order_number;
               if (!fallbackOrderId && maybeOrderNumber) {
+                console.log('🔍 [INVOICE CREATE] Strategy 2 - Looking up by order_number:', maybeOrderNumber);
                 const byNumber = await supabase
                   .from('orders')
                   .select('id')
                   .eq('order_number', maybeOrderNumber)
                   .maybeSingle();
-                if (byNumber.data?.id) fallbackOrderId = byNumber.data.id;
+                if (byNumber.data?.id) {
+                  fallbackOrderId = byNumber.data.id;
+                  console.log('✅ [INVOICE CREATE] Found order by order_number:', fallbackOrderId);
+                }
               }
+              
               // Parse notes dạng "Order: 55"/"Buffet Order: 55"
               if (!fallbackOrderId && payload.notes) {
+                console.log('🔍 [INVOICE CREATE] Strategy 3 - Parsing notes:', payload.notes);
                 const match = String(payload.notes).match(/order\s*[:#-]?\s*(\d+)/i);
-                if (match) fallbackOrderId = Number(match[1]);
+                if (match) {
+                  fallbackOrderId = Number(match[1]);
+                  console.log('✅ [INVOICE CREATE] Found order_id from notes:', fallbackOrderId);
+                }
               }
 
               if (fallbackOrderId) {
+                console.log('📋 [INVOICE CREATE] Fetching order_items for order_id:', fallbackOrderId);
                 const { data: orderItems, error: oiErr } = await supabase
                   .from('order_items')
                   .select('food_item_id, quantity, unit_price, total_price')
                   .eq('order_id', fallbackOrderId);
-                if (!oiErr && Array.isArray(orderItems) && orderItems.length) {
+                
+                if (oiErr) {
+                  console.error('❌ [INVOICE CREATE] Error fetching order_items:', oiErr);
+                } else if (Array.isArray(orderItems) && orderItems.length) {
+                  console.log('✅ [INVOICE CREATE] Found order_items:', orderItems.length);
                   const fromOrder = orderItems.map((it: any) => ({
                     invoice_id: inv.id,
                     service_id: it.food_item_id,
@@ -547,20 +587,27 @@ export const invoicesAPI = {
                     unit_price: Number(it.unit_price || 0),
                     total_price: Number(it.total_price || 0)
                   }));
+                  
+                  console.log('💾 [INVOICE CREATE] Inserting invoice_items:', fromOrder);
                   const { data: inserted2, error: ins2Err } = await supabase
                     .from('invoice_items')
                     .insert(fromOrder)
                     .select('*');
+                  
                   if (!ins2Err) {
                     createdItems = inserted2 || [];
+                    console.log('✅ [INVOICE CREATE] Successfully created invoice_items from order_items:', createdItems.length);
                   } else {
-                    console.error('invoice_items fallback insert error:', ins2Err);
+                    console.error('❌ [INVOICE CREATE] invoice_items fallback insert error:', ins2Err);
                   }
+                } else {
+                  console.log('⚠️ [INVOICE CREATE] No order_items found for order_id:', fallbackOrderId);
                 }
               }
 
-              // Thử chiến lược 2: tìm order mới nhất của nhân viên trong 15 phút gần đây
+              // Thử chiến lược 4: tìm order mới nhất của nhân viên trong 15 phút gần đây
               if (!createdItems.length && payload.employee_id) {
+                console.log('🔍 [INVOICE CREATE] Strategy 4 - Looking for recent orders by employee_id:', payload.employee_id);
                 const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
                 const { data: recentOrders, error: roErr } = await supabase
                   .from('orders')
@@ -570,13 +617,20 @@ export const invoicesAPI = {
                   .gte('created_at', fifteenMinAgo)
                   .order('created_at', { ascending: false })
                   .limit(1);
-                if (!roErr && Array.isArray(recentOrders) && recentOrders[0]?.id) {
+                
+                if (roErr) {
+                  console.error('❌ [INVOICE CREATE] Error fetching recent orders:', roErr);
+                } else if (Array.isArray(recentOrders) && recentOrders[0]?.id) {
                   const roId = recentOrders[0].id;
+                  console.log('✅ [INVOICE CREATE] Found recent order:', roId);
+                  
                   const { data: orderItems2 } = await supabase
                     .from('order_items')
                     .select('food_item_id, quantity, unit_price, total_price')
                     .eq('order_id', roId);
+                  
                   if (Array.isArray(orderItems2) && orderItems2.length) {
+                    console.log('✅ [INVOICE CREATE] Found order_items from recent order:', orderItems2.length);
                     const fromOrder2 = orderItems2.map((it: any) => ({
                       invoice_id: inv.id,
                       service_id: it.food_item_id,
@@ -584,21 +638,30 @@ export const invoicesAPI = {
                       unit_price: Number(it.unit_price || 0),
                       total_price: Number(it.total_price || 0)
                     }));
+                    
                     const { data: inserted3, error: ins3Err } = await supabase
                       .from('invoice_items')
                       .insert(fromOrder2)
                       .select('*');
+                    
                     if (!ins3Err) {
                       createdItems = inserted3 || [];
+                      console.log('✅ [INVOICE CREATE] Successfully created invoice_items from recent order:', createdItems.length);
                     } else {
-                      console.error('invoice_items recent order insert error:', ins3Err);
+                      console.error('❌ [INVOICE CREATE] invoice_items recent order insert error:', ins3Err);
                     }
+                  } else {
+                    console.log('⚠️ [INVOICE CREATE] No order_items found in recent order:', roId);
                   }
+                } else {
+                  console.log('⚠️ [INVOICE CREATE] No recent orders found for employee_id:', payload.employee_id);
                 }
               }
             } catch (fallbackErr) {
-              console.warn('invoice_items fallback failed:', fallbackErr);
+              console.error('❌ [INVOICE CREATE] invoice_items fallback failed:', fallbackErr);
             }
+          } else {
+            console.log('✅ [INVOICE CREATE] invoice_items already created, skipping fallback');
           }
 
           // 3) Xác nhận
