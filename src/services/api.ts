@@ -362,18 +362,44 @@ export const invoicesAPI = {
 
           // Nếu chưa có items từ invoice_items → fallback qua orders/order_items
           if ((!itemsData || itemsData.length === 0)) {
-            // Cố gắng parse order_id từ notes: ví dụ "Order: 55" hoặc "Buffet Order: 55"
-            const notes: string = invoiceData?.notes || '';
-            const match = notes.match(/order\s*[:#-]?\s*(\d+)/i);
-            const orderId = match ? Number(match[1]) : undefined;
-            if (orderId && !Number.isNaN(orderId)) {
+            // Ưu tiên khớp theo order_number = invoice_number
+            let fallbackOrderId: number | undefined = undefined;
+            try {
+              if (invoiceData?.invoice_number) {
+                const orderRes = await supabase
+                  .from('orders')
+                  .select('id, employee_id')
+                  .eq('order_number', invoiceData.invoice_number)
+                  .maybeSingle();
+                if (orderRes.data?.id) {
+                  fallbackOrderId = orderRes.data.id;
+                  if (!invoiceData.employee_id && orderRes.data.employee_id) {
+                    invoiceData.employee_id = orderRes.data.employee_id;
+                  }
+                }
+              }
+            } catch (e) {
+              console.warn('Lookup order by order_number failed:', e);
+            }
+
+            // Nếu chưa có, thử parse trong notes: "Order: 55" hoặc "Buffet Order: 55"
+            if (!fallbackOrderId) {
+              const notes: string = invoiceData?.notes || '';
+              const match = notes.match(/order\s*[:#-]?\s*(\d+)/i);
+              const parsedOrderId = match ? Number(match[1]) : undefined;
+              if (parsedOrderId && !Number.isNaN(parsedOrderId)) {
+                fallbackOrderId = parsedOrderId;
+              }
+            }
+
+            if (fallbackOrderId) {
               try {
                 // Lấy order để suy ra employee nếu chưa có
                 if (!employeeName) {
                   const orderEmp = await supabase
                     .from('orders')
                     .select('employee_id')
-                    .eq('id', orderId)
+                    .eq('id', fallbackOrderId)
                     .single();
                   const eid = orderEmp.data?.employee_id;
                   if (eid) {
@@ -390,7 +416,7 @@ export const invoicesAPI = {
                 const { data: orderItems } = await supabase
                   .from('order_items')
                   .select('id, food_item_id, quantity, unit_price, total_price, food_items(name, price)')
-                  .eq('order_id', orderId);
+                  .eq('order_id', fallbackOrderId);
 
                 if (Array.isArray(orderItems)) {
                   itemsData = orderItems.map((it: any) => ({
