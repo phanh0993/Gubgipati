@@ -630,6 +630,20 @@ export const invoicesAPI = {
                   }
                 }
               }
+              
+              // Strategy 4: Tìm order theo invoice_number nếu nó là order_number
+              if (!fallbackOrderId && payload.invoice_number) {
+                console.log('🔍 [INVOICE CREATE] Strategy 4 - Looking up by invoice_number:', payload.invoice_number);
+                const byInvoiceNumber = await supabase
+                  .from('orders')
+                  .select('id')
+                  .eq('order_number', payload.invoice_number)
+                  .maybeSingle();
+                if (byInvoiceNumber.data?.id) {
+                  fallbackOrderId = byInvoiceNumber.data.id;
+                  console.log('✅ [INVOICE CREATE] Found order_id from invoice_number:', fallbackOrderId);
+                }
+              }
 
               if (fallbackOrderId) {
                 console.log('📋 [INVOICE CREATE] Fetching order and order_items for order_id:', fallbackOrderId);
