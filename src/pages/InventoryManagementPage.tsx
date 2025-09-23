@@ -129,42 +129,41 @@ const InventoryManagementPage: React.FC = () => {
       
       console.log('📊 Loading food stats for:', { start, end, timeRange });
 
-      // Lấy tất cả invoices trong khoảng thời gian
-      const { data: allInvoices, error: allInvoicesError } = await supabase
-        .from('invoices')
-        .select(`
-          id,
-          created_at,
-          payment_status,
-          invoice_items (
-            service_id,
-            quantity,
-            unit_price,
-            total_price,
-            food_items (
-              id,
-              name,
-              price
-            )
-          )
-        `)
-        .eq('payment_status', 'paid')
+      // Đọc từ orders và order_items để thống kê món ăn
+      const { data: allOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, created_at, status')
+        .in('status', ['paid', 'served', 'completed'])
         .order('created_at', { ascending: false });
 
-      if (allInvoicesError) {
-        throw new Error(`Error fetching invoices: ${allInvoicesError.message}`);
+      if (ordersError) {
+        throw new Error(`Error fetching orders: ${ordersError.message}`);
       }
 
-      // Filter invoices by date range manually
-      const invoices = allInvoices?.filter((inv: any) => {
-        const invDate = dayjs(inv.created_at).tz('Asia/Ho_Chi_Minh');
-        const invDateStr = invDate.format('YYYY-MM-DD');
-        return invDateStr >= start && invDateStr <= end;
-      }) || [];
+      // Lọc orders theo khoảng thời gian
+      const orders = (allOrders || []).filter((o: any) => {
+        const d = dayjs(o.created_at).tz('Asia/Ho_Chi_Minh').format('YYYY-MM-DD');
+        return d >= start && d <= end;
+      });
 
-      console.log('📋 Filtered invoices:', invoices.length);
+      console.log('📋 Filtered orders:', orders.length);
 
-      // Thống kê món ăn
+      // Lấy tất cả order_items của các orders vừa lọc
+      let orderItems: any[] = [];
+      if (orders.length > 0) {
+        const orderIds = orders.map((o: any) => o.id);
+        const { data: items, error: itemsError } = await supabase
+          .from('order_items')
+          .select('order_id, food_item_id, quantity, unit_price, total_price, food_items(name, price)')
+          .in('order_id', orderIds);
+
+        if (itemsError) {
+          console.warn('Error fetching order_items:', itemsError);
+        }
+        orderItems = items || [];
+      }
+
+      // Thống kê món ăn từ order_items
       const foodStatsMap: { [key: number]: FoodItemStats } = {};
 
       // Khởi tạo tất cả món ăn với số liệu 0
@@ -179,29 +178,24 @@ const InventoryManagementPage: React.FC = () => {
         };
       });
 
-      // Đếm từ invoice_items
-      invoices.forEach((invoice: any) => {
-        if (invoice.invoice_items && Array.isArray(invoice.invoice_items)) {
-          invoice.invoice_items.forEach((item: any) => {
-            const foodId = item.food_items?.id || item.service_id;
-            const foodName = item.food_items?.name || `Service ${item.service_id}`;
-            
-            if (foodStatsMap[foodId]) {
-              foodStatsMap[foodId].total_ordered += Number(item.quantity || 0);
-              foodStatsMap[foodId].total_revenue += Number(item.total_price || 0);
-              foodStatsMap[foodId].order_count += 1;
-            } else {
-              // Tạo mới nếu món ăn chưa có trong danh sách
-              foodStatsMap[foodId] = {
-                id: foodId,
-                name: foodName,
-                price: Number(item.unit_price || 0),
-                total_ordered: Number(item.quantity || 0),
-                total_revenue: Number(item.total_price || 0),
-                order_count: 1
-              };
-            }
-          });
+      // Đếm từ order_items
+      orderItems.forEach((item: any) => {
+        const foodId = item.food_item_id;
+        const foodName = item.food_items?.name || `Food ${item.food_item_id}`;
+
+        if (foodStatsMap[foodId]) {
+          foodStatsMap[foodId].total_ordered += Number(item.quantity || 0);
+          foodStatsMap[foodId].total_revenue += Number(item.total_price || 0);
+          foodStatsMap[foodId].order_count += 1;
+        } else {
+          foodStatsMap[foodId] = {
+            id: foodId,
+            name: foodName,
+            price: Number(item.unit_price || 0),
+            total_ordered: Number(item.quantity || 0),
+            total_revenue: Number(item.total_price || 0),
+            order_count: 1
+          };
         }
       });
 

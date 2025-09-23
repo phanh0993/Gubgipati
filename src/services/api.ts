@@ -329,20 +329,18 @@ export const invoicesAPI = {
             return;
           }
 
-          // Lấy invoice_items riêng
-          const { data: itemsData, error: itemsError } = await supabase
-            .from('invoice_items')
-            .select(`
-              id,
-              service_id,
-              quantity,
-              unit_price,
-              total_price
-            `)
-            .eq('invoice_id', id);
-
-          if (itemsError) {
-            console.warn('Could not fetch invoice items:', itemsError);
+          // Thử lấy invoice_items trước (nếu schema có liên kết invoice_id)
+          let itemsData: any[] = [];
+          try {
+            const itemsRes = await supabase
+              .from('invoice_items')
+              .select('id, service_id, quantity, unit_price, total_price')
+              .eq('invoice_id', id);
+            if (!itemsRes.error && Array.isArray(itemsRes.data)) {
+              itemsData = itemsRes.data;
+            }
+          } catch (e) {
+            console.warn('invoice_items by invoice_id not available:', e);
           }
 
           // Lấy thông tin nhân viên từ employee_id
@@ -351,21 +349,69 @@ export const invoicesAPI = {
             try {
               const empRes = await supabase
                 .from('employees')
-                .select('fullname, full_name')
+                .select('fullname, full_name, name')
                 .eq('id', invoiceData.employee_id)
                 .single();
               if (empRes.data) {
-                employeeName = empRes.data.fullname || empRes.data.full_name || '';
+                employeeName = empRes.data.fullname || empRes.data.full_name || empRes.data.name || '';
               }
             } catch (e) {
               console.warn('Could not fetch employee name:', e);
             }
           }
 
-          // Chuẩn hóa invoice items
+          // Nếu chưa có items từ invoice_items → fallback qua orders/order_items
+          if ((!itemsData || itemsData.length === 0)) {
+            // Cố gắng parse order_id từ notes: ví dụ "Order: 55" hoặc "Buffet Order: 55"
+            const notes: string = invoiceData?.notes || '';
+            const match = notes.match(/order\s*[:#-]?\s*(\d+)/i);
+            const orderId = match ? Number(match[1]) : undefined;
+            if (orderId && !Number.isNaN(orderId)) {
+              try {
+                // Lấy order để suy ra employee nếu chưa có
+                if (!employeeName) {
+                  const orderEmp = await supabase
+                    .from('orders')
+                    .select('employee_id')
+                    .eq('id', orderId)
+                    .single();
+                  const eid = orderEmp.data?.employee_id;
+                  if (eid) {
+                    const empRes = await supabase
+                      .from('employees')
+                      .select('fullname, full_name, name')
+                      .eq('id', eid)
+                      .single();
+                    employeeName = empRes.data?.fullname || empRes.data?.full_name || empRes.data?.name || employeeName;
+                  }
+                }
+
+                // Lấy order_items theo order_id và join tên món
+                const { data: orderItems } = await supabase
+                  .from('order_items')
+                  .select('id, food_item_id, quantity, unit_price, total_price, food_items(name, price)')
+                  .eq('order_id', orderId);
+
+                if (Array.isArray(orderItems)) {
+                  itemsData = orderItems.map((it: any) => ({
+                    id: it.id,
+                    service_id: it.food_item_id,
+                    quantity: Number(it.quantity || 0),
+                    unit_price: Number(it.unit_price || 0),
+                    total_price: Number(it.total_price || 0),
+                    service_name: it.food_items?.name || `Service ${it.food_item_id}`
+                  }));
+                }
+              } catch (e) {
+                console.warn('Fallback via orders/order_items failed:', e);
+              }
+            }
+          }
+
+          // Chuẩn hóa invoice items (khi có itemsData)
           const normalizedItems = (itemsData || []).map((item: any) => ({
             ...item,
-            service_name: `Service ${item.service_id}`, // Tạm thời dùng service_id
+            service_name: item.service_name || `Service ${item.service_id}`,
             employee_name: employeeName
           }));
 
