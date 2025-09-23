@@ -465,16 +465,16 @@ export const invoicesAPI = {
     
   create: (data: CreateInvoiceRequest): Promise<AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>> => {
     if (USE_SUPABASE) {
-      return new Promise((resolve, reject) => {
+      return new Promise(async (resolve, reject) => {
         try {
           const items = Array.isArray(data.items) ? data.items : [];
-          const subtotal = items.reduce((sum: number, it: any) => sum + Number(it.unit_price || 0) * Number(it.quantity || 0), 0);
+          const subtotal = items.reduce((sum: number, it: any) => sum + Number(it.unit_price || it.price || 0) * Number(it.quantity || 0), 0);
           const discount = Number((data as any).discount_amount || 0);
           const tax = 0; // per requirement: remove tax calculation
           const total = subtotal - discount + tax;
 
           const payload: any = {
-            invoice_number: `INV-${Date.now()}`,
+            invoice_number: (data as any).invoice_number || `INV-${Date.now()}`,
             customer_id: (data as any).customer_id ?? null,
             employee_id: (data as any).employee_id ?? null,
             subtotal: subtotal,
@@ -482,27 +482,47 @@ export const invoicesAPI = {
             tax_amount: tax,
             total_amount: total,
             payment_method: (data as any).payment_method || 'cash',
-            payment_status: 'paid',
+            payment_status: (data as any).payment_status || 'paid',
             invoice_date: new Date().toISOString(),
             notes: (data as any).notes || null,
           };
 
-          supabase
+          // 1) Tạo invoice
+          const { data: inv, error: invErr } = await supabase
             .from('invoices')
             .insert(payload)
             .select('*')
-            .single()
-            .then((res: any) => {
-              if (res.error) { reject(res.error); return; }
-              const axiosLike = {
-                data: { invoice: res.data as any, items: [], message: 'Invoice created' },
-                status: 200,
-                statusText: 'OK',
-                headers: {},
-                config: {} as any,
-              } as AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>;
-              resolve(axiosLike);
-            }, reject);
+            .single();
+          if (invErr) { reject(invErr); return; }
+
+          // 2) Tạo invoice_items nếu có items
+          let createdItems: any[] = [];
+          if (items.length > 0) {
+            const insertItems = items.map((it: any) => ({
+              invoice_id: inv.id,
+              service_id: it.service_id || it.food_item_id || it.id,
+              quantity: Number(it.quantity || 0),
+              unit_price: Number(it.unit_price || it.price || 0),
+              total_price: Number(it.unit_price || it.price || 0) * Number(it.quantity || 0)
+            }));
+
+            const { data: inserted, error: itemsErr } = await supabase
+              .from('invoice_items')
+              .insert(insertItems)
+              .select('*');
+            if (itemsErr) { console.error('invoice_items insert error:', itemsErr); }
+            createdItems = inserted || [];
+          }
+
+          // 3) Xác nhận
+          const axiosLike = {
+            data: { invoice: inv as any, items: createdItems, message: 'Invoice created' },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          } as AxiosResponse<{ invoice: Invoice; items: any[]; message: string }>;
+          resolve(axiosLike);
         } catch (e) {
           reject(e);
         }
