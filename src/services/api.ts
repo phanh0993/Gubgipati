@@ -582,9 +582,30 @@ export const invoicesAPI = {
             console.log('⚠️ [INVOICE CREATE] No items provided, will try fallback strategies');
           }
 
-          // Fallback: nếu chưa có invoice_items, cố gắng copy từ order_items
-          if (!createdItems.length) {
+               // Fallback: luôn kiểm tra và copy từ order_items để đảm bảo đầy đủ
+               // Nếu chỉ có 1 item hoặc items không đúng, cần copy từ order_items
+               const needsFallback = !createdItems.length || 
+                 (createdItems.length === 1 && createdItems[0]?.service_id === 1) ||
+                 (createdItems.length < 2); // Ít hơn 2 items có thể thiếu món ăn
+               
+               if (needsFallback) {
             console.log('🔄 [INVOICE CREATE] Starting fallback strategies to find order_items...');
+            
+            // Xóa invoice_items cũ nếu có để tạo lại từ order_items
+            if (createdItems.length > 0) {
+              console.log('🗑️ [INVOICE CREATE] Deleting existing invoice_items to recreate from order_items...');
+              const { error: deleteError } = await supabase
+                .from('invoice_items')
+                .delete()
+                .eq('invoice_id', inv.id);
+              if (deleteError) {
+                console.error('❌ [INVOICE CREATE] Error deleting existing invoice_items:', deleteError);
+              } else {
+                console.log('✅ [INVOICE CREATE] Deleted existing invoice_items');
+                createdItems = []; // Reset để tạo lại
+              }
+            }
+            
             try {
               let fallbackOrderId: number | undefined = (data as any).order_id;
               console.log('🔍 [INVOICE CREATE] Strategy 1 - Direct order_id:', fallbackOrderId);
@@ -642,6 +663,25 @@ export const invoicesAPI = {
                 if (byInvoiceNumber.data?.id) {
                   fallbackOrderId = byInvoiceNumber.data.id;
                   console.log('✅ [INVOICE CREATE] Found order_id from invoice_number:', fallbackOrderId);
+                }
+              }
+              
+              // Strategy 5: Tìm order theo notes nếu có "Buffet Order: BUF-xxx"
+              if (!fallbackOrderId && payload.notes) {
+                console.log('🔍 [INVOICE CREATE] Strategy 5 - Looking up by notes:', payload.notes);
+                const match = String(payload.notes).match(/Buffet Order:\s*BUF-(\d+)/i);
+                if (match) {
+                  const orderNumber = `BUF-${match[1]}`;
+                  console.log('🔍 [INVOICE CREATE] Found order_number in notes:', orderNumber);
+                  const byNotes = await supabase
+                    .from('orders')
+                    .select('id')
+                    .eq('order_number', orderNumber)
+                    .maybeSingle();
+                  if (byNotes.data?.id) {
+                    fallbackOrderId = byNotes.data.id;
+                    console.log('✅ [INVOICE CREATE] Found order_id from notes:', fallbackOrderId);
+                  }
                 }
               }
 
