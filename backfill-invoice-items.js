@@ -105,6 +105,19 @@ async function backfillInvoiceItems() {
           continue;
         }
         
+        // Lấy thông tin order để có buffet_package_id
+        const { data: order, error: orderError } = await supabase
+          .from('orders')
+          .select('buffet_package_id, buffet_quantity, employee_id')
+          .eq('id', orderId)
+          .single();
+          
+        if (orderError) {
+          console.error(`❌ Error fetching order: ${orderError.message}`);
+          errorCount++;
+          continue;
+        }
+        
         // Lấy order_items
         const { data: orderItems, error: orderItemsError } = await supabase
           .from('order_items')
@@ -117,23 +130,39 @@ async function backfillInvoiceItems() {
           continue;
         }
         
-        if (!orderItems || orderItems.length === 0) {
-          console.log(`⚠️ No order_items found for order ${orderId}`);
-          errorCount++;
-          continue;
-        }
-        
         console.log(`📦 Found ${orderItems.length} order_items`);
         
-        // Tạo invoice_items
-        const invoiceItems = orderItems.map(item => ({
+        // Tạo invoice_items với vé buffet + món ăn
+        let invoiceItems = [];
+        
+        // 1. Thêm vé buffet nếu có
+        if (order.buffet_package_id) {
+          const { data: buffetPackage } = await supabase
+            .from('buffet_packages')
+            .select('id, name, price')
+            .eq('id', order.buffet_package_id)
+            .single();
+          
+          if (buffetPackage) {
+            invoiceItems.push({
+              invoice_id: invoice.id,
+              service_id: null, // Vé buffet với service_id = null
+              employee_id: order.employee_id,
+              quantity: Number(order.buffet_quantity || 1),
+              unit_price: Number(buffetPackage.price || 0)
+            });
+          }
+        }
+        
+        // 2. Thêm món ăn
+        const foodItems = orderItems.map(item => ({
           invoice_id: invoice.id,
-          service_id: null, // Set to null since we don't have services for food items
-          employee_id: null, // Will be filled from invoice if needed
+          service_id: null, // Món ăn với service_id = null
+          employee_id: invoice.employee_id,
           quantity: Number(item.quantity || 0),
           unit_price: Number(item.unit_price || 0)
-          // total_price is generated column
         }));
+        invoiceItems.push(...foodItems);
         
         const { data: inserted, error: insertError } = await supabase
           .from('invoice_items')
