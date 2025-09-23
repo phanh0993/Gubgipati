@@ -338,6 +338,7 @@ const InventoryManagementPage: React.FC = () => {
           </Table>
         </TableContainer>
       </Paper>
+      <Paper sx={{ mb: 3 }}>
         <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
           <Tab label="Danh Sách Nguyên Liệu" />
           <Tab label="Giao Dịch Kho" />
