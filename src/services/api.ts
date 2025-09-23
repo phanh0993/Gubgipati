@@ -345,16 +345,43 @@ export const invoicesAPI = {
               .order('unit_price', { ascending: false }); // Sắp xếp theo giá giảm dần
               
             if (!itemsRes.error && Array.isArray(itemsRes.data)) {
-              // Phân biệt vé vs món ăn dựa trên giá
-              // Vé thường có giá cao (199k, 169k, 229k), món ăn có giá thấp (0-50k)
-              itemsData = itemsRes.data.map((item: any) => {
-                const isTicket = item.unit_price >= 100000; // Vé từ 100k trở lên
-                return {
-                  ...item,
-                  service_name: isTicket ? `VÉ ${item.unit_price.toLocaleString()}K` : 'Món ăn',
-                  service_type: isTicket ? 'buffet_ticket' : 'food_item'
-                };
+              // Lấy tên món ăn và vé từ các bảng tương ứng
+              const itemPromises = itemsRes.data.map(async (item: any) => {
+                const foodItemId = item.service_id; // service_id chứa food_item_id hoặc buffet_package_id
+                const isTicket = item.unit_price > 0 && [33, 34, 35].includes(foodItemId); // ID vé buffet
+                
+                if (isTicket) {
+                  // Lấy tên vé từ buffet_packages
+                  const { data: buffetPackage } = await supabase
+                    .from('buffet_packages')
+                    .select('name')
+                    .eq('id', foodItemId)
+                    .single();
+                  
+                  return {
+                    ...item,
+                    service_name: buffetPackage?.name || `VÉ ${item.unit_price.toLocaleString()}K`,
+                    service_type: 'buffet_ticket',
+                    food_item_id: foodItemId
+                  };
+                } else {
+                  // Lấy tên món ăn từ food_items
+                  const { data: foodItem } = await supabase
+                    .from('food_items')
+                    .select('name')
+                    .eq('id', foodItemId)
+                    .single();
+                  
+                  return {
+                    ...item,
+                    service_name: foodItem?.name || `Food Item ${foodItemId}`,
+                    service_type: 'food_item',
+                    food_item_id: foodItemId
+                  };
+                }
               });
+              
+              itemsData = await Promise.all(itemPromises);
             }
           } catch (e) {
             console.warn('invoice_items by invoice_id not available:', e);
@@ -534,7 +561,7 @@ export const invoicesAPI = {
             console.log('📦 [INVOICE CREATE] Creating invoice_items from provided items:', items.length);
             const insertItems = items.map((it: any) => ({
               invoice_id: inv.id,
-              service_id: null, // Set to null since we don't have services for food items
+              service_id: it.food_item_id || it.service_id || it.id, // Lưu food_item_id vào service_id
               employee_id: payload.employee_id,
               quantity: Number(it.quantity || 0),
               unit_price: Number(it.unit_price || it.price || 0)
@@ -637,11 +664,10 @@ export const invoicesAPI = {
                     if (!buffetErr && buffetPackage) {
                       itemsToInsert.push({
                         invoice_id: inv.id,
-                        service_id: null, // Vé buffet lưu với service_id = null
+                        service_id: buffetPackage.id, // Lưu buffet_package_id vào service_id
                         employee_id: payload.employee_id,
                         quantity: Number(orderInfo.buffet_quantity || 1),
                         unit_price: Number(buffetPackage.price || 0)
-                        // Thêm custom field để phân biệt vé vs món ăn (nếu cần)
                       });
                       console.log('✅ [INVOICE CREATE] Added buffet ticket:', buffetPackage.name, buffetPackage.price);
                     }
@@ -652,7 +678,7 @@ export const invoicesAPI = {
                     console.log('🍽️ [INVOICE CREATE] Adding food items:', orderItems.length);
                     const foodItems = orderItems.map((it: any) => ({
                       invoice_id: inv.id,
-                      service_id: null, // Món ăn không có service_id
+                      service_id: it.food_item_id, // Lưu food_item_id vào service_id
                       employee_id: payload.employee_id,
                       quantity: Number(it.quantity || 0),
                       unit_price: Number(it.unit_price || 0)
@@ -708,7 +734,7 @@ export const invoicesAPI = {
                     console.log('✅ [INVOICE CREATE] Found order_items from recent order:', orderItems2.length);
                     const fromOrder2 = orderItems2.map((it: any) => ({
                       invoice_id: inv.id,
-                      service_id: null, // Set to null since we don't have services for food items
+                      service_id: it.food_item_id, // Lưu food_item_id vào service_id
                       employee_id: payload.employee_id,
                       quantity: Number(it.quantity || 0),
                       unit_price: Number(it.unit_price || 0)

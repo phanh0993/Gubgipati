@@ -146,7 +146,7 @@ async function backfillInvoiceItems() {
           if (buffetPackage) {
             invoiceItems.push({
               invoice_id: invoice.id,
-              service_id: null, // Vé buffet với service_id = null
+              food_item_id: buffetPackage.id, // Lưu buffet_package_id vào food_item_id
               employee_id: order.employee_id,
               quantity: Number(order.buffet_quantity || 1),
               unit_price: Number(buffetPackage.price || 0)
