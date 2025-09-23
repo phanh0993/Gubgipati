@@ -53,6 +53,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import 'dayjs/locale/vi';
 
 import { dashboardAPI, invoicesAPI, orderAPI, buffetAPI } from '../services/api';
+import { supabase } from '../services/supabaseClient';
 import { formatCurrency } from '../utils/formatters';
 
 interface StatCardProps {
@@ -198,16 +199,10 @@ const NewDashboard: React.FC = () => {
         timeRange
       });
 
-      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
+      // Dùng supabase client dùng chung (đã kiểm tra env và log lỗi nếu thiếu)
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
         throw new Error('Missing Supabase configuration');
       }
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       // 1. Lấy tất cả invoices trong khoảng thời gian - SỬA: Sử dụng date string thay vì ISO
       console.log('🔍 Fetching invoices directly from Supabase...');
@@ -303,16 +298,9 @@ const NewDashboard: React.FC = () => {
 
   const loadTopFoods = async (startISO: string, endISO: string): Promise<TopFoodItem[]> => {
     try {
-      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
         return [];
       }
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       // Lấy tất cả invoices với invoice_items - SỬA: Sử dụng date string thay vì ISO
       const { data: allInvoices, error: allInvoicesError } = await supabase
@@ -389,16 +377,9 @@ const NewDashboard: React.FC = () => {
 
   const loadHourlyData = async (startISO: string, endISO: string) => {
     try {
-      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
         return;
       }
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       // Lấy tất cả invoices - SỬA: Sử dụng date string thay vì ISO
       const { data: allInvoices, error: allInvoicesError } = await supabase
@@ -461,16 +442,9 @@ const NewDashboard: React.FC = () => {
 
   const loadDailyRevenueData = async (start: string, end: string) => {
     try {
-      // SỬ DỤNG LOGIC TRỰC TIẾP TỪ SCRIPT TEST - GỌI SUPABASE TRỰC TIẾP
-      const { createClient } = await import('@supabase/supabase-js');
-      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
-      const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
+      if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
         return;
       }
-      
-      const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
       // Generate daily data for the selected range
       const startDate = dayjs(start);
