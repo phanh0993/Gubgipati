@@ -349,7 +349,7 @@ export const invoicesAPI = {
             try {
               const empRes = await supabase
                 .from('employees')
-                .select('fullname, full_name, name')
+                .select('*')
                 .eq('id', invoiceData.employee_id)
                 .single();
               if (empRes.data) {
@@ -405,7 +405,7 @@ export const invoicesAPI = {
                   if (eid) {
                     const empRes = await supabase
                       .from('employees')
-                      .select('fullname, full_name, name')
+                      .select('*')
                       .eq('id', eid)
                       .single();
                     employeeName = empRes.data?.fullname || empRes.data?.full_name || empRes.data?.name || employeeName;
