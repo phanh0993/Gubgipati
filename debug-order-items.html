@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Order Items</title>
+</head>
+<body>
+    <h1>Debug Order Items</h1>
+    <button onclick="testOrderItems()">Test Order Items Logic</button>
+    <div id="output"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://yydxhcvxkmxbohqtbbvw.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl5ZHhoY3Z4a214Ym9ocXRidnd3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjY0MzA2NzMsImV4cCI6MjA0MjAwNjY3M30.8R8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K8K8';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function testOrderItems() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<p>🔍 Testing order items logic...</p>';
+
+            try {
+                // 1. Kiểm tra order ID 63
+                output.innerHTML += '<p>1. Checking order ID 63...</p>';
+                const { data: order63, error: orderError } = await supabase
+                    .from('orders')
+                    .select('*')
+                    .eq('id', 63)
+                    .single();
+
+                if (orderError) {
+                    output.innerHTML += `<p>❌ Error fetching order 63: ${JSON.stringify(orderError)}</p>`;
+                    return;
+                }
+
+                output.innerHTML += `<p>✅ Order 63 found: ${JSON.stringify({
+                    id: order63.id,
+                    order_number: order63.order_number,
+                    status: order63.status,
+                    total_amount: order63.total_amount
+                })}</p>`;
+
+                // 2. Kiểm tra order_items cho order 63
+                output.innerHTML += '<p>2. Checking order_items for order 63...</p>';
+                const { data: items63, error: itemsError } = await supabase
+                    .from('order_items')
+                    .select('*')
+                    .eq('order_id', 63);
+
+                if (itemsError) {
+                    output.innerHTML += `<p>❌ Error fetching order_items: ${JSON.stringify(itemsError)}</p>`;
+                } else {
+                    output.innerHTML += `<p>✅ Found ${items63.length} items for order 63: ${JSON.stringify(items63)}</p>`;
+                }
+
+                // 3. Tạo test order mới
+                output.innerHTML += '<p>3. Creating test order...</p>';
+                const testOrderData = {
+                    order_number: `TEST-${Date.now()}`,
+                    table_id: 1,
+                    employee_id: 14,
+                    order_type: 'buffet',
+                    status: 'open',
+                    subtotal: 150000,
+                    tax_amount: 0,
+                    total_amount: 150000,
+                    buffet_package_id: 1,
+                    buffet_quantity: 2,
+                    notes: 'Test order for debugging'
+                };
+
+                const { data: newOrder, error: createError } = await supabase
+                    .from('orders')
+                    .insert(testOrderData)
+                    .select('*')
+                    .single();
+
+                if (createError) {
+                    output.innerHTML += `<p>❌ Error creating test order: ${JSON.stringify(createError)}</p>`;
+                    return;
+                }
+
+                output.innerHTML += `<p>✅ Test order created: ${JSON.stringify({
+                    id: newOrder.id,
+                    order_number: newOrder.order_number
+                })}</p>`;
+
+                // 4. Thêm test items
+                output.innerHTML += '<p>4. Adding test items...</p>';
+                const testItems = [
+                    {
+                        order_id: newOrder.id,
+                        food_item_id: 1,
+                        quantity: 2,
+                        unit_price: 50000,
+                        total_price: 100000
+                    },
+                    {
+                        order_id: newOrder.id,
+                        food_item_id: 2,
+                        quantity: 1,
+                        unit_price: 50000,
+                        total_price: 50000
+                    }
+                ];
+
+                const { data: insertedItems, error: insertError } = await supabase
+                    .from('order_items')
+                    .insert(testItems)
+                    .select('*');
+
+                if (insertError) {
+                    output.innerHTML += `<p>❌ Error inserting test items: ${JSON.stringify(insertError)}</p>`;
+                } else {
+                    output.innerHTML += `<p>✅ Test items inserted: ${JSON.stringify(insertedItems)}</p>`;
+                }
+
+                // 5. Kiểm tra lại
+                output.innerHTML += '<p>5. Verifying test order items...</p>';
+                const { data: verifyItems, error: verifyError } = await supabase
+                    .from('order_items')
+                    .select('*')
+                    .eq('order_id', newOrder.id);
+
+                if (verifyError) {
+                    output.innerHTML += `<p>❌ Error verifying items: ${JSON.stringify(verifyError)}</p>`;
+                } else {
+                    output.innerHTML += `<p>✅ Verification: Found ${verifyItems.length} items for test order ${newOrder.id}: ${JSON.stringify(verifyItems)}</p>`;
+                }
+
+                output.innerHTML += '<p>🎯 Test completed!</p>';
+
+            } catch (error) {
+                output.innerHTML += `<p>❌ Unexpected error: ${error.message}</p>`;
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</body>
+</html>

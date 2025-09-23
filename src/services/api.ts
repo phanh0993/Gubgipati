@@ -1078,77 +1078,123 @@ export const orderAPI = {
   },
   createOrder: (data: any): Promise<AxiosResponse<any>> => {
     if (USE_SUPABASE) {
-      return new Promise((resolve, reject) => {
-        const { items, ...order } = data;
-        // Tạo order_number nếu bảng yêu cầu NOT NULL
-        const orderNumber = `BUF-${Date.now()}`;
-        const orderPayload = { 
-          order_number: orderNumber, 
-          status: 'open', 
-          // items: items || [], // Tạm thời comment vì cột chưa tồn tại
-          ...order 
-        };
-        supabase
-          .from('orders')
-          .insert(orderPayload)
-          .select('id, table_id, buffet_package_id, buffet_quantity, total_amount')
-          .single()
-          .then(async (res: any) => {
-            if (res.error) { reject(res.error); return; }
-            const orderId = res.data.id;
-            // Lưu items vào order_items với logic gộp số lượng
-            if (Array.isArray(items) && items.length > 0) {
-              console.log('🔄 Processing items for order_items:', items);
-              
-              for (const item of items) {
-                const unitPrice = Number(item.price || item.unit_price || 0);
-                const quantity = Number(item.quantity || 0);
-                const totalPrice = unitPrice * quantity;
-                
-                console.log(`Processing item: food_item_id=${item.food_item_id}, quantity=${quantity}, price=${unitPrice}, total=${totalPrice}`);
-                
-                // Kiểm tra xem món đã tồn tại chưa
-                const { data: existingItem } = await supabase
-                  .from('order_items')
-                  .select('id, quantity, unit_price, total_price')
-                  .eq('order_id', orderId)
-                  .eq('food_item_id', item.food_item_id)
-                  .maybeSingle();
+      return new Promise(async (resolve, reject) => {
+        try {
+          const { items, ...order } = data;
+          console.log('🚀 Creating order with data:', { items: items?.length, order });
+          
+          // Tạo order_number nếu bảng yêu cầu NOT NULL
+          const orderNumber = order.order_number || `BUF-${Date.now()}`;
+          const orderPayload = { 
+            order_number: orderNumber, 
+            status: 'open', 
+            ...order 
+          };
+          
+          console.log('📝 Order payload:', orderPayload);
+          
+          const { data: orderData, error: orderError } = await supabase
+            .from('orders')
+            .insert(orderPayload)
+            .select('*')
+            .single();
 
-                if (existingItem) {
-                  // Món đã tồn tại - thay thế số lượng (không cộng dồn)
-                  await supabase
-                    .from('order_items')
-                    .update({ 
-                      quantity: quantity, 
-                      total_price: totalPrice 
-                    })
-                    .eq('id', existingItem.id);
-                  
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${quantity}`);
+          if (orderError) {
+            console.error('❌ Error creating order:', orderError);
+            reject(orderError);
+            return;
+          }
+
+          console.log('✅ Order created:', orderData);
+          const orderId = orderData.id;
+
+          // Lưu items vào order_items
+          if (Array.isArray(items) && items.length > 0) {
+            console.log('🔄 Processing items for order_items:', items);
+            
+            for (const item of items) {
+              const unitPrice = Number(item.price || item.unit_price || 0);
+              const quantity = Number(item.quantity || 0);
+              const totalPrice = unitPrice * quantity;
+              
+              console.log(`Processing item:`, {
+                food_item_id: item.food_item_id,
+                quantity: quantity,
+                price: unitPrice,
+                total: totalPrice,
+                original_item: item
+              });
+              
+              // Kiểm tra xem món đã tồn tại chưa
+              const { data: existingItem } = await supabase
+                .from('order_items')
+                .select('id, quantity, unit_price, total_price')
+                .eq('order_id', orderId)
+                .eq('food_item_id', item.food_item_id)
+                .maybeSingle();
+
+              if (existingItem) {
+                // Món đã tồn tại - thay thế số lượng (không cộng dồn)
+                const { error: updateError } = await supabase
+                  .from('order_items')
+                  .update({ 
+                    quantity: quantity, 
+                    total_price: totalPrice 
+                  })
+                  .eq('id', existingItem.id);
+                
+                if (updateError) {
+                  console.error(`❌ Failed to update item ${item.food_item_id}:`, updateError);
                 } else {
-                  // Món mới - thêm mới
-                  const insertResult = await supabase.from('order_items').insert({
-                    order_id: orderId,
-                    food_item_id: item.food_item_id,
-                    quantity: quantity,
-                    unit_price: unitPrice,
-                    total_price: totalPrice
-                  });
-                  
-                  if (insertResult.error) {
-                    console.error(`❌ Failed to insert item ${item.food_item_id}:`, insertResult.error);
-                  } else {
-                    console.log(`✅ Added new item ${item.food_item_id}: ${quantity} x ${unitPrice} = ${totalPrice}`);
-                  }
+                  console.log(`✅ Updated existing item ${item.food_item_id}: ${existingItem.quantity} → ${quantity}`);
+                }
+              } else {
+                // Món mới - thêm mới
+                const insertPayload = {
+                  order_id: orderId,
+                  food_item_id: item.food_item_id,
+                  quantity: quantity,
+                  unit_price: unitPrice,
+                  total_price: totalPrice
+                };
+                
+                console.log('📝 Insert payload:', insertPayload);
+                
+                const { data: insertData, error: insertError } = await supabase
+                  .from('order_items')
+                  .insert(insertPayload)
+                  .select('*');
+                
+                if (insertError) {
+                  console.error(`❌ Failed to insert item ${item.food_item_id}:`, insertError);
+                } else {
+                  console.log(`✅ Added new item ${item.food_item_id}:`, insertData);
                 }
               }
-            } else {
-              console.log('⚠️ No items to process or items is not an array');
             }
-            const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
-            resolve(axiosLike);
-          }, reject);
+          } else {
+            console.log('⚠️ No items to process or items is not an array:', items);
+          }
+
+          // Verify items were saved
+          const { data: savedItems, error: verifyError } = await supabase
+            .from('order_items')
+            .select('*')
+            .eq('order_id', orderId);
+
+          if (verifyError) {
+            console.error('❌ Error verifying saved items:', verifyError);
+          } else {
+            console.log(`✅ Verification: ${savedItems.length} items saved for order ${orderId}:`, savedItems);
+          }
+
+          const axiosLike = { data: orderData, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+          resolve(axiosLike);
+
+        } catch (error) {
+          console.error('❌ Unexpected error in createOrder:', error);
+          reject(error);
+        }
       });
     }
     return api.post('/orders', data);
