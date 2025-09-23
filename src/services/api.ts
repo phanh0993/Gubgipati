@@ -315,67 +315,77 @@ export const invoicesAPI = {
     
   getById: (id: number): Promise<AxiosResponse<{ invoice: Invoice; items: any[] }>> => {
     if (USE_SUPABASE) {
-      return new Promise((resolve, reject) => {
-        supabase
-          .from('invoices')
-          .select(`
-            *,
-            invoice_items (
+      return new Promise(async (resolve, reject) => {
+        try {
+          // Lấy invoice trước
+          const { data: invoiceData, error: invoiceError } = await supabase
+            .from('invoices')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+          if (invoiceError) {
+            reject(invoiceError);
+            return;
+          }
+
+          // Lấy invoice_items riêng
+          const { data: itemsData, error: itemsError } = await supabase
+            .from('invoice_items')
+            .select(`
               id,
               service_id,
               quantity,
               unit_price,
-              total_price,
-              food_items (
-                name,
-                price
-              )
-            )
-          `)
-          .eq('id', id)
-          .single()
-          .then(async (res: any) => {
-            if (res.error) { reject(res.error); return; }
-            const data = res.data || {};
-            
-            // Lấy thông tin nhân viên từ employee_id
-            let employeeName = '';
-            if (data.employee_id) {
-              try {
-                const empRes = await supabase
-                  .from('employees')
-                  .select('fullname, full_name')
-                  .eq('id', data.employee_id)
-                  .single();
-                if (empRes.data) {
-                  employeeName = empRes.data.fullname || empRes.data.full_name || '';
-                }
-              } catch (e) {
-                console.warn('Could not fetch employee name:', e);
+              total_price
+            `)
+            .eq('invoice_id', id);
+
+          if (itemsError) {
+            console.warn('Could not fetch invoice items:', itemsError);
+          }
+
+          // Lấy thông tin nhân viên từ employee_id
+          let employeeName = '';
+          if (invoiceData.employee_id) {
+            try {
+              const empRes = await supabase
+                .from('employees')
+                .select('fullname, full_name')
+                .eq('id', invoiceData.employee_id)
+                .single();
+              if (empRes.data) {
+                employeeName = empRes.data.fullname || empRes.data.full_name || '';
               }
+            } catch (e) {
+              console.warn('Could not fetch employee name:', e);
             }
-            
-            // Chuẩn hóa invoice items với tên món ăn
-            const normalizedItems = (data.invoice_items || []).map((item: any) => ({
-              ...item,
-              service_name: item.food_items?.name || `Service ${item.service_id}`,
-              employee_name: employeeName
-            }));
-            
-            const invoiceWithEmployee = {
-              ...data,
-              employee_name: employeeName
-            };
-            
-            const axiosLike = {
-              data: { invoice: invoiceWithEmployee as any, items: normalizedItems as any[] },
-              status: 200,
-              statusText: 'OK',
-              headers: {},
-              config: {} as any,
-            } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
-            resolve(axiosLike);
-          }, reject);
+          }
+
+          // Chuẩn hóa invoice items
+          const normalizedItems = (itemsData || []).map((item: any) => ({
+            ...item,
+            service_name: `Service ${item.service_id}`, // Tạm thời dùng service_id
+            employee_name: employeeName
+          }));
+
+          const invoiceWithEmployee = {
+            ...invoiceData,
+            employee_name: employeeName
+          };
+
+          const axiosLike = {
+            data: { invoice: invoiceWithEmployee as any, items: normalizedItems as any[] },
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            config: {} as any,
+          } as AxiosResponse<{ invoice: Invoice; items: any[] }>;
+          resolve(axiosLike);
+
+        } catch (error) {
+          reject(error);
+        }
       });
     }
     return api.get(`/invoices/${id}`);
