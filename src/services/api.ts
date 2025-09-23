@@ -519,8 +519,8 @@ export const invoicesAPI = {
               invoice_id: inv.id,
               service_id: it.service_id || it.food_item_id || it.id,
               quantity: Number(it.quantity || 0),
-              unit_price: Number(it.unit_price || it.price || 0),
-              total_price: Number(it.unit_price || it.price || 0) * Number(it.quantity || 0)
+              unit_price: Number(it.unit_price || it.price || 0)
+              // total_price is generated column, don't include it
             }));
 
             const { data: inserted, error: itemsErr } = await supabase
@@ -584,8 +584,8 @@ export const invoicesAPI = {
                     invoice_id: inv.id,
                     service_id: it.food_item_id,
                     quantity: Number(it.quantity || 0),
-                    unit_price: Number(it.unit_price || 0),
-                    total_price: Number(it.total_price || 0)
+                    unit_price: Number(it.unit_price || 0)
+                    // total_price is generated column, don't include it
                   }));
                   
                   console.log('💾 [INVOICE CREATE] Inserting invoice_items:', fromOrder);
@@ -635,8 +635,8 @@ export const invoicesAPI = {
                       invoice_id: inv.id,
                       service_id: it.food_item_id,
                       quantity: Number(it.quantity || 0),
-                      unit_price: Number(it.unit_price || 0),
-                      total_price: Number(it.total_price || 0)
+                      unit_price: Number(it.unit_price || 0)
+                      // total_price is generated column, don't include it
                     }));
                     
                     const { data: inserted3, error: ins3Err } = await supabase
