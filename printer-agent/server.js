@@ -2,6 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const bonjour = require('bonjour-service')();
 const ipp = require('ipp');
+const fs = require('fs');
+const http = require('http');
+const https = require('https');
 
 const app = express();
 app.use(cors());
@@ -76,8 +79,29 @@ app.post('/print', async (req, res) => {
 });
 
 const PORT = process.env.PRINTER_AGENT_PORT || 9977;
-app.listen(PORT, () => {
-  console.log(`Printer agent listening on http://localhost:${PORT}`);
-});
+const USE_HTTPS = String(process.env.PRINTER_AGENT_HTTPS || '').toLowerCase() === 'true';
+
+if (USE_HTTPS) {
+  try {
+    const keyPath = process.env.PRINTER_AGENT_SSL_KEY || 'ssl/local.key';
+    const certPath = process.env.PRINTER_AGENT_SSL_CERT || 'ssl/local.crt';
+    const options = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath)
+    };
+    https.createServer(options, app).listen(PORT, () => {
+      console.log(`Printer agent listening (HTTPS) on https://localhost:${PORT}`);
+    });
+  } catch (e) {
+    console.error('Failed to start HTTPS server, falling back to HTTP:', e.message);
+    http.createServer(app).listen(PORT, () => {
+      console.log(`Printer agent listening (HTTP) on http://localhost:${PORT}`);
+    });
+  }
+} else {
+  http.createServer(app).listen(PORT, () => {
+    console.log(`Printer agent listening (HTTP) on http://localhost:${PORT}`);
+  });
+}
 
 

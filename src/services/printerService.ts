@@ -9,7 +9,9 @@ export type DiscoveredPrinter = {
 
 const AGENT_BASE = ((): string => {
   const host = (typeof window !== 'undefined' && window.location) ? window.location.hostname : 'localhost';
-  return `http://${host}:9977`;
+  const isHttps = typeof window !== 'undefined' ? window.location.protocol === 'https:' : false;
+  const protocol = isHttps ? 'https' : 'http';
+  return `${protocol}://${host}:9977`;
 })();
 
 export const printerService = {

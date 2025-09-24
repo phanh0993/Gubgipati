@@ -1,3 +1,19 @@
+## Printer Agent (LAN)
+
+Để tránh Mixed Content khi website chạy HTTPS, bạn cần chạy agent in cục bộ với HTTPS tự ký.
+
+1) Cài và chạy:
+```
+cd printer-agent
+npm install
+# tạo thư mục ssl và đặt file ssl/local.key, ssl/local.crt (self-signed)
+PRINTER_AGENT_HTTPS=true PRINTER_AGENT_PORT=9977 PRINTER_AGENT_SSL_KEY=ssl/local.key PRINTER_AGENT_SSL_CERT=ssl/local.crt npm start
+```
+
+2) Trình duyệt sẽ yêu cầu bạn chấp nhận chứng chỉ tự ký ở địa chỉ https://localhost:9977 (hãy mở và accept).
+
+3) Trên trang quản lý máy in, nhấn "Quét máy in" để hiển thị danh sách.
+
 # 🏠 JULY SPA Management System - Local Development
 
 ## 🎯 Tổng Quan
