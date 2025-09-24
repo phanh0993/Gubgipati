@@ -5,6 +5,8 @@ const ipp = require('ipp');
 const fs = require('fs');
 const http = require('http');
 const https = require('https');
+let nodePrinter;
+try { nodePrinter = require('printer'); } catch { nodePrinter = null; }
 
 const app = express();
 app.use(cors());
@@ -41,6 +43,25 @@ app.get('/health', (_, res) => res.json({ ok: true }));
 
 app.get('/printers', async (_, res) => {
   await discoverPrinters();
+  // Also include system printers (Windows/macOS/Linux) if available
+  if (nodePrinter && typeof nodePrinter.getPrinters === 'function') {
+    try {
+      const sys = nodePrinter.getPrinters();
+      for (const sp of sys) {
+        const id = `system://${sp.name}`;
+        printers.push({
+          id,
+          name: sp.name,
+          host: 'local',
+          port: 0,
+          protocol: 'system',
+          uri: id,
+        });
+      }
+    } catch (e) {
+      console.warn('system printers read error:', e.message);
+    }
+  }
   // Deduplicate by id
   const map = new Map();
   for (const p of printers) {
@@ -56,22 +77,42 @@ app.post('/print', async (req, res) => {
     if (!printerUri || !rawText) {
       return res.status(400).json({ error: 'printerUri and rawText are required' });
     }
-    const printer = ipp.Printer(printerUri);
-    const msg = {
-      'operation-attributes-tag': {
-        'requesting-user-name': 'pos',
-        'job-name': title || 'POS Job',
-        'document-format': 'text/plain'
-      },
-      data: Buffer.from(rawText, 'utf-8')
-    };
-    printer.execute('Print-Job', msg, function (err, resp) {
-      if (err) {
-        console.error('IPP print error:', err);
-        return res.status(500).json({ error: String(err) });
+    if (printerUri.startsWith('system://') && nodePrinter) {
+      const name = printerUri.replace('system://', '');
+      try {
+        nodePrinter.printDirect({
+          data: rawText,
+          printer: name,
+          type: 'RAW',
+          success: function (jobID) {
+            return res.json({ ok: true, jobID });
+          },
+          error: function (err) {
+            console.error('System print error:', err);
+            return res.status(500).json({ error: String(err) });
+          }
+        });
+      } catch (e) {
+        return res.status(500).json({ error: String(e) });
       }
-      return res.json({ ok: true, response: resp });
-    });
+    } else {
+      const printer = ipp.Printer(printerUri);
+      const msg = {
+        'operation-attributes-tag': {
+          'requesting-user-name': 'pos',
+          'job-name': title || 'POS Job',
+          'document-format': 'text/plain'
+        },
+        data: Buffer.from(rawText, 'utf-8')
+      };
+      printer.execute('Print-Job', msg, function (err, resp) {
+        if (err) {
+          console.error('IPP print error:', err);
+          return res.status(500).json({ error: String(err) });
+        }
+        return res.json({ ok: true, response: resp });
+      });
+    }
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: String(e) });

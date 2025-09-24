@@ -115,7 +115,7 @@ const PrinterManagementPage: React.FC = () => {
             <div key={p.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0">
               <div>
                 <div className="font-medium">{p.name}</div>
-                <div className="text-sm text-gray-500">{p.uri}</div>
+                <div className="text-sm text-gray-500">{p.uri} {p.protocol === 'system' ? '(Đã cài trên Windows/macOS)' : ''}</div>
               </div>
             </div>
           ))}
