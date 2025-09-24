@@ -33,6 +33,8 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { printerService } from '../services/printerService';
+import { supabase } from '../services/supabaseClient';
 import { getTimeElapsed, formatVietnamDateTime, formatDateTime } from '../utils/formatters';
 
 interface Table {
@@ -346,33 +348,33 @@ const BuffetTableSelection: React.FC = () => {
     if (!selectedOrder || !orderDetails) return;
     
     try {
-      const printData = {
-        printer_id: 1,
-        order_number: selectedOrder.order_number,
-        table_name: selectedOrder.table_name,
-        area: selectedOrder.area,
-        items: orderDetails.items || [],
-        subtotal: orderDetails.subtotal || 0,
-        tax_amount: 0, // Bỏ thuế
-        total_amount: orderDetails.total_amount || 0,
-        buffet_package: orderDetails.buffet_package || 'Buffet',
-        buffet_duration: orderDetails.buffet_duration_minutes || 0,
-        buffet_quantity: orderDetails.buffet_quantity || 1
-      };
-
-      const response = await fetch('http://localhost:8000/api/print-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(printData),
-      });
-
-      if (response.ok) {
-        alert('In hóa đơn thành công!');
-      } else {
-        alert('Lỗi khi in hóa đơn');
+      // Lấy máy in hoá đơn tổng theo cấu hình
+      let printerUri: string | undefined;
+      try {
+        const { data: mapping } = await supabase
+          .from('printer_mappings')
+          .select('printer_uri')
+          .eq('group_key', 'invoice_main')
+          .maybeSingle();
+        printerUri = mapping?.printer_uri;
+      } catch {}
+      // Nếu chưa cấu hình, lấy máy in đầu tiên từ agent
+      if (!printerUri) {
+        const list = await printerService.discover();
+        printerUri = list[0]?.uri;
       }
+      if (!printerUri) throw new Error('Chưa cấu hình máy in hoá đơn tổng');
+
+      // Nội dung in dạng text đơn giản cho IPP
+      const header = `GUBGIPATI\nHoa don tam tinh\n`;
+      const info = `Ban: ${selectedOrder.table_name} - Khu ${selectedOrder.area}\nOrder: ${selectedOrder.order_number}\n`;
+      const buffet = `Ve: ${orderDetails.buffet_package_name || 'Buffet'} x${orderDetails.buffet_quantity || 1}  ${(orderDetails.buffet_package_price||0).toLocaleString('vi-VN')}\n`;
+      const lines = (orderDetails.items || []).map((it: any) => `x${it.quantity || 1}  ${it.name}  ${(it.price||0).toLocaleString('vi-VN')}`);
+      const total = `\nTong: ${(orderDetails.total_amount || 0).toLocaleString('vi-VN')} VND\n`;
+      const rawText = [header, info, buffet, '---', ...lines, total, '\nXin cam on!\n'].join('\n');
+
+      await printerService.printText(printerUri, `Bill ${selectedOrder.order_number}`, rawText);
+      alert('In hóa đơn thành công!');
     } catch (error) {
       console.error('Error printing bill:', error);
       alert('Lỗi khi in hóa đơn');
