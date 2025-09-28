@@ -350,6 +350,21 @@ export const invoicesAPI = {
                 const foodItemId = item.service_id; // service_id chứa food_item_id hoặc buffet_package_id
                 const isTicket = item.unit_price > 0 && [33, 34, 35].includes(foodItemId); // ID vé buffet
                 
+                // Lấy note từ order_items nếu có
+                let note = '';
+                if (!isTicket) {
+                  try {
+                    const { data: orderItem } = await supabase
+                      .from('order_items')
+                      .select('special_instructions')
+                      .eq('food_item_id', foodItemId)
+                      .maybeSingle();
+                    note = orderItem?.special_instructions || '';
+                  } catch (e) {
+                    console.warn('Could not fetch note for food item:', foodItemId);
+                  }
+                }
+                
                 if (isTicket) {
                   // Lấy tên vé từ buffet_packages
                   const { data: buffetPackage } = await supabase
@@ -362,7 +377,8 @@ export const invoicesAPI = {
                     ...item,
                     service_name: buffetPackage?.name || `VÉ ${item.unit_price.toLocaleString()}K`,
                     service_type: 'buffet_ticket',
-                    food_item_id: foodItemId
+                    food_item_id: foodItemId,
+                    special_instructions: note
                   };
                 } else {
                   // Lấy tên món ăn từ food_items
@@ -376,7 +392,8 @@ export const invoicesAPI = {
                     ...item,
                     service_name: foodItem?.name || `Food Item ${foodItemId}`,
                     service_type: 'food_item',
-                    food_item_id: foodItemId
+                    food_item_id: foodItemId,
+                    special_instructions: note
                   };
                 }
               });
@@ -459,7 +476,7 @@ export const invoicesAPI = {
                 // Lấy order_items theo order_id và join tên món
                 const { data: orderItems } = await supabase
                   .from('order_items')
-                  .select('id, food_item_id, quantity, unit_price, total_price, food_items(name, price)')
+                  .select('id, food_item_id, quantity, unit_price, total_price, special_instructions, food_items(name, price)')
                   .eq('order_id', fallbackOrderId);
 
                 if (Array.isArray(orderItems)) {
@@ -469,7 +486,8 @@ export const invoicesAPI = {
                     quantity: Number(it.quantity || 0),
                     unit_price: Number(it.unit_price || 0),
                     total_price: Number(it.total_price || 0),
-                    service_name: it.food_items?.name || `Service ${it.food_item_id}`
+                    service_name: it.food_items?.name || `Service ${it.food_item_id}`,
+                    special_instructions: it.special_instructions || ''
                   }));
                 }
               } catch (e) {
@@ -482,7 +500,8 @@ export const invoicesAPI = {
           const normalizedItems = (itemsData || []).map((item: any) => ({
             ...item,
             service_name: item.service_name || `Service ${item.service_id}`,
-            employee_name: employeeName
+            employee_name: employeeName,
+            special_instructions: item.special_instructions || ''
           }));
 
           const invoiceWithEmployee = {

@@ -50,6 +50,7 @@ const InvoicesTableSkeleton: React.FC = () => (
           <TableCell>Khách hàng</TableCell>
           <TableCell>Nhân viên</TableCell>
           <TableCell>Dịch vụ</TableCell>
+          <TableCell>Ghi chú</TableCell>
           <TableCell>Tổng tiền</TableCell>
           <TableCell>Phương thức TT</TableCell>
           <TableCell>Trạng thái</TableCell>
@@ -67,6 +68,7 @@ const InvoicesTableSkeleton: React.FC = () => (
             </TableCell>
             <TableCell><Skeleton variant="text" width={100} /></TableCell>
             <TableCell><Skeleton variant="rectangular" width={80} height={24} /></TableCell>
+            <TableCell><Skeleton variant="text" width={80} /></TableCell>
             <TableCell><Skeleton variant="text" width={90} /></TableCell>
             <TableCell><Skeleton variant="text" width={60} /></TableCell>
             <TableCell><Skeleton variant="rectangular" width={80} height={24} /></TableCell>
@@ -545,6 +547,7 @@ const InvoicesPage: React.FC = () => {
                 <TableCell>Khách hàng</TableCell>
                 <TableCell>Nhân viên</TableCell>
                 <TableCell>Dịch vụ</TableCell>
+                <TableCell>Ghi chú</TableCell>
                 <TableCell>Tổng tiền</TableCell>
                 <TableCell>Phương thức TT</TableCell>
                 <TableCell>Trạng thái</TableCell>
@@ -555,7 +558,7 @@ const InvoicesPage: React.FC = () => {
             <TableBody>
               {invoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} sx={{ textAlign: 'center', py: 4 }}>
+                    <TableCell colSpan={10} sx={{ textAlign: 'center', py: 4 }}>
                       <Typography variant="body2" color="text.secondary">
                         Không có hóa đơn nào
                       </Typography>
@@ -591,6 +594,21 @@ const InvoicesPage: React.FC = () => {
                       fontSize: '0.75rem'
                     }}>
                       {(invoice as any).dichvu || '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary" sx={{ 
+                      fontStyle: 'italic',
+                      maxWidth: 150,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      backgroundColor: (invoice as any).notes ? '#fff3cd' : 'transparent',
+                      padding: (invoice as any).notes ? '2px 6px' : '0',
+                      borderRadius: (invoice as any).notes ? '4px' : '0',
+                      border: (invoice as any).notes ? '1px solid #ffeaa7' : 'none'
+                    }}>
+                      {(invoice as any).notes || '-'}
                     </Typography>
                   </TableCell>
                   <TableCell>
@@ -694,6 +712,7 @@ const InvoicesPage: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Dịch vụ</TableCell>
+                      <TableCell>Ghi chú</TableCell>
                       <TableCell>Nhân viên thực hiện</TableCell>
                       <TableCell align="center">Số lượng</TableCell>
                       <TableCell align="right">Đơn giá</TableCell>
@@ -713,6 +732,21 @@ const InvoicesPage: React.FC = () => {
                               {item.service_description}
                             </Typography>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Typography variant="body2" color="text.secondary" sx={{ 
+                            fontStyle: 'italic',
+                            maxWidth: 200,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            backgroundColor: (item as any).special_instructions ? '#fff3cd' : 'transparent',
+                            padding: (item as any).special_instructions ? '4px 8px' : '0',
+                            borderRadius: (item as any).special_instructions ? '4px' : '0',
+                            border: (item as any).special_instructions ? '1px solid #ffeaa7' : 'none'
+                          }}>
+                            {(item as any).special_instructions || '-'}
+                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">
