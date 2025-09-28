@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Button, List, ListItem, ListItemText, Card, CardContent,
   Divider, IconButton, Alert, Grid, CardMedia, CardActionArea,
-  useTheme, useMediaQuery
+  useTheme, useMediaQuery, TextField
 } from '@mui/material';
 import { Add, Remove, ArrowBack, Restaurant } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -46,6 +46,7 @@ interface BuffetPackageItem {
 
 interface OrderItemWithQuantity extends BuffetPackageItem {
   quantity: number;
+  note?: string;
 }
 
 interface BuffetOrder {
@@ -230,7 +231,7 @@ const SimpleBuffetPOS: React.FC = () => {
         )
       );
     } else {
-      setOrderItems(prev => [...prev, { ...item, quantity: 1 }]);
+      setOrderItems(prev => [...prev, { ...item, quantity: 1, note: '' }]);
     }
   };
 
@@ -241,6 +242,16 @@ const SimpleBuffetPOS: React.FC = () => {
           ? { ...item, quantity: Math.max(0, item.quantity - 1) }
           : item
       ).filter(item => item.quantity > 0)
+    );
+  };
+
+  const handleNoteChange = (itemId: number, note: string) => {
+    setOrderItems(prev => 
+      prev.map(item => 
+        item.food_item_id === itemId 
+          ? { ...item, note }
+          : item
+      )
     );
   };
 
@@ -311,7 +322,7 @@ const SimpleBuffetPOS: React.FC = () => {
             price: item.food_item.price,
             quantity: item.quantity,
             total: item.food_item.price * item.quantity,
-            special_instructions: item.is_unlimited ? 'Gọi thoải mái' : '',
+            special_instructions: item.note || (item.is_unlimited ? 'Gọi thoải mái' : ''),
             printer_id: null
           }))
         };
@@ -351,7 +362,7 @@ const SimpleBuffetPOS: React.FC = () => {
             price: parseFloat(item.food_item.price.toString()),
             quantity: item.quantity,
             total: parseFloat(item.food_item.price.toString()) * item.quantity,
-            special_instructions: item.is_unlimited ? 'Gọi thoải mái' : '',
+            special_instructions: item.note || (item.is_unlimited ? 'Gọi thoải mái' : ''),
             printer_id: null
           }))
         };
@@ -435,7 +446,7 @@ const SimpleBuffetPOS: React.FC = () => {
           price: 0, // Buffet items are free
           quantity: item.quantity,
           total: 0,
-          special_instructions: 'Gọi thoải mái',
+          special_instructions: item.note || 'Gọi thoải mái',
           printer_id: null
         }))
       };
@@ -660,39 +671,58 @@ const SimpleBuffetPOS: React.FC = () => {
                 </Typography>
                 <List dense>
                   {orderItems.map((item) => (
-                    <ListItem key={item.food_item_id} sx={{ py: 0.5, px: 0 }}>
-                      <ListItemText
-                        primary={item.food_item.name}
-                        secondary={
-                          <Box component="span">
-                            <Typography variant="caption" component="span">
-                              0₫ × {item.quantity} = 0₫
-                            </Typography>
-                          </Box>
-                        }
-                        primaryTypographyProps={{ fontSize: '0.875rem' }}
-                        secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Button
-                          size="small"
-                          onClick={() => handleRemoveItem(item.food_item_id)}
-                          disabled={item.quantity <= 0}
-                          sx={{ minWidth: 24, height: 24, p: 0 }}
-                        >
-                          <Remove fontSize="small" />
-                        </Button>
-                        <Typography variant="body2" sx={{ minWidth: 20, textAlign: 'center', fontSize: '0.75rem' }}>
-                          {item.quantity}
-                        </Typography>
-                        <Button
-                          size="small"
-                          onClick={() => handleAddItem(item)}
-                          sx={{ minWidth: 24, height: 24, p: 0 }}
-                        >
-                          <Add fontSize="small" />
-                        </Button>
+                    <ListItem key={item.food_item_id} sx={{ py: 0.5, px: 0, flexDirection: 'column', alignItems: 'stretch' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                        <ListItemText
+                          primary={item.food_item.name}
+                          secondary={
+                            <Box component="span">
+                              <Typography variant="caption" component="span">
+                                0₫ × {item.quantity} = 0₫
+                              </Typography>
+                            </Box>
+                          }
+                          primaryTypographyProps={{ fontSize: '0.875rem' }}
+                          secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Button
+                            size="small"
+                            onClick={() => handleRemoveItem(item.food_item_id)}
+                            disabled={item.quantity <= 0}
+                            sx={{ minWidth: 24, height: 24, p: 0 }}
+                          >
+                            <Remove fontSize="small" />
+                          </Button>
+                          <Typography variant="body2" sx={{ minWidth: 20, textAlign: 'center', fontSize: '0.75rem' }}>
+                            {item.quantity}
+                          </Typography>
+                          <Button
+                            size="small"
+                            onClick={() => handleAddItem(item)}
+                            sx={{ minWidth: 24, height: 24, p: 0 }}
+                          >
+                            <Add fontSize="small" />
+                          </Button>
+                        </Box>
                       </Box>
+                      <TextField
+                        size="small"
+                        placeholder="Ghi chú cho món này..."
+                        value={item.note || ''}
+                        onChange={(e) => handleNoteChange(item.food_item_id, e.target.value)}
+                        sx={{ 
+                          '& .MuiInputBase-input': { 
+                            fontSize: '0.75rem', 
+                            py: 0.5,
+                            px: 1
+                          },
+                          '& .MuiOutlinedInput-root': {
+                            height: '32px'
+                          }
+                        }}
+                        fullWidth
+                      />
                     </ListItem>
                   ))}
                 </List>
