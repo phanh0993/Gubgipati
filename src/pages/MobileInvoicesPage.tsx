@@ -104,9 +104,12 @@ const MobileInvoicesPage: React.FC = () => {
             });
           }
           
-          // Ensure employee_name is properly set from order data, not localStorage
-          if (!order.employee_name && order.employee_id) {
-            // This will be handled by the API, but we can set a fallback
+          // Get employee name from order data, not from localStorage
+          if (order.employee_name) {
+            // Employee name is already set from API
+            console.log(`Order ${order.id}: Employee = ${order.employee_name}`);
+          } else if (order.employee_id) {
+            // Fallback if employee_name is not provided
             order.employee_name = 'Nhân viên ' + order.employee_id;
           }
           
@@ -263,12 +266,7 @@ const MobileInvoicesPage: React.FC = () => {
                     </Box>
                     
                     <Typography variant="caption" color="text.secondary">
-                      Nhân viên: {(() => {
-                        const employee = localStorage.getItem('pos_employee');
-                        const employeeData = employee ? JSON.parse(employee) : null;
-                        console.log('Employee data from localStorage:', employeeData);
-                        return employeeData?.full_name || employeeData?.fullname || group.orders[0].employee_name || 'Chưa xác định';
-                      })()}
+                      Nhân viên: {group.orders[0].employee_name || 'Chưa xác định'}
                     </Typography>
                   </CardContent>
                 </Card>

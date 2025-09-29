@@ -373,7 +373,8 @@ export const invoicesAPI = {
                 service_id, 
                 quantity, 
                 unit_price, 
-                total_price
+                total_price,
+                employee_id
               `)
               .eq('invoice_id', id)
               .order('unit_price', { ascending: false }); // Sắp xếp theo giá giảm dần
@@ -384,18 +385,29 @@ export const invoicesAPI = {
                 const foodItemId = item.service_id; // service_id chứa food_item_id hoặc buffet_package_id
                 const isTicket = item.unit_price > 0 && [33, 34, 35].includes(foodItemId); // ID vé buffet
                 
-                // Lấy note từ order_items nếu có
+                // Lấy note và employee từ order_items nếu có
                 let note = '';
+                let employeeName = '';
                 if (!isTicket) {
                   try {
                     const { data: orderItem } = await supabase
                       .from('order_items')
-                      .select('special_instructions')
+                      .select('special_instructions, employee_id')
                       .eq('food_item_id', foodItemId)
                       .maybeSingle();
                     note = orderItem?.special_instructions || '';
+                    
+                    // Fetch employee name if employee_id exists
+                    if (orderItem?.employee_id) {
+                      const { data: employee } = await supabase
+                        .from('employees')
+                        .select('fullname')
+                        .eq('id', orderItem.employee_id)
+                        .single();
+                      employeeName = employee?.fullname || '';
+                    }
                   } catch (e) {
-                    console.warn('Could not fetch note for food item:', foodItemId);
+                    console.warn('Could not fetch note/employee for food item:', foodItemId);
                   }
                 }
                 
@@ -412,7 +424,8 @@ export const invoicesAPI = {
                     service_name: buffetPackage?.name || `VÉ ${item.unit_price.toLocaleString()}K`,
                     service_type: 'buffet_ticket',
                     food_item_id: foodItemId,
-                    special_instructions: note
+                    special_instructions: note,
+                    employee_name: employeeName || 'Chưa xác định'
                   };
                 } else {
                   // Lấy tên món ăn từ food_items
@@ -427,7 +440,8 @@ export const invoicesAPI = {
                     service_name: foodItem?.name || `Food Item ${foodItemId}`,
                     service_type: 'food_item',
                     food_item_id: foodItemId,
-                    special_instructions: note
+                    special_instructions: note,
+                    employee_name: employeeName || 'Chưa xác định'
                   };
                 }
               });
@@ -1516,7 +1530,12 @@ export const orderAPI = {
     if (USE_SUPABASE) {
       const tableId = params?.table_id;
       return new Promise((resolve, reject) => {
-        let query = supabase.from('orders').select('*, items:order_items(*)').order('id', { ascending: false });
+        let query = supabase.from('orders').select(`
+          *,
+          items:order_items(*),
+          table:tables(table_name, area),
+          employee:employees(fullname)
+        `).order('id', { ascending: false });
         if (tableId) query = (query as any).eq('table_id', tableId);
         query.then((res: any) => {
           if (res.error) { reject(res.error); return; }
@@ -1524,7 +1543,11 @@ export const orderAPI = {
           const list = (res.data || []).map((o: any) => ({
             ...o,
             order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
-            status: o.status === 'open' ? 'pending' : o.status
+            status: o.status === 'open' ? 'pending' : o.status,
+            // Map table and employee data from joins
+            table_name: o.table?.table_name || `Bàn ${o.table_id}`,
+            area: o.table?.area || 'Unknown',
+            employee_name: o.employee?.fullname || 'Chưa xác định'
           }));
           const axiosLike = { data: list, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
           resolve(axiosLike);
