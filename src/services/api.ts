@@ -1595,7 +1595,7 @@ export const orderAPI = {
               const [tableRes, pkgRes, empRes] = await Promise.all([
                 o.table_id ? supabase.from('tables').select('table_name, area, table_number').eq('id', o.table_id).single() : Promise.resolve({ data: null }),
                 o.buffet_package_id ? supabase.from('buffet_packages').select('name, price').eq('id', o.buffet_package_id).single() : Promise.resolve({ data: null }),
-                o.employee_id ? supabase.from('employees').select('name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
+                o.employee_id ? supabase.from('employees').select('fullname, full_name, name').eq('id', o.employee_id).single() : Promise.resolve({ data: null })
               ]);
 
               console.log('🔍 Join results:', {
