@@ -78,7 +78,6 @@ export interface Employee {
   id: number;
   user_id: number;
   username: string;
-  password?: string; // For creating/updating employees
   name?: string; // For API compatibility
   fullname: string;
   email?: string;

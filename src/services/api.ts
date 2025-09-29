@@ -204,7 +204,6 @@ export const employeesAPI = {
           .from('employees')
           .insert({
             username: data.username,
-            password: data.password,
             fullname: data.fullname,
             email: data.email,
             phone: data.phone,
@@ -1216,7 +1215,6 @@ export const employeeAPI = {
           .from('employees')
           .insert({
             username: data.username,
-            password: data.password,
             fullname: data.fullname,
             email: data.email,
             phone: data.phone,
@@ -1258,10 +1256,6 @@ export const employeeAPI = {
           base_salary: data.base_salary
         };
         
-        // Only update password if provided
-        if (data.password) {
-          updateData.password = data.password;
-        }
         
         supabase
           .from('employees')
