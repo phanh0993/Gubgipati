@@ -104,7 +104,23 @@ const EmployeesPage: React.FC = () => {
   };
 
   const handleDelete = async (employee: Employee) => {
-    alert('Chức năng xóa chỉ khả dụng trong phiên bản đầy đủ với backend');
+    if (window.confirm(`Bạn có chắc chắn muốn vô hiệu hóa nhân viên ${employee.fullname}?`)) {
+      try {
+        setLoading(true);
+        await employeeAPI.delete(employee.id);
+        
+        setEmployees(employees.map(emp => 
+          emp.id === employee.id ? { ...emp, is_active: false } : emp
+        ));
+        
+        alert('Vô hiệu hóa nhân viên thành công!');
+      } catch (error: any) {
+        console.error('Error deleting employee:', error);
+        alert('Lỗi khi vô hiệu hóa nhân viên: ' + (error.message || 'Không thể kết nối đến server'));
+      } finally {
+        setLoading(false);
+      }
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -117,9 +133,36 @@ const EmployeesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock implementation - just close dialog
-    alert('Chức năng này chỉ khả dụng trong phiên bản đầy đủ với backend');
-    handleClose();
+    
+    try {
+      setLoading(true);
+      
+      if (editMode && editingEmployee) {
+        // Update existing employee
+        const response = await employeeAPI.update(editingEmployee.id, formData);
+        const updatedEmployee = response.data.employee;
+        
+        setEmployees(employees.map(emp => 
+          emp.id === editingEmployee.id ? updatedEmployee : emp
+        ));
+        
+        alert('Cập nhật nhân viên thành công!');
+      } else {
+        // Create new employee
+        const response = await employeeAPI.create(formData);
+        const newEmployee = response.data.employee;
+        
+        setEmployees([...employees, newEmployee]);
+        alert('Thêm nhân viên thành công!');
+      }
+      
+      handleClose();
+    } catch (error: any) {
+      console.error('Error saving employee:', error);
+      alert('Lỗi khi lưu nhân viên: ' + (error.message || 'Không thể kết nối đến server'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

@@ -197,8 +197,43 @@ export const employeesAPI = {
   getById: (id: number): Promise<AxiosResponse<{ employee: Employee; stats: any }>> =>
     api.get(`/employees/${id}`),
     
-  create: (data: any): Promise<AxiosResponse<{ employee: Employee; message: string }>> =>
-    api.post('/employees', data),
+  create: (data: any): Promise<AxiosResponse<{ employee: Employee; message: string }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('employees')
+          .insert({
+            username: data.username,
+            password: data.password,
+            fullname: data.fullname,
+            email: data.email,
+            phone: data.phone,
+            employee_code: data.employee_code,
+            position: data.position,
+            department: data.department,
+            base_salary: data.base_salary || 0,
+            is_active: true
+          })
+          .select('*')
+          .single()
+          .then((res: any) => {
+            if (res.error) { 
+              reject(res.error); 
+              return; 
+            }
+            const axiosLike = { 
+              data: { employee: res.data, message: 'Employee created successfully' }, 
+              status: 201, 
+              statusText: 'Created', 
+              headers: {}, 
+              config: {} as any 
+            } as AxiosResponse<{ employee: Employee; message: string }>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.post('/employees', data);
+  },
     
   update: (id: number, data: Partial<Employee>): Promise<AxiosResponse<{ employee: Employee; message: string }>> =>
     api.put(`/employees/${id}`, data),
@@ -1173,6 +1208,113 @@ export const employeeAPI = {
       return mockAPI.getEmployees();
     }
     return api.get('/employees');
+  },
+
+  create: (data: Partial<Employee>): Promise<AxiosResponse<{ employee: Employee; message: string }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('employees')
+          .insert({
+            username: data.username,
+            password: data.password,
+            fullname: data.fullname,
+            email: data.email,
+            phone: data.phone,
+            employee_code: data.employee_code,
+            position: data.position,
+            department: data.department,
+            base_salary: data.base_salary || 0,
+            is_active: true
+          })
+          .select('*')
+          .single()
+          .then((res: any) => {
+            if (res.error) { 
+              reject(res.error); 
+              return; 
+            }
+            const axiosLike = { 
+              data: { employee: res.data, message: 'Employee created successfully' }, 
+              status: 201, 
+              statusText: 'Created', 
+              headers: {}, 
+              config: {} as any 
+            } as AxiosResponse<{ employee: Employee; message: string }>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.post('/employees', data);
+  },
+
+  update: (id: number, data: Partial<Employee>): Promise<AxiosResponse<{ employee: Employee; message: string }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        const updateData: any = {
+          fullname: data.fullname,
+          email: data.email,
+          phone: data.phone,
+          employee_code: data.employee_code,
+          position: data.position,
+          department: data.department,
+          base_salary: data.base_salary
+        };
+        
+        // Only update password if provided
+        if (data.password) {
+          updateData.password = data.password;
+        }
+        
+        supabase
+          .from('employees')
+          .update(updateData)
+          .eq('id', id)
+          .select('*')
+          .single()
+          .then((res: any) => {
+            if (res.error) { 
+              reject(res.error); 
+              return; 
+            }
+            const axiosLike = { 
+              data: { employee: res.data, message: 'Employee updated successfully' }, 
+              status: 200, 
+              statusText: 'OK', 
+              headers: {}, 
+              config: {} as any 
+            } as AxiosResponse<{ employee: Employee; message: string }>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.put(`/employees/${id}`, data);
+  },
+
+  delete: (id: number): Promise<AxiosResponse<{ message: string }>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('employees')
+          .update({ is_active: false })
+          .eq('id', id)
+          .then((res: any) => {
+            if (res.error) { 
+              reject(res.error); 
+              return; 
+            }
+            const axiosLike = { 
+              data: { message: 'Employee deactivated successfully' }, 
+              status: 200, 
+              statusText: 'OK', 
+              headers: {}, 
+              config: {} as any 
+            } as AxiosResponse<{ message: string }>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.delete(`/employees/${id}`);
   },
 
   // Mobile login authentication using Supabase
