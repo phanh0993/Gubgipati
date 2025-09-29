@@ -1255,7 +1255,6 @@ export const employeeAPI = {
           phone: data.phone,
           employee_code: data.employee_code,
           position: data.position,
-          department: data.department,
           base_salary: data.base_salary
         };
         
