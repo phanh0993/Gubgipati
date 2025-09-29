@@ -390,11 +390,14 @@ export const invoicesAPI = {
                 let employeeName = '';
                 
                 try {
+                  console.log('🔍 Looking for order_item with food_item_id:', foodItemId);
                   const { data: orderItem } = await supabase
                     .from('order_items')
                     .select('special_instructions, employee_id')
                     .eq('food_item_id', foodItemId)
                     .maybeSingle();
+                  
+                  console.log('🔍 Found order_item:', orderItem);
                   note = orderItem?.special_instructions || '';
                   
                   // Fetch employee name if employee_id exists
@@ -405,9 +408,10 @@ export const invoicesAPI = {
                       .eq('id', orderItem.employee_id)
                       .single();
                     employeeName = employee?.fullname || '';
+                    console.log('🔍 Employee from order_item:', { employee_id: orderItem.employee_id, employee_name: employeeName });
                   }
                 } catch (e) {
-                  console.warn('Could not fetch note/employee for item:', foodItemId);
+                  console.warn('Could not fetch note/employee for item:', foodItemId, e);
                 }
                 
                 // Fallback: nếu không tìm thấy employee trong order_items, thử lấy từ invoice
@@ -419,10 +423,13 @@ export const invoicesAPI = {
                       .eq('id', invoiceData.employee_id)
                       .single();
                     employeeName = employee?.fullname || '';
+                    console.log('🔍 Fallback employee from invoice:', { employee_id: invoiceData.employee_id, employee_name: employeeName });
                   } catch (e) {
                     console.warn('Could not fetch employee from invoice:', invoiceData.employee_id);
                   }
                 }
+                
+                console.log('🔍 Final employee name for item:', { foodItemId, employeeName, isTicket });
                 
                 if (isTicket) {
                   // Lấy tên vé từ buffet_packages
