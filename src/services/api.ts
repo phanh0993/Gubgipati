@@ -210,6 +210,7 @@ export const employeesAPI = {
             employee_code: data.employee_code,
             position: data.position,
             base_salary: data.base_salary || 0,
+            hire_date: data.hire_date || new Date().toISOString(),
             is_active: true
           })
           .select('*')
@@ -1221,6 +1222,7 @@ export const employeeAPI = {
             employee_code: data.employee_code,
             position: data.position,
             base_salary: data.base_salary || 0,
+            hire_date: data.hire_date || new Date().toISOString(),
             is_active: true
           })
           .select('*')
