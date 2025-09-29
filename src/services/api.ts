@@ -210,7 +210,6 @@ export const employeesAPI = {
             phone: data.phone,
             employee_code: data.employee_code,
             position: data.position,
-            department: data.department,
             base_salary: data.base_salary || 0,
             is_active: true
           })
@@ -1223,7 +1222,6 @@ export const employeeAPI = {
             phone: data.phone,
             employee_code: data.employee_code,
             position: data.position,
-            department: data.department,
             base_salary: data.base_salary || 0,
             is_active: true
           })

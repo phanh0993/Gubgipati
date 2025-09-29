@@ -86,7 +86,6 @@ export interface Employee {
   avatar?: string;
   employee_code: string;
   position?: string;
-  department?: string; // For department field
   base_salary: number;
   commission_rate: number;
   hire_date: string;
