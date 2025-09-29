@@ -385,7 +385,7 @@ export const invoicesAPI = {
                 const foodItemId = item.service_id; // service_id chứa food_item_id hoặc buffet_package_id
                 const isTicket = item.unit_price > 0 && [33, 34, 35].includes(foodItemId); // ID vé buffet
                 
-                // Lấy note và employee từ order_items nếu có
+                // Lấy note từ order_items nếu có
                 let note = '';
                 let employeeName = '';
                 
@@ -393,29 +393,18 @@ export const invoicesAPI = {
                   console.log('🔍 Looking for order_item with food_item_id:', foodItemId);
                   const { data: orderItem } = await supabase
                     .from('order_items')
-                    .select('special_instructions, employee_id')
+                    .select('special_instructions')
                     .eq('food_item_id', foodItemId)
                     .maybeSingle();
                   
                   console.log('🔍 Found order_item:', orderItem);
                   note = orderItem?.special_instructions || '';
-                  
-                  // Fetch employee name if employee_id exists
-                  if (orderItem?.employee_id) {
-                    const { data: employee } = await supabase
-                      .from('employees')
-                      .select('fullname')
-                      .eq('id', orderItem.employee_id)
-                      .single();
-                    employeeName = employee?.fullname || '';
-                    console.log('🔍 Employee from order_item:', { employee_id: orderItem.employee_id, employee_name: employeeName });
-                  }
                 } catch (e) {
-                  console.warn('Could not fetch note/employee for item:', foodItemId, e);
+                  console.warn('Could not fetch note for item:', foodItemId, e);
                 }
                 
-                // Fallback: nếu không tìm thấy employee trong order_items, thử lấy từ invoice
-                if (!employeeName && invoiceData.employee_id) {
+                // Luôn sử dụng invoice employee_id cho tất cả items
+                if (invoiceData.employee_id) {
                   try {
                     const { data: employee } = await supabase
                       .from('employees')
@@ -423,7 +412,7 @@ export const invoicesAPI = {
                       .eq('id', invoiceData.employee_id)
                       .single();
                     employeeName = employee?.fullname || '';
-                    console.log('🔍 Fallback employee from invoice:', { employee_id: invoiceData.employee_id, employee_name: employeeName });
+                    console.log('🔍 Employee from invoice:', { employee_id: invoiceData.employee_id, employee_name: employeeName });
                   } catch (e) {
                     console.warn('Could not fetch employee from invoice:', invoiceData.employee_id);
                   }
