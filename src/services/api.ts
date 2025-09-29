@@ -388,26 +388,39 @@ export const invoicesAPI = {
                 // Lấy note và employee từ order_items nếu có
                 let note = '';
                 let employeeName = '';
-                if (!isTicket) {
+                
+                try {
+                  const { data: orderItem } = await supabase
+                    .from('order_items')
+                    .select('special_instructions, employee_id')
+                    .eq('food_item_id', foodItemId)
+                    .maybeSingle();
+                  note = orderItem?.special_instructions || '';
+                  
+                  // Fetch employee name if employee_id exists
+                  if (orderItem?.employee_id) {
+                    const { data: employee } = await supabase
+                      .from('employees')
+                      .select('fullname')
+                      .eq('id', orderItem.employee_id)
+                      .single();
+                    employeeName = employee?.fullname || '';
+                  }
+                } catch (e) {
+                  console.warn('Could not fetch note/employee for item:', foodItemId);
+                }
+                
+                // Fallback: nếu không tìm thấy employee trong order_items, thử lấy từ invoice
+                if (!employeeName && invoiceData.employee_id) {
                   try {
-                    const { data: orderItem } = await supabase
-                      .from('order_items')
-                      .select('special_instructions, employee_id')
-                      .eq('food_item_id', foodItemId)
-                      .maybeSingle();
-                    note = orderItem?.special_instructions || '';
-                    
-                    // Fetch employee name if employee_id exists
-                    if (orderItem?.employee_id) {
-                      const { data: employee } = await supabase
-                        .from('employees')
-                        .select('fullname')
-                        .eq('id', orderItem.employee_id)
-                        .single();
-                      employeeName = employee?.fullname || '';
-                    }
+                    const { data: employee } = await supabase
+                      .from('employees')
+                      .select('fullname')
+                      .eq('id', invoiceData.employee_id)
+                      .single();
+                    employeeName = employee?.fullname || '';
                   } catch (e) {
-                    console.warn('Could not fetch note/employee for food item:', foodItemId);
+                    console.warn('Could not fetch employee from invoice:', invoiceData.employee_id);
                   }
                 }
                 
