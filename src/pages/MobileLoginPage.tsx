@@ -18,6 +18,7 @@ import {
   PhoneAndroid,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Employee {
   id: number;
@@ -49,8 +50,12 @@ const MobileLoginPage: React.FC = () => {
       // Lưu thông tin user vào localStorage
       localStorage.setItem('pos_employee', JSON.stringify(loginData.user));
       
-      // Chuyển đến trang mobile tables
-      navigate('/mobile-tables');
+      console.log('✅ Mobile login successful, redirecting...');
+      
+      // Force reload để trigger AuthContext re-check
+      setTimeout(() => {
+        window.location.href = '/mobile-tables';
+      }, 100);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Lỗi đăng nhập');
