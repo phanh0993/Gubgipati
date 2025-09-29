@@ -75,21 +75,40 @@ const MobileInvoicesPage: React.FC = () => {
           order.status === 'pending' && order.order_type === 'buffet'
         );
         
-        // Map items to food_items for compatibility
+        // Map order_items to food_items for compatibility
         const mappedOrders = filteredOrders.map((order: any) => {
           if (order.items) {
-            order.food_items = order.items.map((item: any) => ({
-              food_item: {
-                name: item.name,
-                price: item.price
-              },
-              quantity: item.quantity,
-              price: item.price
-            }));
+            order.food_items = order.items.map((item: any) => {
+              const foodItemId = item.food_item_id;
+              const isTicket = [33, 34, 35].includes(foodItemId); // ID vé buffet
+              
+              let itemName = 'Unknown Item';
+              if (isTicket) {
+                // Vé buffet
+                itemName = `VÉ ${item.unit_price?.toLocaleString()}K` || 'Vé buffet';
+              } else {
+                // Món ăn
+                itemName = item.food_items?.name || 'Unknown Item';
+              }
+              
+              return {
+                food_item: {
+                  name: itemName,
+                  price: item.unit_price || 0
+                },
+                quantity: item.quantity || 0,
+                price: item.unit_price || 0,
+                is_ticket: isTicket,
+                special_instructions: item.special_instructions || ''
+              };
+            });
           }
           
-          // Keep existing buffet package info from database
-          // No need to override with hardcoded values
+          // Ensure employee_name is properly set from order data, not localStorage
+          if (!order.employee_name && order.employee_id) {
+            // This will be handled by the API, but we can set a fallback
+            order.employee_name = 'Nhân viên ' + order.employee_id;
+          }
           
           return order;
         });
@@ -126,12 +145,7 @@ const MobileInvoicesPage: React.FC = () => {
   const calculateTotalAmount = (order: Order) => {
     let total = 0;
     
-    // Add buffet package amount
-    if (order.buffet_quantity && order.buffet_package_price) {
-      total += order.buffet_quantity * order.buffet_package_price;
-    }
-    
-    // Add individual food items amount (only if food_items exist)
+    // Calculate total from order_items (includes both tickets and food items)
     if (order.food_items && order.food_items.length > 0) {
       order.food_items.forEach((item: any) => {
         total += (item.quantity || 1) * (item.price || 0);

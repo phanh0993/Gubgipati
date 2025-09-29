@@ -425,12 +425,7 @@ const MobileOrderDetailsPage: React.FC = () => {
                   Nhân viên
                 </Typography>
                 <Typography variant="h6">
-                  {(() => {
-                    const employee = localStorage.getItem('pos_employee');
-                    const employeeData = employee ? JSON.parse(employee) : null;
-                    console.log('Employee data from localStorage:', employeeData);
-                    return employeeData?.full_name || employeeData?.fullname || order.employee_name || 'Chưa xác định';
-                  })()}
+                  {order.employee_name || 'Chưa xác định'}
                 </Typography>
               </Grid>
             </Grid>

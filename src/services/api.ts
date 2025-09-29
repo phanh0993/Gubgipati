@@ -1440,15 +1440,31 @@ export const orderAPI = {
               // Đọc items từ order_items và join với food_items để lấy tên
               console.log('🔍 Order data:', o);
               console.log('🔍 Order items from DB:', o.order_items);
-              const normalizedItems = (o.order_items || []).map((it: any, index: number) => ({
-                id: it.id || index,
-                order_id: o.id,
-                food_item_id: it.food_item_id,
-                name: it.food_items?.name || 'Unknown Item',
-                quantity: Number(it.quantity || 0),
-                price: Number(it.unit_price || 0),
-                total: Number(it.total_price || 0)
-              }));
+              const normalizedItems = (o.order_items || []).map((it: any, index: number) => {
+                const foodItemId = it.food_item_id;
+                const isTicket = [33, 34, 35].includes(foodItemId); // ID vé buffet
+                
+                let itemName = 'Unknown Item';
+                if (isTicket) {
+                  // Lấy tên vé từ buffet_packages
+                  itemName = `VÉ ${it.unit_price?.toLocaleString()}K` || 'Vé buffet';
+                } else {
+                  // Lấy tên món ăn từ food_items
+                  itemName = it.food_items?.name || 'Unknown Item';
+                }
+                
+                return {
+                  id: it.id || index,
+                  order_id: o.id,
+                  food_item_id: it.food_item_id,
+                  name: itemName,
+                  quantity: Number(it.quantity || 0),
+                  price: Number(it.unit_price || 0),
+                  total: Number(it.total_price || 0),
+                  is_ticket: isTicket,
+                  special_instructions: it.special_instructions || ''
+                };
+              });
               console.log('🔍 Normalized items:', normalizedItems);
 
               const normalized = {
@@ -1506,9 +1522,87 @@ export const orderAPI = {
           console.log('✅ Order created:', orderData);
           const orderId = orderData.id;
 
-          // Lưu items vào order_items
+          // 1. Lưu vé buffet vào order_items trước (nếu có)
+          if (orderPayload.buffet_package_id && orderPayload.buffet_quantity > 0) {
+            console.log('🎫 Processing buffet ticket for order_items:', {
+              buffet_package_id: orderPayload.buffet_package_id,
+              buffet_quantity: orderPayload.buffet_quantity
+            });
+            
+            // Lấy thông tin vé buffet
+            const { data: buffetPackage } = await supabase
+              .from('buffet_packages')
+              .select('id, name, price')
+              .eq('id', orderPayload.buffet_package_id)
+              .single();
+            
+            if (buffetPackage) {
+              const ticketFoodItemId = orderPayload.buffet_package_id; // ID vé = buffet_package_id
+              const ticketQuantity = Number(orderPayload.buffet_quantity || 1);
+              const ticketPrice = Number(buffetPackage.price || 0);
+              const ticketTotal = ticketPrice * ticketQuantity;
+              
+              console.log(`🎫 Adding buffet ticket: ${buffetPackage.name} x${ticketQuantity} = ${ticketTotal}₫`);
+              
+              // Kiểm tra xem vé đã tồn tại chưa
+              const { data: existingTicket } = await supabase
+                .from('order_items')
+                .select('id, quantity, unit_price, total_price')
+                .eq('order_id', orderId)
+                .eq('food_item_id', ticketFoodItemId)
+                .maybeSingle();
+
+              if (existingTicket) {
+                // Vé đã tồn tại - cộng dồn số lượng
+                const oldQuantity = Number(existingTicket.quantity || 0);
+                const newQuantity = oldQuantity + ticketQuantity;
+                const newTotalPrice = ticketPrice * newQuantity;
+                
+                console.log(`🔄 Updating existing ticket ${ticketFoodItemId}: ${oldQuantity} + ${ticketQuantity} = ${newQuantity}`);
+                
+                const { error: updateError } = await supabase
+                  .from('order_items')
+                  .update({ 
+                    quantity: newQuantity, 
+                    total_price: newTotalPrice 
+                  })
+                  .eq('id', existingTicket.id);
+                
+                if (updateError) {
+                  console.error(`❌ Failed to update ticket ${ticketFoodItemId}:`, updateError);
+                } else {
+                  console.log(`✅ Updated existing ticket ${ticketFoodItemId}: ${oldQuantity} + ${ticketQuantity} = ${newQuantity}`);
+                }
+              } else {
+                // Vé mới - thêm mới
+                const ticketPayload = {
+                  order_id: orderId,
+                  food_item_id: ticketFoodItemId,
+                  quantity: ticketQuantity,
+                  unit_price: ticketPrice,
+                  total_price: ticketTotal,
+                  special_instructions: 'Vé buffet'
+                };
+                
+                console.log('📝 Ticket insert payload:', ticketPayload);
+                
+                const { data: insertData, error: insertError } = await supabase
+                  .from('order_items')
+                  .insert(ticketPayload)
+                  .select('*');
+                
+                if (insertError) {
+                  console.error(`❌ Failed to insert ticket ${ticketFoodItemId}:`, insertError);
+                } else {
+                  console.log(`✅ Added new ticket ${ticketFoodItemId}:`, insertData);
+                }
+              }
+            }
+          }
+
+          // 2. Lưu các món ăn vào order_items
           if (Array.isArray(items) && items.length > 0) {
-            console.log('🔄 Processing items for order_items:', items);
+            console.log('🔄 Processing food items for order_items:', items);
             
             for (const item of items) {
               const unitPrice = Number(item.price || item.unit_price || 0);
@@ -1565,7 +1659,8 @@ export const orderAPI = {
                   food_item_id: item.food_item_id,
                   quantity: quantity,
                   unit_price: unitPrice,
-                  total_price: totalPrice
+                  total_price: totalPrice,
+                  special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                 };
                 
                 console.log('📝 Insert payload:', insertPayload);
@@ -1583,7 +1678,7 @@ export const orderAPI = {
               }
             }
           } else {
-            console.log('⚠️ No items to process or items is not an array:', items);
+            console.log('⚠️ No food items to process or items is not an array:', items);
           }
 
           // Verify items were saved
@@ -1668,9 +1763,83 @@ export const orderAPI = {
           .single()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
-            // Cập nhật order_items với logic gộp số lượng
+            // 1. Cập nhật vé buffet vào order_items (nếu có)
+            if (updatePayload.buffet_package_id && updatePayload.buffet_quantity > 0) {
+              console.log('🎫 Processing buffet ticket update for order_items:', {
+                buffet_package_id: updatePayload.buffet_package_id,
+                buffet_quantity: updatePayload.buffet_quantity
+              });
+              
+              // Lấy thông tin vé buffet
+              const { data: buffetPackage } = await supabase
+                .from('buffet_packages')
+                .select('id, name, price')
+                .eq('id', updatePayload.buffet_package_id)
+                .single();
+              
+              if (buffetPackage) {
+                const ticketFoodItemId = updatePayload.buffet_package_id; // ID vé = buffet_package_id
+                const ticketQuantity = Number(updatePayload.buffet_quantity || 1);
+                const ticketPrice = Number(buffetPackage.price || 0);
+                const ticketTotal = ticketPrice * ticketQuantity;
+                
+                console.log(`🎫 Updating buffet ticket: ${buffetPackage.name} x${ticketQuantity} = ${ticketTotal}₫`);
+                
+                // Kiểm tra xem vé đã tồn tại chưa
+                const { data: existingTicket } = await supabase
+                  .from('order_items')
+                  .select('id, quantity, unit_price, total_price')
+                  .eq('order_id', id)
+                  .eq('food_item_id', ticketFoodItemId)
+                  .maybeSingle();
+
+                if (existingTicket) {
+                  // Vé đã tồn tại - cộng dồn số lượng
+                  const oldQuantity = Number(existingTicket.quantity || 0);
+                  const newQuantity = oldQuantity + ticketQuantity;
+                  const newTotalPrice = ticketPrice * newQuantity;
+                  
+                  console.log(`🔄 Updating existing ticket ${ticketFoodItemId}: ${oldQuantity} + ${ticketQuantity} = ${newQuantity}`);
+                  
+                  await supabase
+                    .from('order_items')
+                    .update({ 
+                      quantity: newQuantity, 
+                      total_price: newTotalPrice 
+                    })
+                    .eq('id', existingTicket.id);
+                  
+                  console.log(`✅ Updated existing ticket ${ticketFoodItemId}: ${oldQuantity} + ${ticketQuantity} = ${newQuantity}`);
+                } else {
+                  // Vé mới - thêm mới
+                  const ticketPayload = {
+                    order_id: id,
+                    food_item_id: ticketFoodItemId,
+                    quantity: ticketQuantity,
+                    unit_price: ticketPrice,
+                    total_price: ticketTotal,
+                    special_instructions: 'Vé buffet'
+                  };
+                  
+                  console.log('📝 Ticket insert payload:', ticketPayload);
+                  
+                  const { data: insertData, error: insertError } = await supabase
+                    .from('order_items')
+                    .insert(ticketPayload)
+                    .select('*');
+                  
+                  if (insertError) {
+                    console.error(`❌ Failed to insert ticket ${ticketFoodItemId}:`, insertError);
+                  } else {
+                    console.log(`✅ Added new ticket ${ticketFoodItemId}:`, insertData);
+                  }
+                }
+              }
+            }
+
+            // 2. Cập nhật các món ăn vào order_items
             if (Array.isArray(items) && items.length > 0) {
-              console.log('🔄 Updating items for order_items:', items);
+              console.log('🔄 Updating food items for order_items:', items);
               
               for (const item of items) {
                 const unitPrice = Number(item.price || item.unit_price || 0);
@@ -1717,7 +1886,8 @@ export const orderAPI = {
                     food_item_id: item.food_item_id,
                     quantity: quantity,
                     unit_price: unitPrice,
-                    total_price: totalPrice
+                    total_price: totalPrice,
+                    special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                   });
                   
                   if (insertResult.error) {
@@ -1728,7 +1898,7 @@ export const orderAPI = {
                 }
               }
             } else {
-              console.log('⚠️ No items to update or items is not an array');
+              console.log('⚠️ No food items to update or items is not an array');
             }
             
             // In bếp khi cập nhật order
