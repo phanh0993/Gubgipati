@@ -127,13 +127,12 @@ const MobileInvoicesPage: React.FC = () => {
         
         setOrders(mappedOrders);
       }
-
-      // Fetch tables
-      const tablesResponse = await tableAPI.getTables();
+      
+      // Set tables data
       if (tablesResponse.status === 200) {
-        const tablesData = tablesResponse.data;
-        setTables(tablesData);
+        setTables(tablesResponse.data);
       }
+
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
