@@ -124,8 +124,19 @@ const BuffetTableSelection: React.FC = () => {
         const buffetOrders = ordersData.filter(order => 
           order.order_type === 'buffet' && order.status === 'pending'
         );
-        setOrders(buffetOrders);
-        console.log('Buffet orders:', buffetOrders);
+        
+        // Map table info to orders
+        const ordersWithTableInfo = buffetOrders.map(order => {
+          const table = tablesData.find(t => t.id === order.table_id);
+          return {
+            ...order,
+            table_name: table?.table_name || `Bàn ${order.table_id}`,
+            area: table?.area || 'Unknown'
+          };
+        });
+        
+        setOrders(ordersWithTableInfo);
+        console.log('Buffet orders with table info:', ordersWithTableInfo);
       } else {
         console.error('Orders data is not an array:', ordersData);
         setOrders([]);

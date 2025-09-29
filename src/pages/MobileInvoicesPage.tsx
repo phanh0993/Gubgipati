@@ -67,16 +67,25 @@ const MobileInvoicesPage: React.FC = () => {
       // Fetch orders using Supabase API
       const { orderAPI, tableAPI } = await import('../services/api');
       
-      // Fetch orders
-      const ordersResponse = await orderAPI.getOrders();
+      // Fetch orders and tables
+      const [ordersResponse, tablesResponse] = await Promise.all([
+        orderAPI.getOrders(),
+        tableAPI.getTables()
+      ]);
+      
       if (ordersResponse.status === 200) {
         const ordersData = ordersResponse.data;
+        const tablesData = tablesResponse.data;
         const filteredOrders = ordersData.filter((order: Order) => 
           order.status === 'pending' && order.order_type === 'buffet'
         );
         
-        // Map order_items to food_items for compatibility
+        // Map order_items to food_items for compatibility and add table info
         const mappedOrders = filteredOrders.map((order: any) => {
+          // Add table info
+          const table = tablesData.find(t => t.id === order.table_id);
+          order.table_name = table?.table_name || `Bàn ${order.table_id}`;
+          order.area = table?.area || 'Unknown';
           if (order.items) {
             order.food_items = order.items.map((item: any) => {
               const foodItemId = item.food_item_id;

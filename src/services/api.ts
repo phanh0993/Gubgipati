@@ -1533,7 +1533,6 @@ export const orderAPI = {
         let query = supabase.from('orders').select(`
           *,
           items:order_items(*),
-          table:tables(table_name, area),
           employee:employees(fullname)
         `).order('id', { ascending: false });
         if (tableId) query = (query as any).eq('table_id', tableId);
@@ -1544,10 +1543,11 @@ export const orderAPI = {
             ...o,
             order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
             status: o.status === 'open' ? 'pending' : o.status,
-            // Map table and employee data from joins
-            table_name: o.table?.table_name || `Bàn ${o.table_id}`,
-            area: o.table?.area || 'Unknown',
-            employee_name: o.employee?.fullname || 'Chưa xác định'
+            // Map employee data from join
+            employee_name: o.employee?.fullname || 'Chưa xác định',
+            // Table info will be fetched separately
+            table_name: `Bàn ${o.table_id}`,
+            area: 'Unknown'
           }));
           const axiosLike = { data: list, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
           resolve(axiosLike);
