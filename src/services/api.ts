@@ -2054,6 +2054,7 @@ export const orderAPI = {
                     quantity: quantity,
                     unit_price: unitPrice,
                     total_price: totalPrice,
+                    employee_id: order.employee_id,
                     special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                   });
                   

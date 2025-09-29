@@ -25,6 +25,7 @@ import {
   useTheme,
   useMediaQuery
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 import {
   TableRestaurant,
   Logout,
@@ -65,6 +66,8 @@ const BuffetTableSelection: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
+  const canEdit = user?.role === 'manager' || user?.role === 'admin';
   const [tables, setTables] = useState<Table[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedArea, setSelectedArea] = useState<string>('A');
@@ -769,7 +772,7 @@ const BuffetTableSelection: React.FC = () => {
           <Button onClick={() => setShowOrderDialog(false)}>
             Đóng
           </Button>
-          <Button onClick={handleSaveChanges} variant="outlined" color="primary">
+          <Button onClick={handleSaveChanges} variant="outlined" color="primary" disabled={!canEdit}>
             Lưu thay đổi
           </Button>
           <Button onClick={handlePrintBill} variant="outlined" color="info">

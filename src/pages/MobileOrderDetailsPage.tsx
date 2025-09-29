@@ -17,6 +17,7 @@ import {
   Grid,
   TextField
 } from '@mui/material';
+import { useAuth } from '../contexts/AuthContext';
 import {
   ArrowBack,
   TableRestaurant,
@@ -59,6 +60,8 @@ interface Table {
 const MobileOrderDetailsPage: React.FC = () => {
   const navigate = useNavigate();
   const { orderId } = useParams<{ orderId: string }>();
+  const { user } = useAuth();
+  const canEdit = user?.role === 'manager' || user?.role === 'admin';
   const [order, setOrder] = useState<Order | null>(null);
   const [table, setTable] = useState<Table | null>(null);
   const [loading, setLoading] = useState(true);
@@ -488,6 +491,7 @@ const MobileOrderDetailsPage: React.FC = () => {
                                 inputProps={{ min: 0, style: { textAlign: 'center' } }}
                                 sx={{ width: '50px' }}
                                 size="small"
+                                disabled={!canEdit}
                               />
                             </Box>
                             <Typography variant="body2" color="primary.main">
@@ -521,6 +525,7 @@ const MobileOrderDetailsPage: React.FC = () => {
             variant="outlined"
             color="primary"
             onClick={handleSaveChanges}
+            disabled={!canEdit}
             sx={{ width: '100%' }}
           >
             Lưu thay đổi
@@ -538,7 +543,7 @@ const MobileOrderDetailsPage: React.FC = () => {
               variant="contained"
               startIcon={<Receipt />}
               onClick={handlePayment}
-              disabled={paymentLoading}
+            disabled={paymentLoading || !canEdit}
               sx={{ flex: 1 }}
             >
               {paymentLoading ? 'Đang xử lý...' : 'Thanh Toán'}
