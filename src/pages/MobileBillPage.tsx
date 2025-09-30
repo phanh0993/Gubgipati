@@ -246,9 +246,24 @@ const MobileBillPage: React.FC = () => {
           console.warn('🎫 [Mobile] Failed to read current tickets:', e);
         }
 
+        console.log(`🎫 [Mobile UPDATE ORDER] Debug info:`, {
+          orderId: currentOrder.id,
+          selectedPackage: selectedPackage,
+          buffet_package_id: selectedPackage?.id,
+          buffet_quantity: packageQuantity,
+          currentOrder: currentOrder
+        });
+        
+        if (!selectedPackage || !selectedPackage.id) {
+          console.error('❌ [Mobile UPDATE ORDER] selectedPackage is missing or has no id:', selectedPackage);
+          alert('Lỗi: Không tìm thấy thông tin gói vé. Vui lòng chọn lại gói vé.');
+          return;
+        }
+        
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
+          buffet_package_id: selectedPackage.id,
           buffet_quantity: packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
@@ -430,6 +445,7 @@ const MobileBillPage: React.FC = () => {
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
+          buffet_package_id: selectedPackage.id,
           buffet_quantity: packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
