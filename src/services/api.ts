@@ -1856,9 +1856,31 @@ export const orderAPI = {
             } catch {}
             // 1. Đồng bộ vé buffet vào bảng order_buffet - tạo dòng mới cho mỗi lần order
             try {
-              const buffetPackageId = Number(updatePayload.buffet_package_id || 0);
+              let buffetPackageId = Number(updatePayload.buffet_package_id || 0);
               const additionalQtyRaw = updatePayload.buffet_quantity;
               const additionalQty = (additionalQtyRaw === undefined || additionalQtyRaw === null) ? 0 : Number(additionalQtyRaw);
+              
+              // Nếu buffetPackageId = 0, tự động lấy từ order cũ
+              if (buffetPackageId === 0 && additionalQty > 0) {
+                console.log(`🎫 [UPDATE ORDER] buffetPackageId=0, fetching from existing order...`);
+                try {
+                  const { data: existingOrder, error: orderError } = await supabase
+                    .from('orders')
+                    .select('buffet_package_id')
+                    .eq('id', id)
+                    .maybeSingle();
+                  
+                  if (!orderError && existingOrder && existingOrder.buffet_package_id) {
+                    buffetPackageId = existingOrder.buffet_package_id;
+                    console.log(`🎫 [UPDATE ORDER] Auto-detected buffet_package_id: ${buffetPackageId}`);
+                  } else {
+                    console.error('❌ [UPDATE ORDER] Failed to get buffet_package_id from existing order:', orderError);
+                  }
+                } catch (e) {
+                  console.error('❌ [UPDATE ORDER] Error fetching existing order:', e);
+                }
+              }
+              
               console.log(`🎫 [UPDATE ORDER] Adding new ticket row: orderId=${id}, buffetPackageId=${buffetPackageId}, quantity=${additionalQty}`);
               
               if (buffetPackageId && additionalQty > 0) {

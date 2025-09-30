@@ -1014,32 +1014,32 @@ async function handleOrders(req, res) {
         RETURNING *
       `, updateValues);
       
-      // Cập nhật vé buffet theo yêu cầu: nếu buffet_quantity được truyền
+      // Cập nhật vé buffet: tạo dòng mới cho mỗi lần order thêm vé
       if (buffet_quantity !== undefined) {
-        const currentCountRes = await client.query(
-          `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
-          [id]
-        );
-        const currentQty = currentCountRes.rows[0]?.qty || 0;
-        const desiredQty = parseInt(buffet_quantity) || 0;
-        const pkgId = buffet_package_id || result.rows[0]?.buffet_package_id;
-        if (desiredQty > currentQty && pkgId) {
-          const toAdd = desiredQty - currentQty;
-          for (let i = 0; i < toAdd; i++) {
-            await client.query(
-              `INSERT INTO order_buffet (order_id, buffet_package_id) VALUES ($1, $2)`,
-              [id, pkgId]
-            );
-          }
-        } else if (desiredQty < currentQty) {
-          const toRemove = currentQty - desiredQty;
-          // Xóa bớt theo id cũ nhất
-          await client.query(
-            `DELETE FROM order_buffet WHERE id IN (
-               SELECT id FROM order_buffet WHERE order_id = $1 ORDER BY id DESC LIMIT $2
-             )`,
-            [id, toRemove]
+        const additionalQty = parseInt(buffet_quantity) || 0;
+        let pkgId = buffet_package_id || result.rows[0]?.buffet_package_id;
+        
+        // Nếu buffet_package_id = 0, lấy từ order cũ
+        if (!pkgId) {
+          const orderRes = await client.query(
+            `SELECT buffet_package_id FROM orders WHERE id = $1`,
+            [id]
           );
+          if (orderRes.rows.length > 0) {
+            pkgId = orderRes.rows[0].buffet_package_id;
+          }
+        }
+        
+        if (additionalQty > 0 && pkgId) {
+          console.log(`🎫 [SERVER UPDATE ORDER] Adding ${additionalQty} tickets for order ${id}, package ${pkgId}`);
+          // Tạo dòng mới với quantity = additionalQty
+          await client.query(
+            `INSERT INTO order_buffet (order_id, buffet_package_id, quantity) VALUES ($1, $2, $3)`,
+            [id, pkgId, additionalQty]
+          );
+          console.log(`✅ [SERVER UPDATE ORDER] Successfully added ${additionalQty} tickets`);
+        } else {
+          console.log(`🎫 [SERVER UPDATE ORDER] Skipping ticket sync: additionalQty=${additionalQty}, pkgId=${pkgId}`);
         }
       }
 
