@@ -1609,16 +1609,14 @@ export const orderAPI = {
               console.log('🔍 Order items from DB:', o.order_items);
               const normalizedItems = (o.order_items || []).map((it: any, index: number) => {
                 const foodItemId = it.food_item_id;
-                // Vé buffet: xác định linh hoạt thay vì hardcode ID
                 const looksLikeTicketByNote = String(it.special_instructions || '').toLowerCase().includes('vé buffet');
                 const looksLikeTicketByPkg = !!o.buffet_package_id && Number(o.buffet_package_id) === Number(foodItemId);
                 const looksLikeTicketByMissingName = !it.food_items?.name && Number(it.unit_price || 0) > 0 && !!o.buffet_package_id;
                 const isTicket = looksLikeTicketByNote || looksLikeTicketByPkg || looksLikeTicketByMissingName;
 
-                // Tên item: nếu là vé, ưu tiên tên gói buffet; fallback VÉ <giá>K
                 let itemName = 'Unknown Item';
                 if (isTicket) {
-                  const ticketPrice = Number(it.unit_price || 0);
+                  const ticketPrice = Number(o.buffet_package_price || 0);
                   itemName = (o.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
                 } else {
                   itemName = it.food_items?.name || 'Unknown Item';
@@ -1638,6 +1636,24 @@ export const orderAPI = {
                   employee_name: undefined as any
                 };
               });
+
+              // Nếu không có vé trong order_items, tạo item vé từ orders.buffet_quantity
+              if (Number(o.buffet_package_id) && Number(o.buffet_quantity) > 0) {
+                const ticketPrice = Number(o.buffet_package_price || 0);
+                normalizedItems.push({
+                  id: -1,
+                  order_id: o.id,
+                  food_item_id: o.buffet_package_id,
+                  name: o.buffet_package_name || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet'),
+                  quantity: Number(o.buffet_quantity),
+                  price: ticketPrice,
+                  total: ticketPrice * Number(o.buffet_quantity),
+                  is_ticket: true,
+                  special_instructions: 'Vé buffet',
+                  employee_id: o.employee_id || null,
+                  employee_name: ''
+                });
+              }
 
               // Gán employee_name theo lần xuất hiện đầu tiên của mỗi item
               const firstEmployeePerItem = new Map<number, { id: number; name: string }>();

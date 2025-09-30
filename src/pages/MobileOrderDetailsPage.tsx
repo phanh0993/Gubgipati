@@ -167,58 +167,9 @@ const MobileOrderDetailsPage: React.FC = () => {
 
   const calculateTotalAmount = () => {
     if (!order) return 0;
-    
-    let total = 0;
-    
-    const getItemsTotal = () => {
-      if (!order || !order.food_items || order.food_items.length === 0) return 0;
-      return order.food_items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
-    };
-
-    const getDisplayedBuffetQuantity = () => {
-      if (!order) return 0;
-      if (editingQuantities.buffet_quantity !== undefined) return Math.max(0, Number(editingQuantities.buffet_quantity) || 0);
-      if (order.buffet_quantity && Number(order.buffet_quantity) > 0) return Number(order.buffet_quantity);
-      
-      const price = Number(order.buffet_package_price || 0);
-      if (price <= 0) return 0;
-      
-      const baseTotal = Number(order.subtotal || order.total_amount || 0);
-      const itemsTotal = getItemsTotal();
-      let buffetPortion = baseTotal - itemsTotal;
-      
-      if (buffetPortion <= 0) {
-        // Try parse from notes e.g. "x1", "x 2"
-        const notes: string = String(order.notes || '');
-        const m = notes.match(/x\s*(\d+)/i);
-        if (m) {
-          const q = Number(m[1]);
-          return Number.isFinite(q) && q > 0 ? q : 0;
-        }
-        return 0;
-      }
-      const q = Math.round(buffetPortion / price);
-      return q > 0 ? q : 0;
-    };
-
-    // Add buffet package amount
-    if (order.buffet_package_id && order.buffet_package_price) {
-      const inferredQty = getDisplayedBuffetQuantity();
-      const qty = inferredQty > 0 ? inferredQty : 1;
-      total += qty * order.buffet_package_price;
-    }
-    
-    // Add individual food items amount (only if food_items exist)
-    if (order.food_items && order.food_items.length > 0) {
-      total += order.food_items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
-    }
-
-    // Fallback: if calculated total is 0 but order has subtotal/total_amount, use that
-    if (total === 0) {
-      const fallback = Number(order.total_amount || order.subtotal || 0);
-      if (fallback > 0) return fallback;
-    }
-    return total;
+    // Tính tổng hoàn toàn từ items, bỏ thuế
+    const itemsTotal = (order.food_items || []).reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
+    return itemsTotal;
   };
 
   const handleBack = () => {
