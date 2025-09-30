@@ -395,7 +395,13 @@ const BuffetTableSelection: React.FC = () => {
       // Nội dung in dạng text đơn giản cho IPP
       const header = `GUBGIPATI\nHoa don tam tinh\n`;
       const info = `Ban: ${selectedOrder.table_name} - Khu ${selectedOrder.area}\nOrder: ${selectedOrder.order_number}\n`;
-      const buffet = `Ve: ${orderDetails.buffet_package_name || 'Buffet'} x${orderDetails.buffet_quantity || 1}  ${(orderDetails.buffet_package_price||0).toLocaleString('vi-VN')}\n`;
+      const ticketCount = (() => {
+        const pkgId = orderDetails.buffet_package_id;
+        const byFlag = (orderDetails.items || []).filter((it: any) => it.is_ticket === true).reduce((s: number, it: any) => s + Number(it.quantity || 0), 0);
+        const byPkgId = (orderDetails.items || []).filter((it: any) => Number(it.food_item_id) === Number(pkgId)).reduce((s: number, it: any) => s + Number(it.quantity || 0), 0);
+        return byFlag || byPkgId || 0;
+      })();
+      const buffet = `Ve: ${orderDetails.buffet_package_name || 'Buffet'} x${ticketCount}  ${(orderDetails.buffet_package_price||0).toLocaleString('vi-VN')}\n`;
       const lines = (orderDetails.items || []).map((it: any) => `x${it.quantity || 1}  ${it.name}  ${(it.price||0).toLocaleString('vi-VN')}`);
       const total = `\nTong: ${(orderDetails.total_amount || 0).toLocaleString('vi-VN')} VND\n`;
       const rawText = [header, info, buffet, '---', ...lines, total, '\nXin cam on!\n'].join('\n');
