@@ -166,6 +166,14 @@ async function setupRestaurantDatabase() {
         created_at TIMESTAMP DEFAULT NOW()
       );
 
+      -- Buffet tickets per order (each row = 1 ticket)
+      CREATE TABLE IF NOT EXISTS order_buffet (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+        buffet_package_id INTEGER NOT NULL REFERENCES buffet_packages(id) ON DELETE RESTRICT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
       -- Printers
       CREATE TABLE IF NOT EXISTS printers (
         id SERIAL PRIMARY KEY,
@@ -196,6 +204,8 @@ async function setupRestaurantDatabase() {
       CREATE INDEX IF NOT EXISTS idx_orders_date ON orders (created_at);
       CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items (order_id);
       CREATE INDEX IF NOT EXISTS idx_kitchen_orders_status ON kitchen_orders (status);
+      CREATE INDEX IF NOT EXISTS idx_order_buffet_order ON order_buffet (order_id);
+      CREATE INDEX IF NOT EXISTS idx_order_buffet_package ON order_buffet (buffet_package_id);
     `);
     console.log('✅ Indexes created.');
 

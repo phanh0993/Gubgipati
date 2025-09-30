@@ -256,25 +256,33 @@ async function createInvoiceFromOrder(orderId, client) {
 
     const invoiceId = invoiceResult.rows[0].id;
 
-    // 5. Tạo invoice items cho buffet package
-    if (order.buffet_package_id && order.buffet_quantity > 0) {
+    // 5. Tạo invoice items cho buffet package (đọc số vé từ order_buffet)
+    if (order.buffet_package_id) {
+      // Đếm số vé theo bảng order_buffet
+      const buffetCountRes = await client.query(
+        `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
+        [orderId]
+      );
+      const buffetQty = buffetCountRes.rows[0]?.qty || 0;
+      if (buffetQty > 0) {
       const packageResult = await client.query(`
         SELECT name, price FROM buffet_packages WHERE id = $1
       `, [order.buffet_package_id]);
 
-      if (packageResult.rows.length > 0) {
-        const pkg = packageResult.rows[0];
-        await client.query(`
-          INSERT INTO invoice_items (
-            invoice_id, service_id, employee_id, quantity, unit_price, created_at
-          ) VALUES ($1, $2, $3, $4, $5, NOW())
-        `, [
-          invoiceId,
-          null, // Không có service_id cho buffet package
-          order.employee_id,
-          order.buffet_quantity,
-          pkg.price
-        ]);
+        if (packageResult.rows.length > 0) {
+          const pkg = packageResult.rows[0];
+          await client.query(`
+            INSERT INTO invoice_items (
+              invoice_id, service_id, employee_id, quantity, unit_price, created_at
+            ) VALUES ($1, $2, $3, $4, $5, NOW())
+          `, [
+            invoiceId,
+            null, // Không có service_id cho buffet package
+            order.employee_id,
+            buffetQty,
+            pkg.price
+          ]);
+        }
       }
     }
 
@@ -791,6 +799,15 @@ async function handleOrders(req, res) {
         }
         
         const order = result.rows[0];
+
+        // Đếm số vé từ order_buffet
+        if (order.buffet_package_id) {
+          const buffetCountRes = await client.query(
+            `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
+            [order.id]
+          );
+          order.buffet_quantity = buffetCountRes.rows[0]?.qty || 0;
+        }
         
         // Lấy order items
         const itemsResult = await client.query(`
@@ -831,6 +848,16 @@ async function handleOrders(req, res) {
       
       // Lấy order items cho mỗi order
       const orders = result.rows;
+      // Lấy số vé cho từng order bằng order_buffet
+      for (const o of orders) {
+        if (o.buffet_package_id) {
+          const buffetCountRes = await client.query(
+            `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
+            [o.id]
+          );
+          o.buffet_quantity = buffetCountRes.rows[0]?.qty || 0;
+        }
+      }
       for (const order of orders) {
         const itemsResult = await client.query(`
           SELECT oi.id, oi.food_item_id, oi.quantity, oi.unit_price, oi.total_price, oi.special_instructions,
@@ -894,10 +921,21 @@ async function handleOrders(req, res) {
           INSERT INTO orders (order_number, table_id, customer_id, employee_id, order_type, subtotal, tax_amount, total_amount, notes, buffet_package_id, buffet_duration_minutes, buffet_start_time, buffet_quantity)
           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
           RETURNING *
-        `, [finalOrderNumber, table_id, customer_id, employee_id, order_type, subtotalNum, taxAmountNum, totalAmountNum, notes, body.buffet_package_id || null, body.buffet_duration_minutes || null, body.buffet_start_time || null, body.buffet_quantity || 1]);
+        `, [finalOrderNumber, table_id, customer_id, employee_id, order_type, subtotalNum, taxAmountNum, totalAmountNum, notes, body.buffet_package_id || null, body.buffet_duration_minutes || null, body.buffet_start_time || null, 0]);
         order = result.rows[0];
       }
       
+      // Insert buffet tickets into order_buffet if provided
+      if (body.buffet_package_id && Number(body.buffet_quantity) > 0) {
+        const qty = parseInt(body.buffet_quantity) || 0;
+        for (let i = 0; i < qty; i++) {
+          await client.query(
+            `INSERT INTO order_buffet (order_id, buffet_package_id) VALUES ($1, $2)`,
+            [order.id, body.buffet_package_id]
+          );
+        }
+      }
+
       // Insert order items
       if (items && items.length > 0) {
         for (const item of items) {
@@ -922,7 +960,7 @@ async function handleOrders(req, res) {
       const pathParts = req.url.split('/');
       const id = pathParts[pathParts.length - 1];
       const body = await parseBody(req);
-      const { status, notes, payment_method, buffet_quantity, subtotal, tax_amount, total_amount, items } = body;
+      const { status, notes, payment_method, buffet_quantity, subtotal, tax_amount, total_amount, items, buffet_package_id } = body;
       
       // Cập nhật order
       const updateFields = [];
@@ -941,11 +979,7 @@ async function handleOrders(req, res) {
         updateFields.push(`payment_method = $${paramCount++}`);
         updateValues.push(payment_method);
       }
-      if (buffet_quantity !== undefined) {
-        // Thay thế số lượng vé buffet (không cộng dồn)
-        updateFields.push(`buffet_quantity = $${paramCount++}`);
-        updateValues.push(buffet_quantity);
-      }
+      // Vé buffet: thêm/xóa dòng trong order_buffet, không dùng cột buffet_quantity nữa
       if (subtotal !== undefined) {
         updateFields.push(`subtotal = $${paramCount++}`);
         updateValues.push(subtotal);
@@ -969,6 +1003,35 @@ async function handleOrders(req, res) {
         RETURNING *
       `, updateValues);
       
+      // Cập nhật vé buffet theo yêu cầu: nếu buffet_quantity được truyền
+      if (buffet_quantity !== undefined) {
+        const currentCountRes = await client.query(
+          `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
+          [id]
+        );
+        const currentQty = currentCountRes.rows[0]?.qty || 0;
+        const desiredQty = parseInt(buffet_quantity) || 0;
+        const pkgId = buffet_package_id || result.rows[0]?.buffet_package_id;
+        if (desiredQty > currentQty && pkgId) {
+          const toAdd = desiredQty - currentQty;
+          for (let i = 0; i < toAdd; i++) {
+            await client.query(
+              `INSERT INTO order_buffet (order_id, buffet_package_id) VALUES ($1, $2)`,
+              [id, pkgId]
+            );
+          }
+        } else if (desiredQty < currentQty) {
+          const toRemove = currentQty - desiredQty;
+          // Xóa bớt theo id cũ nhất
+          await client.query(
+            `DELETE FROM order_buffet WHERE id IN (
+               SELECT id FROM order_buffet WHERE order_id = $1 ORDER BY id DESC LIMIT $2
+             )`,
+            [id, toRemove]
+          );
+        }
+      }
+
       // Nếu có items mới, thay thế items cũ (không cộng dồn)
       if (items && Array.isArray(items)) {
         console.log('🔄 Replacing items (not merging):', items.map(item => ({

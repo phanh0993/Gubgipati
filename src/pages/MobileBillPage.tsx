@@ -189,7 +189,7 @@ const MobileBillPage: React.FC = () => {
       const itemsTotal = 0; // Buffet items are usually free
       const subtotal = packageTotal + itemsTotal;
       const tax_amount = 0; // Bỏ thuế
-      const total_amount = subtotal + tax_amount;
+      const total_amount = subtotal;
 
       // Tạo order data với đầy đủ các trường như PC version
       const orderData = {
@@ -219,16 +219,16 @@ const MobileBillPage: React.FC = () => {
       };
 
       if (currentOrder) {
-        // Gộp vào order cũ - tính toán đúng tổng tiền như PC version
-        const currentSubtotal = (currentOrder.total_amount || 0) / 1.1; // Lấy subtotal cũ (trước thuế)
+        // Gộp vào order cũ - không tính thuế
+        const currentSubtotal = (currentOrder.total_amount || 0);
         const newCombinedSubtotal = currentSubtotal + subtotal;
-        const newCombinedTax = newCombinedSubtotal * 0.1;
-        const newCombinedTotal = newCombinedSubtotal + newCombinedTax;
+        const newCombinedTax = 0;
+        const newCombinedTotal = newCombinedSubtotal;
         
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          buffet_quantity: packageQuantity, // Chỉ gửi số lượng vé mới, API sẽ tự gộp
+          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,
@@ -295,65 +295,29 @@ const MobileBillPage: React.FC = () => {
       const employee = localStorage.getItem('pos_employee');
       const employeeData = employee ? JSON.parse(employee) : null;
       
-      // 1. Tạo invoice trước để ghi nhận doanh thu
-      const invoiceData = {
-        customer_id: currentOrder.customer_id || undefined,
-        employee_id: employeeData?.id || currentOrder.employee_id || 14,
-        items: [
-          {
-            service_id: 1, // Dummy service ID for buffet orders
-            quantity: 1,
-            unit_price: currentOrder.total_amount || 0,
-          }
-        ],
-        discount_amount: 0,
-        tax_amount: 0, // Bỏ thuế
-        payment_method: 'cash',
-        notes: `Buffet Order: ${currentOrder.order_number || currentOrder.id} - NV: ${employeeData?.full_name || 'Unknown'}`
-      };
-      
-      const { invoicesAPI } = await import('../services/api');
-      const withTimeout = async <T,>(p: Promise<T>, ms = 12000): Promise<T> => {
-        return await Promise.race<T>([
-          p,
-          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)) as Promise<T>
-        ]);
-      };
-      const invoiceResponse = await withTimeout(invoicesAPI.create(invoiceData), 12000);
-      
-      if (invoiceResponse.status === 200) {
-        // 2. Cập nhật order status thành paid sau khi tạo invoice thành công
-        const { orderAPI } = await import('../services/api');
-        let response;
-        try {
-          response = await withTimeout(orderAPI.updateOrder(currentOrder.id, {
-          status: 'paid',
-          employee_id: employeeData?.id || null,
-          items: selectedItems
-            .filter(item => itemQuantities[item.id] > 0)
-            .map(item => ({
-              food_item_id: item.food_item.id,
-              name: item.food_item.name,
-              price: 0,
-              quantity: itemQuantities[item.id],
-              total: 0,
-              special_instructions: 'Gọi thoải mái',
-              printer_id: null
-            }))
-        }), 8000);
-        } catch (e) {
-          console.warn('Update order status timeout/failed, continue:', e);
-          response = { status: 200 } as any;
-        }
+      // 1. Cập nhật order sang paid, server tự tạo invoice
+      const { orderAPI } = await import('../services/api');
+      const response = await orderAPI.updateOrder(currentOrder.id, {
+        status: 'paid',
+        employee_id: employeeData?.id || null,
+        items: selectedItems
+          .filter(item => itemQuantities[item.id] > 0)
+          .map(item => ({
+            food_item_id: item.food_item.id,
+            name: item.food_item.name,
+            price: 0,
+            quantity: itemQuantities[item.id],
+            total: 0,
+            special_instructions: 'Gọi thoải mái',
+            printer_id: null
+          }))
+      });
 
-        if (response.status === 200) {
-          alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
-          navigate('/mobile-tables');
-        } else {
-          alert('Hóa đơn đã được tạo nhưng lỗi khi cập nhật trạng thái order');
-        }
+      if (response.status === 200) {
+        alert('Thanh toán thành công!');
+        navigate('/mobile-tables');
       } else {
-        alert('Lỗi khi tạo hóa đơn doanh thu');
+        alert('Lỗi khi cập nhật trạng thái order');
       }
       return;
     }
@@ -390,7 +354,7 @@ const MobileBillPage: React.FC = () => {
       const itemsTotal = 0; // Buffet items are usually free
       const subtotal = packageTotal + itemsTotal;
       const tax_amount = 0; // Bỏ thuế
-      const total_amount = subtotal + tax_amount;
+      const total_amount = subtotal;
 
       // Tạo order data với đầy đủ các trường như PC version
       const orderData = {
@@ -420,16 +384,16 @@ const MobileBillPage: React.FC = () => {
       };
 
       if (currentOrder) {
-        // Gộp vào order cũ và thanh toán - tính toán đúng tổng tiền như PC version
-        const currentSubtotal = (currentOrder.total_amount || 0) / 1.1; // Lấy subtotal cũ (trước thuế)
+        // Gộp vào order cũ và thanh toán - không tính thuế
+        const currentSubtotal = (currentOrder.total_amount || 0);
         const newCombinedSubtotal = currentSubtotal + subtotal;
-        const newCombinedTax = newCombinedSubtotal * 0.1;
-        const newCombinedTotal = newCombinedSubtotal + newCombinedTax;
+        const newCombinedTax = 0;
+        const newCombinedTotal = newCombinedSubtotal;
         
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          buffet_quantity: packageQuantity, // Chỉ gửi số lượng vé mới, API sẽ tự gộp
+          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,

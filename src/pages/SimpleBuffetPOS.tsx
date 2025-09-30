@@ -303,16 +303,17 @@ const SimpleBuffetPOS: React.FC = () => {
         // Lấy employee_id từ user_id
         const employeeId = user?.id ? await getEmployeeId(user.id) : 14;
         
-        // Gộp vào order cũ - tính toán đúng tổng tiền
-        const currentSubtotal = currentOrder.total_amount; // Lấy subtotal cũ (không có thuế)
+        // Gộp vào order cũ - tính toán đúng tổng tiền (không thuế)
+        const currentSubtotal = currentOrder.total_amount;
         const newCombinedSubtotal = currentSubtotal + newSubtotal;
-        const newCombinedTax = 0; // Bỏ thuế
+        const newCombinedTax = 0;
         const newCombinedTotal = newCombinedSubtotal + newCombinedTax;
         
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          buffet_quantity: packageQuantity, // Chỉ gửi số lượng vé mới, API sẽ tự gộp
+          // Gửi số vé mong muốn = hiện tại + thêm mới, server sẽ đồng bộ order_buffet
+          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,
@@ -426,7 +427,44 @@ const SimpleBuffetPOS: React.FC = () => {
     }
 
     try {
-      // 1. Tạo order trước
+      // 1. Nếu đã có order: cập nhật tổng vé mong muốn + items mới và thanh toán
+      if (currentOrder) {
+        const employeeId = user?.id ? await getEmployeeId(user.id) : 14;
+        const packageTotal = (selectedPackage.price || 0) * packageQuantity;
+        const itemsTotal = orderItems.reduce((sum, item) => sum + (item.food_item.price * item.quantity), 0);
+        const subtotal = packageTotal + itemsTotal;
+        const totalAmount = subtotal;
+
+        const { orderAPI } = await import('../services/api');
+        const response = await orderAPI.updateOrder(Number(currentOrder.id), {
+          employee_id: employeeId,
+          buffet_package_id: selectedPackage.id,
+          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
+          subtotal: (currentOrder.total_amount || 0) + totalAmount,
+          tax_amount: 0,
+          total_amount: (currentOrder.total_amount || 0) + totalAmount,
+          status: 'paid',
+          items: orderItems.map(item => ({
+            food_item_id: item.food_item_id,
+            name: item.food_item.name,
+            price: parseFloat(item.food_item.price.toString()),
+            quantity: item.quantity,
+            total: parseFloat(item.food_item.price.toString()) * item.quantity,
+            special_instructions: item.note || (item.is_unlimited ? 'Gọi thoải mái' : ''),
+            printer_id: null
+          }))
+        });
+
+        if (response.status === 200) {
+          alert('Thanh toán thành công!');
+          navigate('/buffet-tables');
+        } else {
+          alert('Lỗi khi thanh toán');
+        }
+        return;
+      }
+
+      // 2. Chưa có order: tạo order rồi đánh dấu paid
       const orderData = {
         order_type: 'buffet',
         table_id: selectedTable.id,
@@ -453,36 +491,10 @@ const SimpleBuffetPOS: React.FC = () => {
 
       const { orderAPI } = await import('../services/api');
       const { data: newOrder } = await orderAPI.createOrder(orderData);
-      
-      // 2. Tạo invoice để ghi nhận doanh thu
-      const invoiceData = {
-        customer_id: undefined,
-        employee_id: 14,
-        items: [
-          {
-            service_id: 1,
-            quantity: 1,
-            unit_price: newOrder.total_amount || 0,
-          }
-        ],
-        discount_amount: 0,
-        tax_amount: 0,
-        payment_method: 'cash',
-        notes: `Buffet Order: ${newOrder.order_number || newOrder.id}`
-      };
-      
-      const { invoicesAPI } = await import('../services/api');
-      const invoiceResponse = await invoicesAPI.create(invoiceData);
-      
-      if (invoiceResponse.status === 200) {
-        // 3. Cập nhật order status thành 'paid'
-        await orderAPI.updateOrder(newOrder.id, { status: 'paid' });
-        
-        alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
-        navigate('/buffet-tables');
-      } else {
-        alert('Lỗi khi tạo hóa đơn doanh thu');
-      }
+      // Đánh dấu paid để server tự tạo invoice
+      await orderAPI.updateOrder(newOrder.id, { status: 'paid' });
+      alert('Thanh toán thành công!');
+      navigate('/buffet-tables');
     } catch (error) {
       console.error('Error processing payment:', error);
       alert('Lỗi khi thanh toán');
