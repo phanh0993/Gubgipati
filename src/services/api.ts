@@ -1586,18 +1586,20 @@ export const orderAPI = {
                 };
               });
 
-              // Đọc số vé từ order_buffet thay vì orders.buffet_quantity
+              // Đọc số vé từ order_buffet.quantity thay vì đếm dòng
               if (Number(o.buffet_package_id)) {
                 try {
-                  const { data: buffetTickets, error: buffetError } = await supabase
+                  const { data: buffetTicket, error: buffetError } = await supabase
                     .from('order_buffet')
-                    .select('id')
-                    .eq('order_id', o.id);
+                    .select('quantity')
+                    .eq('order_id', o.id)
+                    .eq('buffet_package_id', o.buffet_package_id)
+                    .maybeSingle();
                   
-                  if (!buffetError && buffetTickets && buffetTickets.length > 0) {
+                  if (!buffetError && buffetTicket && buffetTicket.quantity > 0) {
                     const ticketPrice = Number(o.buffet_package_price || 0);
-                    const ticketQty = buffetTickets.length;
-                    console.log(`🎫 [GET ORDERS] Order ${o.id}: Found ${ticketQty} tickets in order_buffet`);
+                    const ticketQty = buffetTicket.quantity;
+                    console.log(`🎫 [GET ORDERS] Order ${o.id}: Found ${ticketQty} tickets in order_buffet.quantity`);
                     
                     normalizedItems.push({
                       id: -1,
@@ -1731,31 +1733,29 @@ export const orderAPI = {
           console.log('✅ Order created:', orderData);
           const orderId = orderData.id;
 
-          // 1. Đồng bộ vé buffet vào bảng order_buffet theo số lượng mong muốn
+          // 1. Đồng bộ vé buffet vào bảng order_buffet với quantity
           try {
             const desiredQty = Number(order.buffet_quantity || 0);
             const buffetPackageId = Number(order.buffet_package_id || 0);
-            console.log(`🎫 [CREATE ORDER] Syncing tickets: desiredQty=${desiredQty}, buffetPackageId=${buffetPackageId}`);
+            console.log(`🎫 [CREATE ORDER] Creating tickets: desiredQty=${desiredQty}, buffetPackageId=${buffetPackageId}`);
             
-            if (buffetPackageId && desiredQty >= 0) {
-              // Chèn desiredQty dòng vé
-              if (desiredQty > 0) {
-                const ticketRows = Array(desiredQty).fill(null).map(() => ({
+            if (buffetPackageId && desiredQty > 0) {
+              // Tạo 1 dòng với quantity = desiredQty
+              const { error: insertErr } = await supabase
+                .from('order_buffet')
+                .insert({
                   order_id: orderId,
-                  buffet_package_id: buffetPackageId
-                }));
-                console.log(`🎫 [CREATE ORDER] Inserting ${desiredQty} tickets into order_buffet:`, ticketRows);
-                const ins = await supabase.from('order_buffet').insert(ticketRows);
-                if (ins.error) {
-                  console.error('❌ [CREATE ORDER] Insert order_buffet failed:', ins.error);
-                } else {
-                  console.log(`✅ [CREATE ORDER] Successfully inserted ${desiredQty} tickets into order_buffet`);
-                }
+                  buffet_package_id: buffetPackageId,
+                  quantity: desiredQty
+                });
+                
+              if (insertErr) {
+                console.error('❌ [CREATE ORDER] Insert order_buffet failed:', insertErr);
               } else {
-                console.log(`🎫 [CREATE ORDER] No tickets to insert (desiredQty=${desiredQty})`);
+                console.log(`✅ [CREATE ORDER] Successfully created ticket with quantity ${desiredQty}`);
               }
             } else {
-              console.log(`🎫 [CREATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
+              console.log(`🎫 [CREATE ORDER] No tickets to create (desiredQty=${desiredQty})`);
             }
           } catch (e) {
             console.error('❌ [CREATE ORDER] Sync order_buffet failed:', e);
@@ -1848,59 +1848,61 @@ export const orderAPI = {
                 .maybeSingle();
               if (fetched.data) updatedRow = fetched.data;
             } catch {}
-            // 1. Đồng bộ vé buffet vào bảng order_buffet theo số lượng mong muốn (desired quantity)
+            // 1. Đồng bộ vé buffet vào bảng order_buffet - cộng dồn quantity
             try {
               const buffetPackageId = Number(updatePayload.buffet_package_id || 0);
-              const desiredQtyRaw = updatePayload.buffet_quantity;
-              const desiredQty = (desiredQtyRaw === undefined || desiredQtyRaw === null) ? undefined : Number(desiredQtyRaw);
-              console.log(`🎫 [UPDATE ORDER] Syncing tickets: orderId=${id}, buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
+              const additionalQtyRaw = updatePayload.buffet_quantity;
+              const additionalQty = (additionalQtyRaw === undefined || additionalQtyRaw === null) ? 0 : Number(additionalQtyRaw);
+              console.log(`🎫 [UPDATE ORDER] Adding tickets: orderId=${id}, buffetPackageId=${buffetPackageId}, additionalQty=${additionalQty}`);
               
-              if (buffetPackageId && desiredQty !== undefined && desiredQty >= 0) {
-                // Đếm vé hiện tại
-                const { data: currentRows, error: countErr } = await supabase
+              if (buffetPackageId && additionalQty > 0) {
+                // Kiểm tra xem đã có vé buffet cho order này chưa
+                const { data: existingTicket, error: findErr } = await supabase
                   .from('order_buffet')
-                  .select('id')
-                  .eq('order_id', id);
+                  .select('id, quantity')
+                  .eq('order_id', id)
+                  .eq('buffet_package_id', buffetPackageId)
+                  .maybeSingle();
                   
-                if (!countErr) {
-                  const currentQty = (currentRows || []).length;
-                  const delta = desiredQty - currentQty;
-                  console.log(`🎫 [UPDATE ORDER] Current tickets: ${currentQty}, desired: ${desiredQty}, delta: ${delta}`);
-                  
-                  if (delta > 0) {
-                    // Thêm delta dòng
-                    const ticketRows = Array(delta).fill(null).map(() => ({
-                      order_id: id,
-                      buffet_package_id: buffetPackageId
-                    }));
-                    console.log(`🎫 [UPDATE ORDER] Adding ${delta} tickets:`, ticketRows);
-                    const ins = await supabase.from('order_buffet').insert(ticketRows);
-                    if (ins.error) {
-                      console.error('❌ [UPDATE ORDER] Insert order_buffet failed:', ins.error);
+                if (!findErr) {
+                  if (existingTicket) {
+                    // Cập nhật quantity = cũ + mới
+                    const newQuantity = (existingTicket.quantity || 1) + additionalQty;
+                    console.log(`🎫 [UPDATE ORDER] Updating existing ticket: ${existingTicket.quantity} + ${additionalQty} = ${newQuantity}`);
+                    
+                    const { error: updateErr } = await supabase
+                      .from('order_buffet')
+                      .update({ quantity: newQuantity })
+                      .eq('id', existingTicket.id);
+                      
+                    if (updateErr) {
+                      console.error('❌ [UPDATE ORDER] Update order_buffet failed:', updateErr);
                     } else {
-                      console.log(`✅ [UPDATE ORDER] Successfully added ${delta} tickets`);
-                    }
-                  } else if (delta < 0) {
-                    // Xóa bớt - lấy các id đầu tiên và xóa |delta|
-                    const toDeleteIds = (currentRows || []).slice(0, Math.abs(delta)).map((r: any) => r.id);
-                    console.log(`🎫 [UPDATE ORDER] Removing ${Math.abs(delta)} tickets with IDs:`, toDeleteIds);
-                    if (toDeleteIds.length > 0) {
-                      const del = await supabase.from('order_buffet').delete().in('id', toDeleteIds);
-                      if (del.error) {
-                        console.error('❌ [UPDATE ORDER] Delete order_buffet failed:', del.error);
-                      } else {
-                        console.log(`✅ [UPDATE ORDER] Successfully removed ${toDeleteIds.length} tickets`);
-                      }
+                      console.log(`✅ [UPDATE ORDER] Successfully updated ticket quantity to ${newQuantity}`);
                     }
                   } else {
-                    console.log(`🎫 [UPDATE ORDER] No change needed (current=${currentQty}, desired=${desiredQty})`);
+                    // Tạo dòng mới với quantity = additionalQty
+                    console.log(`🎫 [UPDATE ORDER] Creating new ticket with quantity: ${additionalQty}`);
+                    
+                    const { error: insertErr } = await supabase
+                      .from('order_buffet')
+                      .insert({
+                        order_id: id,
+                        buffet_package_id: buffetPackageId,
+                        quantity: additionalQty
+                      });
+                      
+                    if (insertErr) {
+                      console.error('❌ [UPDATE ORDER] Insert order_buffet failed:', insertErr);
+                    } else {
+                      console.log(`✅ [UPDATE ORDER] Successfully created new ticket with quantity ${additionalQty}`);
+                    }
                   }
-                  (updatedRow as any).buffet_quantity = desiredQty;
                 } else {
-                  console.error('❌ [UPDATE ORDER] Failed to count current tickets:', countErr);
+                  console.error('❌ [UPDATE ORDER] Failed to find existing ticket:', findErr);
                 }
               } else {
-                console.log(`🎫 [UPDATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
+                console.log(`🎫 [UPDATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, additionalQty=${additionalQty}`);
               }
             } catch (e) {
               console.error('❌ [UPDATE ORDER] Sync order_buffet failed:', e);

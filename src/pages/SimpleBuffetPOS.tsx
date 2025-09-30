@@ -333,8 +333,8 @@ const SimpleBuffetPOS: React.FC = () => {
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          // Gửi tổng số vé mong muốn = hiện tại từ order_buffet + thêm mới
-          buffet_quantity: currentTicketCount + packageQuantity,
+          // Gửi chỉ số vé mới thêm, server sẽ cộng dồn vào quantity
+          buffet_quantity: packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,

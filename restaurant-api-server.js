@@ -258,12 +258,12 @@ async function createInvoiceFromOrder(orderId, client) {
 
     // 5. Tạo invoice items cho buffet package (đọc số vé từ order_buffet)
     if (order.buffet_package_id) {
-      // Đếm số vé theo bảng order_buffet
+      // Đọc số vé từ order_buffet.quantity
       const buffetCountRes = await client.query(
-        `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
-        [orderId]
+        `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
+        [orderId, order.buffet_package_id]
       );
-      const buffetQty = buffetCountRes.rows[0]?.qty || 0;
+      const buffetQty = buffetCountRes.rows[0]?.quantity || 0;
       if (buffetQty > 0) {
       const packageResult = await client.query(`
         SELECT name, price FROM buffet_packages WHERE id = $1
@@ -811,13 +811,13 @@ async function handleOrders(req, res) {
         
         const order = result.rows[0];
 
-        // Đếm số vé từ order_buffet
+        // Đọc số vé từ order_buffet.quantity
         if (order.buffet_package_id) {
           const buffetCountRes = await client.query(
-            `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
-            [order.id]
+            `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
+            [order.id, order.buffet_package_id]
           );
-          order.buffet_quantity = buffetCountRes.rows[0]?.qty || 0;
+          order.buffet_quantity = buffetCountRes.rows[0]?.quantity || 0;
         }
         
         // Lấy order items
@@ -859,14 +859,14 @@ async function handleOrders(req, res) {
       
       // Lấy order items cho mỗi order
       const orders = result.rows;
-      // Lấy số vé cho từng order bằng order_buffet
+      // Lấy số vé cho từng order bằng order_buffet.quantity
       for (const o of orders) {
         if (o.buffet_package_id) {
           const buffetCountRes = await client.query(
-            `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
-            [o.id]
+            `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
+            [o.id, o.buffet_package_id]
           );
-          o.buffet_quantity = buffetCountRes.rows[0]?.qty || 0;
+          o.buffet_quantity = buffetCountRes.rows[0]?.quantity || 0;
         }
       }
       for (const order of orders) {

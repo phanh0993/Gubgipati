@@ -249,7 +249,7 @@ const MobileBillPage: React.FC = () => {
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          buffet_quantity: currentTicketCount + packageQuantity,
+          buffet_quantity: packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,
@@ -430,7 +430,7 @@ const MobileBillPage: React.FC = () => {
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          buffet_quantity: currentTicketCount + packageQuantity,
+          buffet_quantity: packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,
