@@ -203,6 +203,12 @@ const SimpleBuffetPOS: React.FC = () => {
   }, [selectedTable, packages]);
 
   const handleSelectPackage = async (pkg: BuffetPackage) => {
+    console.log(`🎫 [PC SELECT PACKAGE] Package selected:`, {
+      pkg,
+      currentOrder: currentOrder,
+      currentOrderBuffetPackageId: currentOrder?.buffet_package_id
+    });
+    
     if (currentOrder && currentOrder.buffet_package_id !== pkg.id) {
       alert('Bàn này đã order loại vé khác. Chỉ có thể thêm vé cùng loại!');
       return;
@@ -210,6 +216,11 @@ const SimpleBuffetPOS: React.FC = () => {
 
     setSelectedPackage(pkg);
     setPackageQuantity(currentOrder ? 0 : 1);
+    
+    console.log(`🎫 [PC SELECT PACKAGE] After set:`, {
+      selectedPackage: pkg,
+      packageQuantity: currentOrder ? 0 : 1
+    });
 
     // Load items for selected package from API
     await fetchPackageItems(pkg.id);
@@ -457,12 +468,19 @@ const SimpleBuffetPOS: React.FC = () => {
         const totalAmount = subtotal;
 
         const { orderAPI } = await import('../services/api');
-        console.log(`🎫 [PC UPDATE ORDER] Sending update:`, {
+        console.log(`🎫 [PC UPDATE ORDER] Debug info:`, {
           orderId: currentOrder.id,
-          buffet_package_id: selectedPackage.id,
+          selectedPackage: selectedPackage,
+          buffet_package_id: selectedPackage?.id,
           buffet_quantity: packageQuantity,
-          selectedPackage: selectedPackage
+          currentOrder: currentOrder
         });
+        
+        if (!selectedPackage || !selectedPackage.id) {
+          console.error('❌ [PC UPDATE ORDER] selectedPackage is missing or has no id:', selectedPackage);
+          alert('Lỗi: Không tìm thấy thông tin gói vé. Vui lòng chọn lại gói vé.');
+          return;
+        }
         
         const response = await orderAPI.updateOrder(Number(currentOrder.id), {
           employee_id: employeeId,
