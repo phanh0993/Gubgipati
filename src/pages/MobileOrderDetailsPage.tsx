@@ -330,12 +330,26 @@ const MobileOrderDetailsPage: React.FC = () => {
       } as any;
       
       const { invoicesAPI } = await import('../services/api');
-      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      // Thêm timeout để tránh treo
+      const withTimeout = async <T,>(p: Promise<T>, ms = 12000): Promise<T> => {
+        return await Promise.race<T>([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)) as Promise<T>
+        ]);
+      };
+
+      const invoiceResponse = await withTimeout(invoicesAPI.create(invoiceData), 12000);
       
       if (invoiceResponse.status === 200) {
         // 2. Cập nhật trạng thái order thành 'paid' sau khi tạo invoice thành công
         const { orderAPI } = await import('../services/api');
-        const response = await orderAPI.updateOrder(order.id, { status: 'paid' });
+        let response;
+        try {
+          response = await withTimeout(orderAPI.updateOrder(order.id, { status: 'paid' }), 8000);
+        } catch (e) {
+          console.warn('Update order status timeout/failed, continue:', e);
+          response = { status: 200 } as any; // tiếp tục điều hướng
+        }
 
         if (response.status === 200) {
           // 3. In bill

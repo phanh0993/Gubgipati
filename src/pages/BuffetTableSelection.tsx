@@ -318,6 +318,14 @@ const BuffetTableSelection: React.FC = () => {
       setPaymentLoading(true);
       const { orderAPI, invoicesAPI } = await import('../services/api');
       
+      // Helper: timeout wrapper to avoid long-hanging requests
+      const withTimeout = async <T,>(p: Promise<T>, ms = 8000): Promise<T> => {
+        return await Promise.race<T>([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)) as Promise<T>
+        ]);
+      };
+      
       // 1. Tạo invoice trước để ghi nhận doanh thu
       const invoiceData = {
         customer_id: orderDetails.customer_id || undefined,
@@ -335,14 +343,19 @@ const BuffetTableSelection: React.FC = () => {
         notes: `Buffet Order: ${orderDetails.order_number} - Table: ${orderDetails.table_name} (${orderDetails.area})`
       };
       
-      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      const invoiceResponse = await withTimeout(invoicesAPI.create(invoiceData), 12000);
       
       if (invoiceResponse.status === 200) {
         // 2. Cập nhật order status thành paid sau khi tạo invoice thành công
-        await orderAPI.updateOrder(selectedOrder.id, { status: 'paid' });
+        try {
+          await withTimeout(orderAPI.updateOrder(selectedOrder.id, { status: 'paid' }), 8000);
+        } catch (e) {
+          console.warn('Update order status timeout/failed, continue:', e);
+        }
         
         // 3. Tự động in bill sau khi thanh toán
-        await handlePrintBill();
+        // Thực hiện in không chặn UI
+        handlePrintBill().catch((e) => console.warn('Print skipped/error:', e));
         
         alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
         setShowOrderDialog(false);

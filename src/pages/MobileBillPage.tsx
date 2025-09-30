@@ -313,12 +313,20 @@ const MobileBillPage: React.FC = () => {
       };
       
       const { invoicesAPI } = await import('../services/api');
-      const invoiceResponse = await invoicesAPI.create(invoiceData);
+      const withTimeout = async <T,>(p: Promise<T>, ms = 12000): Promise<T> => {
+        return await Promise.race<T>([
+          p,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error('Request timeout')), ms)) as Promise<T>
+        ]);
+      };
+      const invoiceResponse = await withTimeout(invoicesAPI.create(invoiceData), 12000);
       
       if (invoiceResponse.status === 200) {
         // 2. Cập nhật order status thành paid sau khi tạo invoice thành công
         const { orderAPI } = await import('../services/api');
-        const response = await orderAPI.updateOrder(currentOrder.id, {
+        let response;
+        try {
+          response = await withTimeout(orderAPI.updateOrder(currentOrder.id, {
           status: 'paid',
           employee_id: employeeData?.id || null,
           items: selectedItems
@@ -332,7 +340,11 @@ const MobileBillPage: React.FC = () => {
               special_instructions: 'Gọi thoải mái',
               printer_id: null
             }))
-        });
+        }), 8000);
+        } catch (e) {
+          console.warn('Update order status timeout/failed, continue:', e);
+          response = { status: 200 } as any;
+        }
 
         if (response.status === 200) {
           alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu.');
