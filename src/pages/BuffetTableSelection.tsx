@@ -680,28 +680,69 @@ const BuffetTableSelection: React.FC = () => {
               {(() => {
                 console.log('🔍 Rendering items:', orderDetails.items);
                 console.log('🔍 Items length:', orderDetails.items?.length);
-                return orderDetails.items && orderDetails.items.length > 0;
-              })() ? (
-                <List dense>
-                  {mergeDuplicateItems(orderDetails.items).map((item: any, index: number) => (
-                    <ListItem key={index}>
-                      <ListItemText
-                        primary={item.name}
-                        secondary={`Giá: ${item.price.toLocaleString('vi-VN')} ₫`}
-                      />
-                      <TextField
-                        type="number"
-                        value={editingQuantities[`item_${index}`] !== undefined ? editingQuantities[`item_${index}`] : item.quantity}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange('item', parseInt(e.target.value) || 0, index)}
-                        inputProps={{ min: 0, style: { textAlign: 'center' } }}
-                        sx={{ width: '80px' }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography color="text.secondary">Chưa có món nào</Typography>
-              )}
+                
+                if (!orderDetails.items || orderDetails.items.length === 0) {
+                  return <Typography color="text.secondary">Chưa có món nào</Typography>;
+                }
+
+                // Tách vé buffet và món ăn
+                const buffetItems = orderDetails.items.filter((item: any) => item.is_ticket === true || item.food_item_id === orderDetails.buffet_package_id);
+                const foodItems = orderDetails.items.filter((item: any) => !item.is_ticket && item.food_item_id !== orderDetails.buffet_package_id);
+
+                return (
+                  <>
+                    {/* Hiển thị vé buffet ở đầu */}
+                    {buffetItems.length > 0 && (
+                      <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                        {buffetItems.map((item: any, index: number) => {
+                          const ticketPrice = orderDetails.buffet_package_price || 0;
+                          const ticketCount = item.quantity || 1;
+                          return (
+                            <Typography 
+                              key={`buffet-${index}`}
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 'bold', 
+                                color: '#1976d2',
+                                textAlign: 'center',
+                                mb: 1
+                              }}
+                            >
+                              VÉ {Math.round(ticketPrice / 1000)}K &nbsp;&nbsp;&nbsp; {ticketCount}
+                            </Typography>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    {/* Hiển thị món ăn */}
+                    {foodItems.length > 0 && (
+                      <>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 1 }}>
+                          Món ăn:
+                        </Typography>
+                        <List dense>
+                          {mergeDuplicateItems(foodItems).map((item: any, index: number) => (
+                            <ListItem key={index}>
+                              <ListItemText
+                                primary={item.name}
+                                secondary={`Giá: ${item.price.toLocaleString('vi-VN')} ₫`}
+                              />
+                              <TextField
+                                type="number"
+                                value={editingQuantities[`item_${index}`] !== undefined ? editingQuantities[`item_${index}`] : item.quantity}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange('item', parseInt(e.target.value) || 0, index)}
+                                inputProps={{ min: 0, style: { textAlign: 'center' } }}
+                                sx={{ width: '80px' }}
+                              />
+                            </ListItem>
+                          ))}
+                        </List>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
               
               <Divider sx={{ my: 2 }} />
               
