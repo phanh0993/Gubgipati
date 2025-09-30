@@ -177,7 +177,7 @@ const BuffetTableSelection: React.FC = () => {
     const mergedItems: { [key: string]: any } = {};
     
     items.forEach(item => {
-      const key = item.name;
+      const key = `${item.food_item_id || item.id || item.name}-${Number(item.price || 0)}`;
       if (mergedItems[key]) {
         // Nếu đã có món này, cộng dồn số lượng
         mergedItems[key].quantity += item.quantity || 1;

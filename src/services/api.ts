@@ -1619,7 +1619,7 @@ export const orderAPI = {
                 let itemName = 'Unknown Item';
                 if (isTicket) {
                   const ticketPrice = Number(it.unit_price || 0);
-                  itemName = (pkgRes.data?.name) || (o.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
+                  itemName = (o.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
                 } else {
                   itemName = it.food_items?.name || 'Unknown Item';
                 }
@@ -1633,23 +1633,80 @@ export const orderAPI = {
                   price: Number(it.unit_price || 0),
                   total: Number(it.total_price || 0),
                   is_ticket: isTicket,
-                  special_instructions: it.special_instructions || ''
+                  special_instructions: it.special_instructions || '',
+                  employee_id: it.employee_id || o.employee_id || null,
+                  employee_name: undefined as any
                 };
               });
-              console.log('🔍 Normalized items:', normalizedItems);
+
+              // Gán employee_name theo lần xuất hiện đầu tiên của mỗi item
+              const firstEmployeePerItem = new Map<number, { id: number; name: string }>();
+              for (const it of normalizedItems) {
+                const key = Number(it.food_item_id);
+                if (!firstEmployeePerItem.has(key)) {
+                  firstEmployeePerItem.set(key, { id: it.employee_id, name: '' });
+                }
+              }
+              // Tra cứu tên nhân viên nếu có employee_id
+              try {
+                const empIds = Array.from(new Set(normalizedItems.map((i: any) => i.employee_id).filter(Boolean)));
+                if (empIds.length > 0) {
+                  const { data: employeesRes } = await supabase
+                    .from('employees')
+                    .select('id, fullname')
+                    .in('id', empIds);
+                  const empMap: Record<number, string> = {};
+                  (employeesRes || []).forEach((e: any) => { empMap[e.id] = e.fullname; });
+                  normalizedItems.forEach((i: any) => {
+                    const ke = Number(i.food_item_id);
+                    const first = firstEmployeePerItem.get(ke);
+                    if (first && first.name === '') {
+                      first.name = empMap[i.employee_id] || '';
+                      firstEmployeePerItem.set(ke, first);
+                    }
+                    i.employee_name = empMap[i.employee_id] || first?.name || '';
+                  });
+                }
+              } catch (e) {
+                console.warn('Employee name lookup failed:', e);
+              }
+
+              // Chọn employee của order là người order đầu tiên (theo thời gian) trong danh sách items
+              let firstOrderEmployeeName = '';
+              let firstOrderEmployeeId: number | null = null;
+              if (normalizedItems.length > 0) {
+                const first = normalizedItems[0];
+                firstOrderEmployeeId = first.employee_id || null;
+                firstOrderEmployeeName = first.employee_name || '';
+              }
 
               const normalized = {
                 ...o,
                 order_type: o.order_type || (o.buffet_package_id ? 'buffet' : 'other'),
                 status: o.status === 'open' ? 'pending' : o.status,
-                table_name: tableRes.data?.table_name || '',
-                area: tableRes.data?.area || '',
-                table_number: tableRes.data?.table_number || '',
-                buffet_package_name: pkgRes.data?.name || 'Buffet Package',
-                buffet_package_price: Number(pkgRes.data?.price || 0),
-                employee_name: empRes.data?.fullname || 'Chưa xác định',
+                table_name: undefined as any,
+                area: undefined as any,
+                table_number: undefined as any,
+                buffet_package_name: undefined as any,
+                buffet_package_price: undefined as any,
+                employee_name: firstOrderEmployeeName,
                 items: normalizedItems
               };
+
+              // Bổ sung thông tin join phụ (bàn, gói)
+              try {
+                const [tableRes, pkgRes] = await Promise.all([
+                  o.table_id ? supabase.from('tables').select('table_name, area, table_number').eq('id', o.table_id).single() : Promise.resolve({ data: null }),
+                  o.buffet_package_id ? supabase.from('buffet_packages').select('name, price').eq('id', o.buffet_package_id).single() : Promise.resolve({ data: null })
+                ]);
+                normalized.table_name = tableRes.data?.table_name || '';
+                normalized.area = tableRes.data?.area || '';
+                normalized.table_number = tableRes.data?.table_number || '';
+                normalized.buffet_package_name = pkgRes.data?.name || 'Buffet Package';
+                normalized.buffet_package_price = Number(pkgRes.data?.price || 0);
+              } catch (e) {
+                // ignore
+              }
 
               const axiosLike = { data: normalized, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
               resolve(axiosLike);
@@ -1934,6 +1991,7 @@ export const orderAPI = {
           .maybeSingle()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
+            const updatedRow = res.data || order; // fallback khi maybeSingle trả về null
             // 1. Cập nhật vé buffet vào order_items (nếu có)
             if (updatePayload.buffet_package_id && updatePayload.buffet_quantity > 0) {
               console.log('🎫 Processing buffet ticket update for order_items:', {
@@ -2118,7 +2176,7 @@ export const orderAPI = {
               }
             }
             
-            const axiosLike = { data: { ...res.data }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            const axiosLike = { data: { ...updatedRow }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
           }, reject);
       });
