@@ -1741,21 +1741,29 @@ export const orderAPI = {
             
             if (buffetPackageId && desiredQty > 0) {
               // Tạo 1 dòng với quantity = desiredQty
-              const { error: insertErr } = await supabase
+              console.log(`🎫 [CREATE ORDER] Inserting into order_buffet:`, {
+                order_id: orderId,
+                buffet_package_id: buffetPackageId,
+                quantity: desiredQty
+              });
+              
+              const { data: insertData, error: insertErr } = await supabase
                 .from('order_buffet')
                 .insert({
                   order_id: orderId,
                   buffet_package_id: buffetPackageId,
                   quantity: desiredQty
-                });
+                })
+                .select('*');
                 
               if (insertErr) {
                 console.error('❌ [CREATE ORDER] Insert order_buffet failed:', insertErr);
+                console.error('❌ [CREATE ORDER] Error details:', JSON.stringify(insertErr, null, 2));
               } else {
-                console.log(`✅ [CREATE ORDER] Successfully created ticket with quantity ${desiredQty}`);
+                console.log(`✅ [CREATE ORDER] Successfully created ticket:`, insertData);
               }
             } else {
-              console.log(`🎫 [CREATE ORDER] No tickets to create (desiredQty=${desiredQty})`);
+              console.log(`🎫 [CREATE ORDER] No tickets to create (desiredQty=${desiredQty}, buffetPackageId=${buffetPackageId})`);
             }
           } catch (e) {
             console.error('❌ [CREATE ORDER] Sync order_buffet failed:', e);
@@ -1870,36 +1878,46 @@ export const orderAPI = {
                     const newQuantity = (existingTicket.quantity || 1) + additionalQty;
                     console.log(`🎫 [UPDATE ORDER] Updating existing ticket: ${existingTicket.quantity} + ${additionalQty} = ${newQuantity}`);
                     
-                    const { error: updateErr } = await supabase
+                    const { data: updateData, error: updateErr } = await supabase
                       .from('order_buffet')
                       .update({ quantity: newQuantity })
-                      .eq('id', existingTicket.id);
+                      .eq('id', existingTicket.id)
+                      .select('*');
                       
                     if (updateErr) {
                       console.error('❌ [UPDATE ORDER] Update order_buffet failed:', updateErr);
+                      console.error('❌ [UPDATE ORDER] Error details:', JSON.stringify(updateErr, null, 2));
                     } else {
-                      console.log(`✅ [UPDATE ORDER] Successfully updated ticket quantity to ${newQuantity}`);
+                      console.log(`✅ [UPDATE ORDER] Successfully updated ticket:`, updateData);
                     }
                   } else {
                     // Tạo dòng mới với quantity = additionalQty
                     console.log(`🎫 [UPDATE ORDER] Creating new ticket with quantity: ${additionalQty}`);
+                    console.log(`🎫 [UPDATE ORDER] Inserting into order_buffet:`, {
+                      order_id: id,
+                      buffet_package_id: buffetPackageId,
+                      quantity: additionalQty
+                    });
                     
-                    const { error: insertErr } = await supabase
+                    const { data: insertData, error: insertErr } = await supabase
                       .from('order_buffet')
                       .insert({
                         order_id: id,
                         buffet_package_id: buffetPackageId,
                         quantity: additionalQty
-                      });
+                      })
+                      .select('*');
                       
                     if (insertErr) {
                       console.error('❌ [UPDATE ORDER] Insert order_buffet failed:', insertErr);
+                      console.error('❌ [UPDATE ORDER] Error details:', JSON.stringify(insertErr, null, 2));
                     } else {
-                      console.log(`✅ [UPDATE ORDER] Successfully created new ticket with quantity ${additionalQty}`);
+                      console.log(`✅ [UPDATE ORDER] Successfully created new ticket:`, insertData);
                     }
                   }
                 } else {
                   console.error('❌ [UPDATE ORDER] Failed to find existing ticket:', findErr);
+                  console.error('❌ [UPDATE ORDER] Error details:', JSON.stringify(findErr, null, 2));
                 }
               } else {
                 console.log(`🎫 [UPDATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, additionalQty=${additionalQty}`);
