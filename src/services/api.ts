@@ -1609,17 +1609,21 @@ export const orderAPI = {
               console.log('🔍 Order items from DB:', o.order_items);
               const normalizedItems = (o.order_items || []).map((it: any, index: number) => {
                 const foodItemId = it.food_item_id;
-                const isTicket = [33, 34, 35].includes(foodItemId); // ID vé buffet
-                
+                // Vé buffet: xác định linh hoạt thay vì hardcode ID
+                const looksLikeTicketByNote = String(it.special_instructions || '').toLowerCase().includes('vé buffet');
+                const looksLikeTicketByPkg = !!o.buffet_package_id && Number(o.buffet_package_id) === Number(foodItemId);
+                const looksLikeTicketByMissingName = !it.food_items?.name && Number(it.unit_price || 0) > 0 && !!o.buffet_package_id;
+                const isTicket = looksLikeTicketByNote || looksLikeTicketByPkg || looksLikeTicketByMissingName;
+
+                // Tên item: nếu là vé, ưu tiên tên gói buffet; fallback VÉ <giá>K
                 let itemName = 'Unknown Item';
                 if (isTicket) {
-                  // Lấy tên vé từ buffet_packages
-                  itemName = `VÉ ${it.unit_price?.toLocaleString()}K` || 'Vé buffet';
+                  const ticketPrice = Number(it.unit_price || 0);
+                  itemName = (pkgRes.data?.name) || (o.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
                 } else {
-                  // Lấy tên món ăn từ food_items
                   itemName = it.food_items?.name || 'Unknown Item';
                 }
-                
+
                 return {
                   id: it.id || index,
                   order_id: o.id,

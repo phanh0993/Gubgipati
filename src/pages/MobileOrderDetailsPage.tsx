@@ -83,23 +83,26 @@ const MobileOrderDetailsPage: React.FC = () => {
       const orderResponse = await orderAPI.getOrderById(Number(orderId));
       if (orderResponse.status === 200) {
         const orderData = orderResponse.data;
-        // Map items to food_items for compatibility
+        // Map items to food_items for compatibility (treat tickets as items)
         if (orderData.items) {
           orderData.food_items = orderData.items.map((item: any) => ({
             food_item: {
               name: item.name,
               price: item.price
             },
+            name: item.name,
+            food_item_id: item.food_item_id,
             quantity: item.quantity,
-            price: item.price
+            price: item.price,
+            special_instructions: item.special_instructions || ''
           }));
         }
-        
-        // Fetch buffet package info from database if missing
-        if (orderData.buffet_quantity && (!orderData.buffet_package_name || !orderData.buffet_package_price)) {
+
+        // Fetch buffet package info from database (based on buffet_package_id)
+        if (orderData.buffet_package_id && (!orderData.buffet_package_name || !orderData.buffet_package_price)) {
           try {
             const { buffetAPI } = await import('../services/api');
-            const packageResponse = await buffetAPI.getBuffetPackageById(orderData.buffet_package_id || 1);
+            const packageResponse = await buffetAPI.getBuffetPackageById(orderData.buffet_package_id);
             if (packageResponse.status === 200) {
               const packageData = packageResponse.data;
               orderData.buffet_package_name = packageData.name || 'Buffet Package';
@@ -112,6 +115,8 @@ const MobileOrderDetailsPage: React.FC = () => {
             orderData.buffet_package_price = orderData.buffet_package_price || 0;
           }
         }
+
+        // No need to infer buffet quantity; tickets are represented as items
         setOrder(orderData);
         
         // Fetch table info
@@ -163,18 +168,54 @@ const MobileOrderDetailsPage: React.FC = () => {
     
     let total = 0;
     
+    const getItemsTotal = () => {
+      if (!order || !order.food_items || order.food_items.length === 0) return 0;
+      return order.food_items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
+    };
+
+    const getDisplayedBuffetQuantity = () => {
+      if (!order) return 0;
+      if (editingQuantities.buffet_quantity !== undefined) return Math.max(0, Number(editingQuantities.buffet_quantity) || 0);
+      if (order.buffet_quantity && Number(order.buffet_quantity) > 0) return Number(order.buffet_quantity);
+      
+      const price = Number(order.buffet_package_price || 0);
+      if (price <= 0) return 0;
+      
+      const baseTotal = Number(order.subtotal || order.total_amount || 0);
+      const itemsTotal = getItemsTotal();
+      let buffetPortion = baseTotal - itemsTotal;
+      
+      if (buffetPortion <= 0) {
+        // Try parse from notes e.g. "x1", "x 2"
+        const notes: string = String(order.notes || '');
+        const m = notes.match(/x\s*(\d+)/i);
+        if (m) {
+          const q = Number(m[1]);
+          return Number.isFinite(q) && q > 0 ? q : 0;
+        }
+        return 0;
+      }
+      const q = Math.round(buffetPortion / price);
+      return q > 0 ? q : 0;
+    };
+
     // Add buffet package amount
-    if (order.buffet_quantity && order.buffet_package_price) {
-      total += order.buffet_quantity * order.buffet_package_price;
+    if (order.buffet_package_id && order.buffet_package_price) {
+      const inferredQty = getDisplayedBuffetQuantity();
+      const qty = inferredQty > 0 ? inferredQty : 1;
+      total += qty * order.buffet_package_price;
     }
     
     // Add individual food items amount (only if food_items exist)
     if (order.food_items && order.food_items.length > 0) {
-      order.food_items.forEach((item: any) => {
-        total += (item.quantity || 1) * (item.price || 0);
-      });
+      total += order.food_items.reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
     }
-    
+
+    // Fallback: if calculated total is 0 but order has subtotal/total_amount, use that
+    if (total === 0) {
+      const fallback = Number(order.total_amount || order.subtotal || 0);
+      if (fallback > 0) return fallback;
+    }
     return total;
   };
 
@@ -205,12 +246,7 @@ const MobileOrderDetailsPage: React.FC = () => {
     if (!order) return;
     
     try {
-      // Tính toán tổng tiền mới
-      const newBuffetQuantity = editingQuantities.buffet_quantity !== undefined 
-        ? editingQuantities.buffet_quantity 
-        : (order.buffet_quantity || 0);
-      const buffetTotal = (order.buffet_package_price || 0) * newBuffetQuantity;
-      
+      // Tính lại items như nguồn sự thật (bao gồm vé buffet như item)
       let itemsTotal = 0;
       const items = order.food_items || [];
       const updatedItems = items.map((item: any, index: number) => {
@@ -226,19 +262,18 @@ const MobileOrderDetailsPage: React.FC = () => {
         };
       });
       
-      const newSubtotal = buffetTotal + itemsTotal;
+      const newSubtotal = itemsTotal;
       const newTax = 0; // Bỏ thuế
       const newTotal = newSubtotal + newTax;
       
       // Cập nhật order
       const { orderAPI } = await import('../services/api');
       const response = await orderAPI.updateOrder(order.id, {
-        buffet_quantity: newBuffetQuantity,
         subtotal: newSubtotal,
         tax_amount: newTax,
         total_amount: newTotal,
         items: updatedItems.map((item: any) => ({
-          food_item_id: item.food_item?.id || item.food_item_id || null,
+          food_item_id: item.food_item_id || item.food_item?.id || null,
           name: item.food_item?.name || item.name,
           price: item.price || 0,
           quantity: item.quantity,
@@ -271,22 +306,26 @@ const MobileOrderDetailsPage: React.FC = () => {
       const employee = localStorage.getItem('pos_employee');
       const employeeData = employee ? JSON.parse(employee) : null;
       
-      // 1. Tạo invoice trước để ghi nhận doanh thu
+      // 1. Tạo invoice trước để ghi nhận doanh thu (truyền đầy đủ items để tránh fallback chậm)
+      const mappedItems = (order.food_items || []).map((it: any) => ({
+        service_id: it.food_item_id || it.food_item?.id || null,
+        quantity: Number(it.quantity || 0),
+        unit_price: Number(it.price || 0)
+      }));
+
       const invoiceData = {
         customer_id: order.customer_id || undefined,
         employee_id: employeeData?.id || order.employee_id || 14,
-        items: [
-          {
-            service_id: 1, // Dummy service ID for orders
-            quantity: 1,
-            unit_price: order.total_amount || 0,
-          }
+        order_id: order.id,
+        order_number: order.order_number,
+        items: mappedItems.length > 0 ? mappedItems : [
+          { service_id: 1, quantity: 1, unit_price: Number(order.total_amount || 0) }
         ],
         discount_amount: 0,
         tax_amount: 0, // Bỏ thuế
         payment_method: 'cash',
         notes: `Order: ${order.order_number || order.id} - NV: ${employeeData?.fullname || 'Unknown'}`
-      };
+      } as any;
       
       const { invoicesAPI } = await import('../services/api');
       const invoiceResponse = await invoicesAPI.create(invoiceData);
@@ -443,35 +482,6 @@ const MobileOrderDetailsPage: React.FC = () => {
             </Typography>
             
             <List>
-              {/* Buffet Package */}
-              {order.buffet_quantity && order.buffet_package_name && order.buffet_package_price && (
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Typography variant="body1" sx={{ fontWeight: 'bold' }}>
-                            {order.buffet_package_name}
-                          </Typography>
-                          <TextField
-                            type="number"
-                            value={editingQuantities.buffet_quantity !== undefined ? editingQuantities.buffet_quantity : order.buffet_quantity}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange('buffet', parseInt(e.target.value) || 0)}
-                            inputProps={{ min: 0, style: { textAlign: 'center' } }}
-                            sx={{ width: '60px' }}
-                            size="small"
-                          />
-                        </Box>
-                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-                          {((editingQuantities.buffet_quantity !== undefined ? editingQuantities.buffet_quantity : order.buffet_quantity) * order.buffet_package_price).toLocaleString('vi-VN')} ₫
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              )}
-              
-              {/* Food Items */}
               {order.food_items && order.food_items.length > 0 && (
                 <>
                   <Divider sx={{ my: 1 }} />
@@ -482,7 +492,7 @@ const MobileOrderDetailsPage: React.FC = () => {
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Typography variant="body2">
-                                {item.food_item?.name || 'Món ăn'}
+                                {item.food_item?.name || item.name || 'Món ăn'}
                               </Typography>
                               <TextField
                                 type="number"
