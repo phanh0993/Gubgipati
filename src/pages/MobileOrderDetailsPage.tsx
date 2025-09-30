@@ -43,6 +43,7 @@ interface Order {
   subtotal?: number;
   tax_amount?: number;
   buffet_quantity?: number;
+  buffet_package_id?: number;
   buffet_package_name?: string;
   buffet_package_price?: number;
   food_items?: any[];
