@@ -46,6 +46,7 @@ interface Order {
   buffet_package_name?: string;
   buffet_package_price?: number;
   food_items?: any[];
+  notes?: string;
 }
 
 interface Table {
