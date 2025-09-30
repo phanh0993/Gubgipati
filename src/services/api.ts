@@ -1586,22 +1586,38 @@ export const orderAPI = {
                 };
               });
 
-              // Nếu không có vé trong order_items, tạo item vé từ orders.buffet_quantity
-              if (Number(o.buffet_package_id) && Number(o.buffet_quantity) > 0) {
-                const ticketPrice = Number(o.buffet_package_price || 0);
-                normalizedItems.push({
-                  id: -1,
-                  order_id: o.id,
-                  food_item_id: o.buffet_package_id,
-                  name: o.buffet_package_name || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet'),
-                  quantity: Number(o.buffet_quantity),
-                  price: ticketPrice,
-                  total: ticketPrice * Number(o.buffet_quantity),
-                  is_ticket: true,
-                  special_instructions: 'Vé buffet',
-                  employee_id: o.employee_id || null,
-                  employee_name: ''
-                });
+              // Đọc số vé từ order_buffet thay vì orders.buffet_quantity
+              if (Number(o.buffet_package_id)) {
+                try {
+                  const { data: buffetTickets, error: buffetError } = await supabase
+                    .from('order_buffet')
+                    .select('id')
+                    .eq('order_id', o.id);
+                  
+                  if (!buffetError && buffetTickets && buffetTickets.length > 0) {
+                    const ticketPrice = Number(o.buffet_package_price || 0);
+                    const ticketQty = buffetTickets.length;
+                    console.log(`🎫 [GET ORDERS] Order ${o.id}: Found ${ticketQty} tickets in order_buffet`);
+                    
+                    normalizedItems.push({
+                      id: -1,
+                      order_id: o.id,
+                      food_item_id: o.buffet_package_id,
+                      name: o.buffet_package_name || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet'),
+                      quantity: ticketQty,
+                      price: ticketPrice,
+                      total: ticketPrice * ticketQty,
+                      is_ticket: true,
+                      special_instructions: 'Vé buffet',
+                      employee_id: o.employee_id || null,
+                      employee_name: ''
+                    });
+                  } else {
+                    console.log(`🎫 [GET ORDERS] Order ${o.id}: No tickets found in order_buffet`);
+                  }
+                } catch (e) {
+                  console.warn(`🎫 [GET ORDERS] Failed to read order_buffet for order ${o.id}:`, e);
+                }
               }
 
               // Gán employee_name theo lần xuất hiện đầu tiên của mỗi item
@@ -1719,6 +1735,8 @@ export const orderAPI = {
           try {
             const desiredQty = Number(order.buffet_quantity || 0);
             const buffetPackageId = Number(order.buffet_package_id || 0);
+            console.log(`🎫 [CREATE ORDER] Syncing tickets: desiredQty=${desiredQty}, buffetPackageId=${buffetPackageId}`);
+            
             if (buffetPackageId && desiredQty >= 0) {
               // Chèn desiredQty dòng vé
               if (desiredQty > 0) {
@@ -1726,14 +1744,21 @@ export const orderAPI = {
                   order_id: orderId,
                   buffet_package_id: buffetPackageId
                 }));
+                console.log(`🎫 [CREATE ORDER] Inserting ${desiredQty} tickets into order_buffet:`, ticketRows);
                 const ins = await supabase.from('order_buffet').insert(ticketRows);
                 if (ins.error) {
-                  console.warn('⚠️ Insert order_buffet failed:', ins.error);
+                  console.error('❌ [CREATE ORDER] Insert order_buffet failed:', ins.error);
+                } else {
+                  console.log(`✅ [CREATE ORDER] Successfully inserted ${desiredQty} tickets into order_buffet`);
                 }
+              } else {
+                console.log(`🎫 [CREATE ORDER] No tickets to insert (desiredQty=${desiredQty})`);
               }
+            } else {
+              console.log(`🎫 [CREATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
             }
           } catch (e) {
-            console.warn('⚠️ Sync order_buffet on create failed:', e);
+            console.error('❌ [CREATE ORDER] Sync order_buffet failed:', e);
           }
 
           // 2. Lưu các món ăn vào order_items
@@ -1828,36 +1853,57 @@ export const orderAPI = {
               const buffetPackageId = Number(updatePayload.buffet_package_id || 0);
               const desiredQtyRaw = updatePayload.buffet_quantity;
               const desiredQty = (desiredQtyRaw === undefined || desiredQtyRaw === null) ? undefined : Number(desiredQtyRaw);
+              console.log(`🎫 [UPDATE ORDER] Syncing tickets: orderId=${id}, buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
+              
               if (buffetPackageId && desiredQty !== undefined && desiredQty >= 0) {
                 // Đếm vé hiện tại
                 const { data: currentRows, error: countErr } = await supabase
                   .from('order_buffet')
                   .select('id')
                   .eq('order_id', id);
+                  
                 if (!countErr) {
                   const currentQty = (currentRows || []).length;
                   const delta = desiredQty - currentQty;
+                  console.log(`🎫 [UPDATE ORDER] Current tickets: ${currentQty}, desired: ${desiredQty}, delta: ${delta}`);
+                  
                   if (delta > 0) {
                     // Thêm delta dòng
                     const ticketRows = Array(delta).fill(null).map(() => ({
                       order_id: id,
                       buffet_package_id: buffetPackageId
                     }));
+                    console.log(`🎫 [UPDATE ORDER] Adding ${delta} tickets:`, ticketRows);
                     const ins = await supabase.from('order_buffet').insert(ticketRows);
-                    if (ins.error) console.warn('⚠️ Insert order_buffet failed:', ins.error);
+                    if (ins.error) {
+                      console.error('❌ [UPDATE ORDER] Insert order_buffet failed:', ins.error);
+                    } else {
+                      console.log(`✅ [UPDATE ORDER] Successfully added ${delta} tickets`);
+                    }
                   } else if (delta < 0) {
                     // Xóa bớt - lấy các id đầu tiên và xóa |delta|
                     const toDeleteIds = (currentRows || []).slice(0, Math.abs(delta)).map((r: any) => r.id);
+                    console.log(`🎫 [UPDATE ORDER] Removing ${Math.abs(delta)} tickets with IDs:`, toDeleteIds);
                     if (toDeleteIds.length > 0) {
                       const del = await supabase.from('order_buffet').delete().in('id', toDeleteIds);
-                      if (del.error) console.warn('⚠️ Delete order_buffet failed:', del.error);
+                      if (del.error) {
+                        console.error('❌ [UPDATE ORDER] Delete order_buffet failed:', del.error);
+                      } else {
+                        console.log(`✅ [UPDATE ORDER] Successfully removed ${toDeleteIds.length} tickets`);
+                      }
                     }
+                  } else {
+                    console.log(`🎫 [UPDATE ORDER] No change needed (current=${currentQty}, desired=${desiredQty})`);
                   }
                   (updatedRow as any).buffet_quantity = desiredQty;
+                } else {
+                  console.error('❌ [UPDATE ORDER] Failed to count current tickets:', countErr);
                 }
+              } else {
+                console.log(`🎫 [UPDATE ORDER] Skipping ticket sync: buffetPackageId=${buffetPackageId}, desiredQty=${desiredQty}`);
               }
             } catch (e) {
-              console.warn('⚠️ Sync order_buffet on update failed:', e);
+              console.error('❌ [UPDATE ORDER] Sync order_buffet failed:', e);
             }
 
             // 2. Cập nhật các món ăn vào order_items

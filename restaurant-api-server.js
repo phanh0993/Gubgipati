@@ -792,6 +792,17 @@ async function handleOrders(req, res) {
           LEFT JOIN buffet_packages bp ON o.buffet_package_id = bp.id
           WHERE o.id = $1
         `, [orderId]);
+
+        // Đếm số vé từ order_buffet và cập nhật buffet_quantity
+        if (result.rows.length > 0) {
+          const buffetCountRes = await client.query(
+            `SELECT COUNT(*)::int AS qty FROM order_buffet WHERE order_id = $1`,
+            [orderId]
+          );
+          const actualBuffetQty = buffetCountRes.rows[0]?.qty || 0;
+          result.rows[0].buffet_quantity = actualBuffetQty;
+          console.log(`🎫 Order ${orderId}: buffet_quantity updated from order_buffet = ${actualBuffetQty}`);
+        }
         
         if (result.rows.length === 0) {
           sendJSON(res, 404, { error: 'Order not found' });
