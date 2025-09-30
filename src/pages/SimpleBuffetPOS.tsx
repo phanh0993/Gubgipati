@@ -457,10 +457,17 @@ const SimpleBuffetPOS: React.FC = () => {
         const totalAmount = subtotal;
 
         const { orderAPI } = await import('../services/api');
+        console.log(`🎫 [PC UPDATE ORDER] Sending update:`, {
+          orderId: currentOrder.id,
+          buffet_package_id: selectedPackage.id,
+          buffet_quantity: packageQuantity,
+          selectedPackage: selectedPackage
+        });
+        
         const response = await orderAPI.updateOrder(Number(currentOrder.id), {
           employee_id: employeeId,
           buffet_package_id: selectedPackage.id,
-          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
+          buffet_quantity: packageQuantity, // Chỉ gửi số vé mới thêm
           subtotal: (currentOrder.total_amount || 0) + totalAmount,
           tax_amount: 0,
           total_amount: (currentOrder.total_amount || 0) + totalAmount,
