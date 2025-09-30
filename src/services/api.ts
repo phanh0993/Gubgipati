@@ -1916,7 +1916,26 @@ export const orderAPI = {
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             const updatedRow = res.data || order; // fallback khi maybeSingle trả về null
-            // 1. KHÔNG cập nhật vé trong order_items; thay vào đó cộng dồn buffet_quantity trong orders
+            // 1. Cộng dồn buffet_quantity trên bảng orders nếu có gửi số vé mới
+            try {
+              if (updatePayload.buffet_package_id && Number(updatePayload.buffet_quantity) > 0) {
+                const { data: existing } = await supabase
+                  .from('orders')
+                  .select('buffet_quantity')
+                  .eq('id', id)
+                  .single();
+                const prev = Number(existing?.buffet_quantity || 0);
+                const add = Number(updatePayload.buffet_quantity || 0);
+                const newQty = prev + add;
+                await supabase
+                  .from('orders')
+                  .update({ buffet_quantity: newQty })
+                  .eq('id', id);
+                (updatedRow as any).buffet_quantity = newQty;
+              }
+            } catch (e) {
+              console.warn('Buffet quantity accumulate failed:', e);
+            }
 
             // 2. Cập nhật các món ăn vào order_items
             if (Array.isArray(items) && items.length > 0) {
