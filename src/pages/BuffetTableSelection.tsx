@@ -375,21 +375,12 @@ const BuffetTableSelection: React.FC = () => {
     if (!selectedOrder || !orderDetails) return;
     
     try {
-      // Lấy máy in hoá đơn tổng theo cấu hình
-      let printerUri: string | undefined;
-      try {
-        const { data: mapping } = await supabase
-          .from('printer_mappings')
-          .select('printer_uri')
-          .eq('group_key', 'invoice_main')
-          .maybeSingle();
-        printerUri = mapping?.printer_uri;
-      } catch {}
-      // Nếu chưa cấu hình, BỎ QUA in để tránh treo (không auto discover)
-      if (!printerUri) {
-        console.warn('No invoice_main printer mapping; skip printing');
-        return;
-      }
+      // BỎ truy vấn printer_mappings để tránh 404; in chỉ khi bật cờ enable_invoice_print và agent có default
+      const enableInvoicePrint = (typeof window !== 'undefined') && localStorage.getItem('enable_invoice_print') === 'true';
+      if (!enableInvoicePrint) return;
+      const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
+      const agentBase = `http://${host}:9977`;
+      const printerUri = 'default';
 
       // Nội dung in dạng text đơn giản cho IPP
       const header = `GUBGIPATI\nHoa don tam tinh\n`;
