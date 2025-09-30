@@ -827,59 +827,8 @@ export const invoicesAPI = {
                     if (!ins2Err) {
                       createdItems = inserted2 || [];
                       console.log('✅ [INVOICE CREATE] Successfully created invoice_items:', createdItems.length);
-                    // Optional: trigger kitchen printing by group mappings
-                    try {
-                      const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
-                      const agentBase = `http://${host}:9977`;
-                      // Fetch mappings
-                      const { data: mappings } = await supabase
-                        .from('printer_mappings')
-                        .select('group_key, printer_uri');
-                      const groupToPrinter: Record<string, string> = {};
-                      (mappings || []).forEach((m: any) => { groupToPrinter[m.group_key] = m.printer_uri; });
-                      
-                      // Lấy thông tin chi tiết món ăn để in
-                      const { data: foodItems } = await supabase
-                        .from('food_items')
-                        .select('id, name')
-                        .in('id', createdItems.map((it: any) => it.service_id));
-                      
-                      const foodMap: Record<number, string> = {};
-                      (foodItems || []).forEach((item: any) => {
-                        foodMap[item.id] = item.name;
-                      });
-                      
-                      // Lấy thông tin order_items để có note
-                      const { data: orderItemsWithNotes } = await supabase
-                        .from('order_items')
-                        .select('food_item_id, special_instructions')
-                        .eq('order_id', fallbackOrderId);
-                      
-                      const noteMap: Record<number, string> = {};
-                      (orderItemsWithNotes || []).forEach((item: any) => {
-                        if (item.special_instructions && item.special_instructions !== 'Gọi thoải mái') {
-                          noteMap[item.food_item_id] = item.special_instructions;
-                        }
-                      });
-                      
-                      const text = createdItems.map((it: any) => {
-                        const foodName = foodMap[it.service_id] || `ITEM ${it.service_id}`;
-                        const note = noteMap[it.service_id] ? ` - ${noteMap[it.service_id]}` : '';
-                        return `x${it.quantity} - ${foodName}${note}`;
-                      }).join('\n');
-                      
-                      // Choose a demo group: kitchen_other
-                      const uri = groupToPrinter['kitchen_other'];
-                      if (uri) {
-                        await fetch(`${agentBase}/print`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ printerUri: uri, title: `Order ${fallbackOrderId}`, rawText: text })
-                        });
-                      }
-                    } catch (e) {
-                      console.warn('🖨️ print skip:', e);
-                    }
+                    // Printing disabled by default to avoid external 404/lag. Enable later via dedicated setting.
+                    // console.log('🖨️ Printing is disabled in invoicesAPI.create.');
                     } else {
                       console.error('❌ [INVOICE CREATE] invoice_items insert error:', ins2Err);
                     }
