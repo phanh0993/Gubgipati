@@ -1911,11 +1911,18 @@ export const orderAPI = {
           .from('orders')
           .update(updatePayload)
           .eq('id', id)
-          .select('*')
-          .maybeSingle()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
-            const updatedRow = res.data || order; // fallback khi maybeSingle trả về null
+            // Try fetch the updated row, but don't fail if not found
+            let updatedRow: any = { id, ...order };
+            try {
+              const fetched = await supabase
+                .from('orders')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+              if (fetched.data) updatedRow = fetched.data;
+            } catch {}
             // 1. Cộng dồn buffet_quantity trên bảng orders nếu có gửi số vé mới
             try {
               if (updatePayload.buffet_package_id && Number(updatePayload.buffet_quantity) > 0) {
