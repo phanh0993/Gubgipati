@@ -7,6 +7,11 @@ import {
 } from '@mui/material';
 import { Add, Remove, ArrowBack, Restaurant } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://rmqzggfwvhsoiijlsxwy.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXpnZ2Z3dmhzb2lpamxzeHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyODc1MjYsImV4cCI6MjA3MTg2MzUyNn0.EWtnieipmSr5prm18pNCgCYSfdGRtr-710ISCZ-Jsl4';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface TableInfo {
   id: number;
@@ -309,11 +314,27 @@ const SimpleBuffetPOS: React.FC = () => {
         const newCombinedTax = 0;
         const newCombinedTotal = newCombinedSubtotal + newCombinedTax;
         
+        // Đọc số vé hiện tại từ order_buffet thay vì currentOrder.buffet_quantity
+        let currentTicketCount = 0;
+        try {
+          const { data: currentTickets, error: ticketError } = await supabase
+            .from('order_buffet')
+            .select('id')
+            .eq('order_id', currentOrder.id);
+          
+          if (!ticketError && currentTickets) {
+            currentTicketCount = currentTickets.length;
+            console.log(`🎫 [PC] Current tickets in order_buffet: ${currentTicketCount}`);
+          }
+        } catch (e) {
+          console.warn('🎫 [PC] Failed to read current tickets:', e);
+        }
+
         // Chỉ gửi items mới, API sẽ tự gộp với items cũ
         const updatedOrderData = {
           employee_id: employeeId,
-          // Gửi số vé mong muốn = hiện tại + thêm mới, server sẽ đồng bộ order_buffet
-          buffet_quantity: (currentOrder.buffet_quantity || 0) + packageQuantity,
+          // Gửi tổng số vé mong muốn = hiện tại từ order_buffet + thêm mới
+          buffet_quantity: currentTicketCount + packageQuantity,
           subtotal: newCombinedSubtotal,
           tax_amount: newCombinedTax,
           total_amount: newCombinedTotal,
