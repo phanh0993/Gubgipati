@@ -46,7 +46,7 @@ BEGIN
         ON CONFLICT DO NOTHING;
         
         -- Kiểm tra dữ liệu
-        SELECT COUNT(*) as row_count FROM public.order_buffet WHERE order_id = test_order_id;
+        PERFORM COUNT(*) FROM public.order_buffet WHERE order_id = test_order_id;
         
         -- Xóa dữ liệu test
         DELETE FROM public.order_buffet WHERE order_id = test_order_id AND buffet_package_id = 35;
@@ -66,5 +66,5 @@ FROM information_schema.table_privileges
 WHERE table_name = 'order_buffet' 
 AND table_schema = 'public';
 
--- Thông báo hoàn thành
+-- 7. Thông báo hoàn thành
 SELECT 'Order_buffet table check completed!' as message;
