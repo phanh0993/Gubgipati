@@ -226,8 +226,11 @@ const MobileOrderDetailsPage: React.FC = () => {
   };
 
   const handlePrint = () => {
-    // Implement print functionality
-    window.print();
+    try {
+      window.print();
+    } catch (e) {
+      console.warn('Print skipped:', e);
+    }
   };
 
   const handleQuantityChange = (type: 'buffet' | 'item', newQuantity: number, itemIndex?: number) => {

@@ -385,12 +385,11 @@ const BuffetTableSelection: React.FC = () => {
           .maybeSingle();
         printerUri = mapping?.printer_uri;
       } catch {}
-      // Nếu chưa cấu hình, lấy máy in đầu tiên từ agent
+      // Nếu chưa cấu hình, BỎ QUA in để tránh treo (không auto discover)
       if (!printerUri) {
-        const list = await printerService.discover();
-        printerUri = list[0]?.uri;
+        console.warn('No invoice_main printer mapping; skip printing');
+        return;
       }
-      if (!printerUri) throw new Error('Chưa cấu hình máy in hoá đơn tổng');
 
       // Nội dung in dạng text đơn giản cho IPP
       const header = `GUBGIPATI\nHoa don tam tinh\n`;
