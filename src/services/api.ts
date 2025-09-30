@@ -1715,7 +1715,26 @@ export const orderAPI = {
           console.log('✅ Order created:', orderData);
           const orderId = orderData.id;
 
-          // 1. KHÔNG thêm vé buffet vào order_items để tránh lỗi FK; giữ buffet_quantity ở bảng orders
+          // 1. Đồng bộ vé buffet vào bảng order_buffet theo số lượng mong muốn
+          try {
+            const desiredQty = Number(order.buffet_quantity || 0);
+            const buffetPackageId = Number(order.buffet_package_id || 0);
+            if (buffetPackageId && desiredQty >= 0) {
+              // Chèn desiredQty dòng vé
+              if (desiredQty > 0) {
+                const ticketRows = Array(desiredQty).fill(null).map(() => ({
+                  order_id: orderId,
+                  buffet_package_id: buffetPackageId
+                }));
+                const ins = await supabase.from('order_buffet').insert(ticketRows);
+                if (ins.error) {
+                  console.warn('⚠️ Insert order_buffet failed:', ins.error);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('⚠️ Sync order_buffet on create failed:', e);
+          }
 
           // 2. Lưu các món ăn vào order_items
           if (Array.isArray(items) && items.length > 0) {
@@ -1804,25 +1823,41 @@ export const orderAPI = {
                 .maybeSingle();
               if (fetched.data) updatedRow = fetched.data;
             } catch {}
-            // 1. Cộng dồn buffet_quantity trên bảng orders nếu có gửi số vé mới
+            // 1. Đồng bộ vé buffet vào bảng order_buffet theo số lượng mong muốn (desired quantity)
             try {
-              if (updatePayload.buffet_package_id && Number(updatePayload.buffet_quantity) > 0) {
-                const { data: existing } = await supabase
-                  .from('orders')
-                  .select('buffet_quantity')
-                  .eq('id', id)
-                  .single();
-                const prev = Number(existing?.buffet_quantity || 0);
-                const add = Number(updatePayload.buffet_quantity || 0);
-                const newQty = prev + add;
-                await supabase
-                  .from('orders')
-                  .update({ buffet_quantity: newQty })
-                  .eq('id', id);
-                (updatedRow as any).buffet_quantity = newQty;
+              const buffetPackageId = Number(updatePayload.buffet_package_id || 0);
+              const desiredQtyRaw = updatePayload.buffet_quantity;
+              const desiredQty = (desiredQtyRaw === undefined || desiredQtyRaw === null) ? undefined : Number(desiredQtyRaw);
+              if (buffetPackageId && desiredQty !== undefined && desiredQty >= 0) {
+                // Đếm vé hiện tại
+                const { data: currentRows, error: countErr } = await supabase
+                  .from('order_buffet')
+                  .select('id')
+                  .eq('order_id', id);
+                if (!countErr) {
+                  const currentQty = (currentRows || []).length;
+                  const delta = desiredQty - currentQty;
+                  if (delta > 0) {
+                    // Thêm delta dòng
+                    const ticketRows = Array(delta).fill(null).map(() => ({
+                      order_id: id,
+                      buffet_package_id: buffetPackageId
+                    }));
+                    const ins = await supabase.from('order_buffet').insert(ticketRows);
+                    if (ins.error) console.warn('⚠️ Insert order_buffet failed:', ins.error);
+                  } else if (delta < 0) {
+                    // Xóa bớt - lấy các id đầu tiên và xóa |delta|
+                    const toDeleteIds = (currentRows || []).slice(0, Math.abs(delta)).map((r: any) => r.id);
+                    if (toDeleteIds.length > 0) {
+                      const del = await supabase.from('order_buffet').delete().in('id', toDeleteIds);
+                      if (del.error) console.warn('⚠️ Delete order_buffet failed:', del.error);
+                    }
+                  }
+                  (updatedRow as any).buffet_quantity = desiredQty;
+                }
               }
             } catch (e) {
-              console.warn('Buffet quantity accumulate failed:', e);
+              console.warn('⚠️ Sync order_buffet on update failed:', e);
             }
 
             // 2. Cập nhật các món ăn vào order_items
