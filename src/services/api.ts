@@ -1941,48 +1941,34 @@ export const orderAPI = {
               console.log('⚠️ No food items to update or items is not an array');
             }
             
-            // In bếp khi cập nhật order
+            // In bếp khi cập nhật order (chỉ khi bật cờ enable_kitchen_print)
             if (Array.isArray(items) && items.length > 0) {
-              try {
-                const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
-                const agentBase = `http://${host}:9977`;
-                
-                // Fetch mappings
-                const { data: mappings } = await supabase
-                  .from('printer_mappings')
-                  .select('group_key, printer_uri');
-                const groupToPrinter: Record<string, string> = {};
-                (mappings || []).forEach((m: any) => { groupToPrinter[m.group_key] = m.printer_uri; });
-                
-                // Lấy thông tin chi tiết món ăn để in
-                const { data: foodItems } = await supabase
-                  .from('food_items')
-                  .select('id, name')
-                  .in('id', items.map((it: any) => it.food_item_id));
-                
-                const foodMap: Record<number, string> = {};
-                (foodItems || []).forEach((item: any) => {
-                  foodMap[item.id] = item.name;
-                });
-                
-                const text = items.map((it: any) => {
-                  const foodName = foodMap[it.food_item_id] || `ITEM ${it.food_item_id}`;
-                  const note = it.special_instructions && it.special_instructions !== 'Gọi thoải mái' ? ` - ${it.special_instructions}` : '';
-                  return `x${it.quantity} - ${foodName}${note}`;
-                }).join('\n');
-                
-                // In ra máy in bếp (kitchen_other)
-                const uri = groupToPrinter['kitchen_other'];
-                if (uri) {
+              const enableKitchenPrint = (typeof window !== 'undefined') && localStorage.getItem('enable_kitchen_print') === 'true';
+              if (enableKitchenPrint) {
+                try {
+                  const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
+                  const agentBase = `http://${host}:9977`;
+                  // Lấy thông tin chi tiết món ăn để in (không đọc printer_mappings để tránh 404)
+                  const { data: foodItems } = await supabase
+                    .from('food_items')
+                    .select('id, name')
+                    .in('id', items.map((it: any) => it.food_item_id));
+                  const foodMap: Record<number, string> = {};
+                  (foodItems || []).forEach((item: any) => { foodMap[item.id] = item.name; });
+                  const text = items.map((it: any) => {
+                    const foodName = foodMap[it.food_item_id] || `ITEM ${it.food_item_id}`;
+                    const note = it.special_instructions && it.special_instructions !== 'Gọi thoải mái' ? ` - ${it.special_instructions}` : '';
+                    return `x${it.quantity} - ${foodName}${note}`;
+                  }).join('\n');
+                  // Dùng nhóm mặc định, yêu cầu agent cấu hình printer mặc định
                   await fetch(`${agentBase}/print`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ printerUri: uri, title: `Order Update ${id}`, rawText: text })
+                    body: JSON.stringify({ printerUri: 'default', title: `Order Update ${id}`, rawText: text })
                   });
-                  console.log('🖨️ Kitchen print sent for order update:', id);
+                } catch (e) {
+                  console.warn('🖨️ Kitchen print skip:', e);
                 }
-              } catch (e) {
-                console.warn('🖨️ Kitchen print skip:', e);
               }
             }
             
