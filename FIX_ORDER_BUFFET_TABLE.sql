@@ -46,12 +46,13 @@ CREATE INDEX IF NOT EXISTS idx_order_buffet_package ON public.order_buffet(buffe
 CREATE INDEX IF NOT EXISTS idx_order_buffet_quantity ON public.order_buffet(quantity);
 
 -- Thêm unique constraint để tránh duplicate (order_id, buffet_package_id)
-ALTER TABLE public.order_buffet 
-DROP CONSTRAINT IF EXISTS unique_order_buffet;
+-- BỎ QUA: Cho phép nhiều dòng cùng order_id để lưu từng lần order
+-- ALTER TABLE public.order_buffet 
+-- DROP CONSTRAINT IF EXISTS unique_order_buffet;
 
-ALTER TABLE public.order_buffet 
-ADD CONSTRAINT unique_order_buffet 
-UNIQUE (order_id, buffet_package_id);
+-- ALTER TABLE public.order_buffet 
+-- ADD CONSTRAINT unique_order_buffet 
+-- UNIQUE (order_id, buffet_package_id);
 
 -- 8. Kiểm tra cấu trúc bảng sau khi sửa
 SELECT column_name, data_type, is_nullable, column_default 

@@ -256,14 +256,14 @@ async function createInvoiceFromOrder(orderId, client) {
 
     const invoiceId = invoiceResult.rows[0].id;
 
-    // 5. Tạo invoice items cho buffet package (đọc số vé từ order_buffet)
+    // 5. Tạo invoice items cho buffet package (tổng quantity từ tất cả dòng order_buffet)
     if (order.buffet_package_id) {
-      // Đọc số vé từ order_buffet.quantity
+      // Tổng quantity từ tất cả dòng order_buffet cùng order_id
       const buffetCountRes = await client.query(
-        `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
-        [orderId, order.buffet_package_id]
+        `SELECT SUM(quantity)::int AS total_qty FROM order_buffet WHERE order_id = $1`,
+        [orderId]
       );
-      const buffetQty = buffetCountRes.rows[0]?.quantity || 0;
+      const buffetQty = buffetCountRes.rows[0]?.total_qty || 0;
       if (buffetQty > 0) {
       const packageResult = await client.query(`
         SELECT name, price FROM buffet_packages WHERE id = $1
@@ -811,13 +811,13 @@ async function handleOrders(req, res) {
         
         const order = result.rows[0];
 
-        // Đọc số vé từ order_buffet.quantity
+        // Đọc tổng số vé từ tất cả dòng order_buffet cùng order_id
         if (order.buffet_package_id) {
           const buffetCountRes = await client.query(
-            `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
-            [order.id, order.buffet_package_id]
+            `SELECT SUM(quantity)::int AS total_qty FROM order_buffet WHERE order_id = $1`,
+            [order.id]
           );
-          order.buffet_quantity = buffetCountRes.rows[0]?.quantity || 0;
+          order.buffet_quantity = buffetCountRes.rows[0]?.total_qty || 0;
         }
         
         // Lấy order items
@@ -859,14 +859,14 @@ async function handleOrders(req, res) {
       
       // Lấy order items cho mỗi order
       const orders = result.rows;
-      // Lấy số vé cho từng order bằng order_buffet.quantity
+      // Lấy tổng số vé cho từng order từ tất cả dòng order_buffet
       for (const o of orders) {
         if (o.buffet_package_id) {
           const buffetCountRes = await client.query(
-            `SELECT quantity FROM order_buffet WHERE order_id = $1 AND buffet_package_id = $2`,
-            [o.id, o.buffet_package_id]
+            `SELECT SUM(quantity)::int AS total_qty FROM order_buffet WHERE order_id = $1`,
+            [o.id]
           );
-          o.buffet_quantity = buffetCountRes.rows[0]?.quantity || 0;
+          o.buffet_quantity = buffetCountRes.rows[0]?.total_qty || 0;
         }
       }
       for (const order of orders) {
