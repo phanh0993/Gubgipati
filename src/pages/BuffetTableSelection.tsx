@@ -681,43 +681,7 @@ const BuffetTableSelection: React.FC = () => {
               <Divider sx={{ my: 2 }} />
               
               {/* Hiển thị thông tin vé buffet */}
-              <Typography variant="h6" gutterBottom>
-                Loại Vé Buffet
-              </Typography>
-              {(() => {
-                console.log('🔍 Buffet package info:', {
-                  name: orderDetails.buffet_package_name,
-                  price: orderDetails.buffet_package_price,
-                  quantity: orderDetails.buffet_quantity
-                });
-                return null;
-              })()}
-              <Box sx={{ mb: 2, p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Box>
-                    <Typography variant="h6">
-                      {orderDetails.buffet_package_name || 'Buffet Package'}
-                    </Typography>
-                    <Typography variant="body2">
-                      Thành tiền: {((orderDetails.buffet_package_price || 0) * (orderDetails.buffet_quantity || 0)).toLocaleString('vi-VN')} ₫
-                    </Typography>
-                  </Box>
-                  <TextField
-                    type="number"
-                    value={editingQuantities.buffet_quantity !== undefined ? editingQuantities.buffet_quantity : (orderDetails.buffet_quantity || 0)}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleQuantityChange('buffet', parseInt(e.target.value) || 0)}
-                    inputProps={{ min: 0, style: { textAlign: 'center', color: 'white' } }}
-                    sx={{ 
-                      width: '80px',
-                      '& .MuiOutlinedInput-root': {
-                        '& fieldset': { borderColor: 'rgba(255,255,255,0.3)' },
-                        '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.5)' },
-                        '&.Mui-focused fieldset': { borderColor: 'white' }
-                      }
-                    }}
-                  />
-                </Box>
-              </Box>
+              {/* Hiển thị vé như item trong danh sách bên dưới, bỏ ô chỉnh vé riêng để tránh lệch */}
               
               <Divider sx={{ my: 2 }} />
               

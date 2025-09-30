@@ -1931,7 +1931,7 @@ export const orderAPI = {
           .update(updatePayload)
           .eq('id', id)
           .select('*')
-          .single()
+          .maybeSingle()
           .then(async (res: any) => {
             if (res.error) { reject(res.error); return; }
             // 1. Cập nhật vé buffet vào order_items (nếu có)
