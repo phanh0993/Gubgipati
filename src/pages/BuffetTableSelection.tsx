@@ -375,9 +375,9 @@ const BuffetTableSelection: React.FC = () => {
     if (!selectedOrder || !orderDetails) return;
     
     try {
-      // BỎ truy vấn printer_mappings để tránh 404; in chỉ khi bật cờ enable_invoice_print và agent có default
-      const enableInvoicePrint = (typeof window !== 'undefined') && localStorage.getItem('enable_invoice_print') === 'true';
-      if (!enableInvoicePrint) return;
+      // Tắt hoàn toàn logic in hóa đơn để tránh lag
+      console.log('🖨️ Invoice printing disabled to avoid lag');
+      return;
       const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
       const agentBase = `http://${host}:9977`;
       const printerUri = 'default';

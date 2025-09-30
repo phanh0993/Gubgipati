@@ -1971,36 +1971,8 @@ export const orderAPI = {
               console.log('⚠️ No food items to update or items is not an array');
             }
             
-            // In bếp khi cập nhật order (chỉ khi bật cờ enable_kitchen_print)
-            if (Array.isArray(items) && items.length > 0) {
-              const enableKitchenPrint = (typeof window !== 'undefined') && localStorage.getItem('enable_kitchen_print') === 'true';
-              if (enableKitchenPrint) {
-                try {
-                  const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
-                  const agentBase = `http://${host}:9977`;
-                  // Lấy thông tin chi tiết món ăn để in (không đọc printer_mappings để tránh 404)
-                  const { data: foodItems } = await supabase
-                    .from('food_items')
-                    .select('id, name')
-                    .in('id', items.map((it: any) => it.food_item_id));
-                  const foodMap: Record<number, string> = {};
-                  (foodItems || []).forEach((item: any) => { foodMap[item.id] = item.name; });
-                  const text = items.map((it: any) => {
-                    const foodName = foodMap[it.food_item_id] || `ITEM ${it.food_item_id}`;
-                    const note = it.special_instructions && it.special_instructions !== 'Gọi thoải mái' ? ` - ${it.special_instructions}` : '';
-                    return `x${it.quantity} - ${foodName}${note}`;
-                  }).join('\n');
-                  // Dùng nhóm mặc định, yêu cầu agent cấu hình printer mặc định
-                  await fetch(`${agentBase}/print`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ printerUri: 'default', title: `Order Update ${id}`, rawText: text })
-                  });
-                } catch (e) {
-                  console.warn('🖨️ Kitchen print skip:', e);
-                }
-              }
-            }
+            // Tắt hoàn toàn logic in bếp để tránh lag khi thanh toán
+            console.log('🖨️ Kitchen printing disabled to avoid lag during payment');
             
             const axiosLike = { data: { ...updatedRow }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);

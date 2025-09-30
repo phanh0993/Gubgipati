@@ -34,19 +34,9 @@ const PrinterManagementPage: React.FC = () => {
   };
 
   const loadMappings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('printer_mappings')
-        .select('*');
-      if (error) throw error;
-      const map: Record<string, PrinterMapping> = {};
-      (data || []).forEach((row: any) => {
-        map[row.group_key] = row as PrinterMapping;
-      });
-      setMappings(map);
-    } catch (e) {
-      // ignore if table not exists
-    }
+    // Tắt hoàn toàn logic printer_mappings để tránh 404
+    console.log('🖨️ Printer mappings disabled to avoid 404 errors');
+    setMappings({});
   };
 
   useEffect(() => {
@@ -57,28 +47,11 @@ const PrinterManagementPage: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      for (const g of GROUPS) {
-        const selected = mappings[g.key];
-        if (!selected) continue;
-        if (selected.id) {
-          await supabase
-            .from('printer_mappings')
-            .update({ printer_uri: selected.printer_uri, printer_name: selected.printer_name })
-            .eq('id', selected.id);
-        } else {
-          const { data } = await supabase
-            .from('printer_mappings')
-            .insert({ group_key: g.key, printer_uri: selected.printer_uri, printer_name: selected.printer_name })
-            .select('*')
-            .single();
-          if (data) {
-            setMappings((prev) => ({ ...prev, [g.key]: data as PrinterMapping }));
-          }
-        }
-      }
-      alert('Lưu cấu hình máy in thành công');
+      // Tắt hoàn toàn logic lưu printer_mappings để tránh 404
+      console.log('🖨️ Printer mappings save disabled to avoid 404 errors');
+      alert('Cấu hình máy in đã được tắt để tránh lỗi 404. Sử dụng printer-agent trực tiếp.');
     } catch (e: any) {
-      alert('Lỗi lưu cấu hình: ' + (e.message || ''));
+      alert('Lỗi khi lưu cấu hình: ' + e.message);
     } finally {
       setLoading(false);
     }
