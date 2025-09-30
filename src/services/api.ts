@@ -1785,11 +1785,7 @@ export const orderAPI = {
                 original_item: item
               });
               
-              // Nếu quantity = 0, bỏ qua (giữ nguyên số lượng cũ)
-              if (quantity === 0) {
-                console.log(`⏭️ Skipping item ${item.food_item_id} with quantity 0 (keeping existing quantity)`);
-                continue;
-              }
+              if (quantity === 0) continue;
               
               // Kiểm tra xem món đã tồn tại chưa
               const { data: existingItem } = await supabase
@@ -1800,28 +1796,17 @@ export const orderAPI = {
                 .maybeSingle();
 
               if (existingItem) {
-                // Món đã tồn tại - cộng dồn số lượng
                 const oldQuantity = Number(existingItem.quantity || 0);
                 const newQuantity = oldQuantity + quantity;
                 const newTotalPrice = unitPrice * newQuantity;
-                
-                console.log(`🔄 Updating existing item ${item.food_item_id}: ${oldQuantity} + ${quantity} = ${newQuantity}`);
-                
-                const { error: updateError } = await supabase
+                await supabase
                   .from('order_items')
                   .update({ 
                     quantity: newQuantity, 
                     total_price: newTotalPrice 
                   })
                   .eq('id', existingItem.id);
-                
-                if (updateError) {
-                  console.error(`❌ Failed to update item ${item.food_item_id}:`, updateError);
-                } else {
-                  console.log(`✅ Updated existing item ${item.food_item_id}: ${oldQuantity} + ${quantity} = ${newQuantity}`);
-                }
               } else {
-                // Món mới - thêm mới
                 const insertPayload = {
                   order_id: orderId,
                   food_item_id: item.food_item_id,
@@ -1830,78 +1815,9 @@ export const orderAPI = {
                   total_price: totalPrice,
                   special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                 };
-                
-                console.log('📝 Insert payload:', insertPayload);
-                
-                const { data: insertData, error: insertError } = await supabase
-                  .from('order_items')
-                  .insert(insertPayload)
-                  .select('*');
-                
-                if (insertError) {
-                  console.error(`❌ Failed to insert item ${item.food_item_id}:`, insertError);
-                } else {
-                  console.log(`✅ Added new item ${item.food_item_id}:`, insertData);
-                }
+                await supabase.from('order_items').insert(insertPayload);
               }
             }
-          } else {
-            console.log('⚠️ No food items to process or items is not an array:', items);
-          }
-
-          // Verify items were saved
-          const { data: savedItems, error: verifyError } = await supabase
-            .from('order_items')
-            .select('*')
-            .eq('order_id', orderId);
-
-          if (verifyError) {
-            console.error('❌ Error verifying saved items:', verifyError);
-          } else {
-            console.log(`✅ Verification: ${savedItems.length} items saved for order ${orderId}:`, savedItems);
-          }
-
-          // In bếp khi tạo order mới
-          try {
-            const host = (typeof window !== 'undefined' && (window as any).location) ? (window as any).location.hostname : 'localhost';
-            const agentBase = `http://${host}:9977`;
-            
-            // Fetch mappings
-            const { data: mappings } = await supabase
-              .from('printer_mappings')
-              .select('group_key, printer_uri');
-            const groupToPrinter: Record<string, string> = {};
-            (mappings || []).forEach((m: any) => { groupToPrinter[m.group_key] = m.printer_uri; });
-            
-            // Lấy thông tin chi tiết món ăn để in
-            const { data: foodItems } = await supabase
-              .from('food_items')
-              .select('id, name')
-              .in('id', items.map((it: any) => it.food_item_id));
-            
-            const foodMap: Record<number, string> = {};
-            (foodItems || []).forEach((item: any) => {
-              foodMap[item.id] = item.name;
-            });
-            
-            const text = items.map((it: any) => {
-              const foodName = foodMap[it.food_item_id] || `ITEM ${it.food_item_id}`;
-              const note = it.special_instructions && it.special_instructions !== 'Gọi thoải mái' ? ` - ${it.special_instructions}` : '';
-              return `x${it.quantity} - ${foodName}${note}`;
-            }).join('\n');
-            
-            // In ra máy in bếp (kitchen_other)
-            const uri = groupToPrinter['kitchen_other'];
-            if (uri) {
-              await fetch(`${agentBase}/print`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ printerUri: uri, title: `Order ${orderId}`, rawText: text })
-              });
-              console.log('🖨️ Kitchen print sent for order:', orderId);
-            }
-          } catch (e) {
-            console.warn('🖨️ Kitchen print skip:', e);
           }
 
           const axiosLike = { data: orderData, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
