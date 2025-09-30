@@ -1891,18 +1891,14 @@ export const orderAPI = {
                   buffet_package_id: buffetPackageId,
                   quantity: additionalQty
                 });
+                console.log(`🎫 [UPDATE ORDER] Using SIMPLE INSERT (no upsert, no onConflict)`); // Debug log
                 
-                // Sử dụng upsert để tránh conflict, nhưng với timestamp khác nhau để tạo dòng mới
                 const { data: insertData, error: insertErr } = await supabase
                   .from('order_buffet')
-                  .upsert({
+                  .insert({
                     order_id: id,
                     buffet_package_id: buffetPackageId,
-                    quantity: additionalQty,
-                    created_at: new Date().toISOString() // Timestamp khác để tạo dòng mới
-                  }, {
-                    onConflict: 'order_id,buffet_package_id,created_at', // Conflict trên timestamp
-                    ignoreDuplicates: false
+                    quantity: additionalQty
                   })
                   .select('*');
                   
