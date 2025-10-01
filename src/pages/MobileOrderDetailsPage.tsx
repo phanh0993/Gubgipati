@@ -118,7 +118,28 @@ const MobileOrderDetailsPage: React.FC = () => {
           }
         }
 
-        // No need to infer buffet quantity; tickets are represented as items
+        // Đọc số vé thực tế từ order_buffet thay vì dùng buffet_quantity cũ
+        if (orderData.buffet_package_id) {
+          try {
+            const { supabase } = await import('../services/api');
+            const { data: buffetTickets, error: buffetError } = await supabase
+              .from('order_buffet')
+              .select('quantity')
+              .eq('order_id', orderData.id);
+            
+            if (!buffetError && buffetTickets && buffetTickets.length > 0) {
+              const totalTicketQuantity = buffetTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+              orderData.buffet_quantity = totalTicketQuantity;
+              console.log(`🎫 [Mobile Order Details] Order ${orderData.id}: Found ${buffetTickets.length} ticket rows, total quantity: ${totalTicketQuantity}`);
+            } else {
+              console.log(`🎫 [Mobile Order Details] Order ${orderData.id}: No tickets found in order_buffet`);
+              orderData.buffet_quantity = 0;
+            }
+          } catch (e) {
+            console.warn(`🎫 [Mobile Order Details] Failed to read order_buffet for order ${orderData.id}:`, e);
+          }
+        }
+        
         setOrder(orderData);
         
         // Fetch table info
