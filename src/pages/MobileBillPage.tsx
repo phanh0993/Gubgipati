@@ -12,7 +12,8 @@ import {
   ListItem,
   ListItemText,
   Button,
-  Divider
+  Divider,
+  TextField
 } from '@mui/material';
 import {
   ArrowBack,
@@ -80,6 +81,7 @@ const MobileBillPage: React.FC = () => {
 
   const [packageQuantity, setPackageQuantity] = useState(packageQuantityFromState ?? (currentOrder ? 0 : 1));
   const [itemQuantities, setItemQuantities] = useState<{ [key: number]: number }>(orderItems || {});
+  const [itemNotesState, setItemNotesState] = useState<{ [key: number]: string }>(itemNotes || {});
 
   useEffect(() => {
     if (orderItems) {
@@ -117,6 +119,13 @@ const MobileBillPage: React.FC = () => {
     }
   };
 
+  const handleUpdateItemNote = (itemId: number, note: string) => {
+    setItemNotesState(prev => ({
+      ...prev,
+      [itemId]: note
+    }));
+  };
+
   const calculateTotal = () => {
     let total = 0;
     
@@ -150,7 +159,7 @@ const MobileBillPage: React.FC = () => {
             price: 0,
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+            special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       });
@@ -215,7 +224,7 @@ const MobileBillPage: React.FC = () => {
             price: 0, // Buffet items are free
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+            special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       };
@@ -273,7 +282,7 @@ const MobileBillPage: React.FC = () => {
               price: 0, // Buffet items are free
               quantity: itemQuantities[item.id],
               total: 0,
-              special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+              special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
               printer_id: null
             }))
         };
@@ -341,7 +350,7 @@ const MobileBillPage: React.FC = () => {
             price: 0,
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+            special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       });
@@ -406,7 +415,7 @@ const MobileBillPage: React.FC = () => {
             price: 0, // Buffet items are free
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+            special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       };
@@ -451,7 +460,7 @@ const MobileBillPage: React.FC = () => {
               price: 0, // Buffet items are free
               quantity: itemQuantities[item.id],
               total: 0,
-              special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
+              special_instructions: itemNotesState[item.id] || 'Gọi thoải mái',
               printer_id: null
             }))
         };
@@ -624,9 +633,9 @@ const MobileBillPage: React.FC = () => {
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                 {item.food_item.name}
                               </Typography>
-                              {item.special_instructions && (
+                              {itemNotesState[item.id] && (
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                                  Ghi chú: {item.special_instructions}
+                                  Ghi chú: {itemNotesState[item.id]}
                                 </Typography>
                               )}
                             </Box>
@@ -650,6 +659,26 @@ const MobileBillPage: React.FC = () => {
                           </IconButton>
                         </Box>
                       </ListItem>
+                      
+                      {/* Trường nhập note cho món */}
+                      <Box sx={{ px: 2, pb: 1 }}>
+                        <TextField
+                          size="small"
+                          placeholder="Ghi chú cho món này..."
+                          value={itemNotesState[item.id] || ''}
+                          onChange={(e) => handleUpdateItemNote(item.id, e.target.value)}
+                          sx={{ 
+                            width: '100%',
+                            '& .MuiInputBase-input': {
+                              fontSize: '0.8rem',
+                              padding: '8px 12px'
+                            }
+                          }}
+                          variant="outlined"
+                          multiline
+                          maxRows={2}
+                        />
+                      </Box>
                     );
                   })}
                 </List>
