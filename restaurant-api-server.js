@@ -118,7 +118,7 @@ async function handleInvoices(req, res) {
           invoice_number, customer_id, employee_id, subtotal, tax_amount, 
           total_amount, payment_method, payment_status, invoice_date, notes,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh', $9, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', $9, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
         RETURNING *
       `, [invoice_number, customer_id, employee_id, subtotal, tax_amount, total_amount, payment_method, payment_status, notes]);
       
@@ -162,7 +162,7 @@ async function handleInvoices(req, res) {
         return;
       }
       
-      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
+      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
       values.push(invoiceId);
       
       const result = await client.query(`
@@ -929,8 +929,8 @@ async function handleOrders(req, res) {
         const finalOrderNumber = order_number || `BUF-${Date.now()}`;
         
         const result = await client.query(`
-          INSERT INTO orders (order_number, table_id, customer_id, employee_id, order_type, subtotal, tax_amount, total_amount, notes, buffet_package_id, buffet_duration_minutes, buffet_start_time, buffet_quantity)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+          INSERT INTO orders (order_number, table_id, customer_id, employee_id, order_type, subtotal, tax_amount, total_amount, notes, buffet_package_id, buffet_duration_minutes, buffet_start_time, buffet_quantity, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
           RETURNING *
         `, [finalOrderNumber, table_id, customer_id, employee_id, order_type, subtotalNum, taxAmountNum, totalAmountNum, notes, body.buffet_package_id || null, body.buffet_duration_minutes || null, body.buffet_start_time || null, 0]);
         order = result.rows[0];
@@ -941,7 +941,7 @@ async function handleOrders(req, res) {
         const qty = parseInt(body.buffet_quantity) || 0;
         for (let i = 0; i < qty; i++) {
           await client.query(
-            `INSERT INTO order_buffet (order_id, buffet_package_id) VALUES ($1, $2)`,
+            `INSERT INTO order_buffet (order_id, buffet_package_id, created_at) VALUES ($1, $2, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
             [order.id, body.buffet_package_id]
           );
         }
@@ -1004,7 +1004,7 @@ async function handleOrders(req, res) {
         updateValues.push(total_amount);
       }
       
-      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
+      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
       updateValues.push(id);
       
       const result = await client.query(`
@@ -1034,7 +1034,7 @@ async function handleOrders(req, res) {
           console.log(`🎫 [SERVER UPDATE ORDER] Adding ${additionalQty} tickets for order ${id}, package ${pkgId}`);
           // Tạo dòng mới với quantity = additionalQty
           await client.query(
-            `INSERT INTO order_buffet (order_id, buffet_package_id, quantity) VALUES ($1, $2, $3)`,
+            `INSERT INTO order_buffet (order_id, buffet_package_id, quantity, created_at) VALUES ($1, $2, $3, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')`,
             [id, pkgId, additionalQty]
           );
           console.log(`✅ [SERVER UPDATE ORDER] Successfully added ${additionalQty} tickets`);
