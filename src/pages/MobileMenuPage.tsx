@@ -257,14 +257,15 @@ const MobileMenuPage: React.FC = () => {
                     const isSelected = selectedItems[item.id] || false;
                     const currentNote = itemNotes[item.id] || '';
                     return (
-                      <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
                         <Card
                           onClick={() => handleSelectItem(item.id)}
                           sx={{
                             cursor: 'pointer',
                             border: 2,
                             borderColor: isSelected ? 'primary.main' : 'grey.300',
-                            height: '90px',
+                            height: isSelected ? 'auto' : '90px',
+                            minHeight: '90px',
                             display: 'flex',
                             flexDirection: 'column',
                             justifyContent: 'center',
@@ -294,40 +295,63 @@ const MobileMenuPage: React.FC = () => {
                               style={{ width: 35, height: 35, borderRadius: 4 }}
                             />
                           </Box>
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              fontSize: '0.65rem',
-                              textAlign: 'center',
-                              fontWeight: 'bold',
-                              px: 0.5,
-                              lineHeight: 1.2,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              overflow: 'hidden',
-                              color: isSelected ? 'primary.main' : 'text.primary'
-                            }}
-                          >
-                            {item.food_item.name}
-                          </Typography>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                fontSize: '0.65rem',
+                                textAlign: 'center',
+                                fontWeight: 'bold',
+                                px: 0.5,
+                                lineHeight: 1.2,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                color: isSelected ? 'primary.main' : 'text.primary'
+                              }}
+                            >
+                              {item.food_item.name}
+                            </Typography>
+                            {currentNote && (
+                              <Chip
+                                label="Có ghi chú"
+                                size="small"
+                                sx={{
+                                  fontSize: '0.6rem',
+                                  height: '16px',
+                                  backgroundColor: 'success.light',
+                                  color: 'success.contrastText'
+                                }}
+                              />
+                            )}
+                          </Box>
                         </Card>
                         
                         {isSelected && (
-                          <TextField
-                            size="small"
-                            placeholder="Ghi chú cho món này..."
-                            value={currentNote}
-                            onChange={(e) => handleUpdateItemNote(item.id, e.target.value)}
-                            sx={{ 
-                              width: '100%',
-                              '& .MuiInputBase-input': {
-                                fontSize: '0.75rem',
-                                padding: '6px 8px'
-                              }
-                            }}
-                            variant="outlined"
-                          />
+                          <Box sx={{ mt: 1, width: '100%' }}>
+                            <TextField
+                              size="small"
+                              placeholder="Ghi chú cho món này..."
+                              value={currentNote}
+                              onChange={(e) => handleUpdateItemNote(item.id, e.target.value)}
+                              sx={{ 
+                                width: '100%',
+                                '& .MuiInputBase-input': {
+                                  fontSize: '0.8rem',
+                                  padding: '8px 12px',
+                                  minHeight: '20px'
+                                },
+                                '& .MuiOutlinedInput-root': {
+                                  borderRadius: '8px',
+                                  backgroundColor: '#f5f5f5'
+                                }
+                              }}
+                              variant="outlined"
+                              multiline
+                              maxRows={2}
+                            />
+                          </Box>
                         )}
                       </Box>
                     );
