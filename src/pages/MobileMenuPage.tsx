@@ -13,7 +13,8 @@ import {
   ListItem,
   ListItemText,
   Button,
-  Chip
+  Chip,
+  TextField
 } from '@mui/material';
 import {
   TableRestaurant,
@@ -70,6 +71,7 @@ const MobileMenuPage: React.FC = () => {
   const [currentOrder, setCurrentOrder] = useState<Order | null>(existingOrder || null);
   const [selectedItems, setSelectedItems] = useState<{ [key: number]: boolean }>({});
   const [orderItems, setOrderItems] = useState<{ [key: number]: number }>({});
+  const [itemNotes, setItemNotes] = useState<{ [key: number]: string }>({});
 
   useEffect(() => {
     fetchPackages();
@@ -140,6 +142,13 @@ const MobileMenuPage: React.FC = () => {
     }
   };
 
+  const handleUpdateItemNote = (itemId: number, note: string) => {
+    setItemNotes(prev => ({
+      ...prev,
+      [itemId]: note
+    }));
+  };
+
   const handleViewOrder = () => {
     const selectedItemsList = packageItems.filter(item => selectedItems[item.id]);
     const orderData = {
@@ -148,7 +157,8 @@ const MobileMenuPage: React.FC = () => {
       selectedPackage,
       packageQuantity,
       selectedItems: selectedItemsList,
-      orderItems
+      orderItems,
+      itemNotes
     };
     
     navigate('/mobile-bill', { state: orderData });
@@ -245,62 +255,81 @@ const MobileMenuPage: React.FC = () => {
                 }}>
                   {packageItems.map((item) => {
                     const isSelected = selectedItems[item.id] || false;
+                    const currentNote = itemNotes[item.id] || '';
                     return (
-                      <Card
-                        key={item.id}
-                        onClick={() => handleSelectItem(item.id)}
-                        sx={{
-                          cursor: 'pointer',
-                          border: 2,
-                          borderColor: isSelected ? 'primary.main' : 'grey.300',
-                          height: '90px',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          bgcolor: isSelected ? 'primary.light' : 'white',
-                          '&:hover': {
-                            borderColor: 'primary.main',
-                            boxShadow: 2
-                          }
-                        }}
-                      >
-                        <Box
+                      <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Card
+                          onClick={() => handleSelectItem(item.id)}
                           sx={{
-                            width: 35,
-                            height: 35,
-                            bgcolor: isSelected ? 'primary.main' : 'primary.light',
-                            borderRadius: 1,
+                            cursor: 'pointer',
+                            border: 2,
+                            borderColor: isSelected ? 'primary.main' : 'grey.300',
+                            height: '90px',
                             display: 'flex',
-                            alignItems: 'center',
+                            flexDirection: 'column',
                             justifyContent: 'center',
-                            mb: 0.5
+                            alignItems: 'center',
+                            bgcolor: isSelected ? 'primary.light' : 'white',
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              boxShadow: 2
+                            }
                           }}
                         >
-                          <img
-                            src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent(item.food_item.name.charAt(0))}`}
-                            alt={item.food_item.name}
-                            style={{ width: 35, height: 35, borderRadius: 4 }}
+                          <Box
+                            sx={{
+                              width: 35,
+                              height: 35,
+                              bgcolor: isSelected ? 'primary.main' : 'primary.light',
+                              borderRadius: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mb: 0.5
+                            }}
+                          >
+                            <img
+                              src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent(item.food_item.name.charAt(0))}`}
+                              alt={item.food_item.name}
+                              style={{ width: 35, height: 35, borderRadius: 4 }}
+                            />
+                          </Box>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              fontSize: '0.65rem',
+                              textAlign: 'center',
+                              fontWeight: 'bold',
+                              px: 0.5,
+                              lineHeight: 1.2,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              color: isSelected ? 'primary.main' : 'text.primary'
+                            }}
+                          >
+                            {item.food_item.name}
+                          </Typography>
+                        </Card>
+                        
+                        {isSelected && (
+                          <TextField
+                            size="small"
+                            placeholder="Ghi chú cho món này..."
+                            value={currentNote}
+                            onChange={(e) => handleUpdateItemNote(item.id, e.target.value)}
+                            sx={{ 
+                              width: '100%',
+                              '& .MuiInputBase-input': {
+                                fontSize: '0.75rem',
+                                padding: '6px 8px'
+                              }
+                            }}
+                            variant="outlined"
                           />
-                        </Box>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            fontSize: '0.65rem',
-                            textAlign: 'center',
-                            fontWeight: 'bold',
-                            px: 0.5,
-                            lineHeight: 1.2,
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            color: isSelected ? 'primary.main' : 'text.primary'
-                          }}
-                        >
-                          {item.food_item.name}
-                        </Typography>
-                      </Card>
+                        )}
+                      </Box>
                     );
                   })}
                 </Box>

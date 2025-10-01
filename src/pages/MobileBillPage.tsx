@@ -76,6 +76,7 @@ const MobileBillPage: React.FC = () => {
   const packageQuantityFromState = location.state?.packageQuantity as number;
   const selectedItems = location.state?.selectedItems as BuffetPackageItem[];
   const orderItems = location.state?.orderItems as { [key: number]: number };
+  const itemNotes = location.state?.itemNotes as { [key: number]: string };
 
   const [packageQuantity, setPackageQuantity] = useState(packageQuantityFromState ?? (currentOrder ? 0 : 1));
   const [itemQuantities, setItemQuantities] = useState<{ [key: number]: number }>(orderItems || {});
@@ -150,7 +151,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
             printer_id: null
           }))
       });
@@ -216,7 +217,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
             printer_id: null
           }))
       };
@@ -275,7 +276,7 @@ const MobileBillPage: React.FC = () => {
               quantity: itemQuantities[item.id],
               total: 0,
               special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
               printer_id: null
             }))
         };
@@ -344,7 +345,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
             printer_id: null
           }))
       });
@@ -410,7 +411,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
             printer_id: null
           }))
       };
@@ -456,7 +457,7 @@ const MobileBillPage: React.FC = () => {
               quantity: itemQuantities[item.id],
               total: 0,
               special_instructions: 'Gọi thoải mái',
-            note: 'Buffet item',
+            note: itemNotes?.[item.id] || 'Buffet item',
               printer_id: null
             }))
         };
