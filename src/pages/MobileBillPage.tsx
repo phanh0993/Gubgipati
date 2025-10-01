@@ -230,17 +230,17 @@ const MobileBillPage: React.FC = () => {
         const newCombinedTax = 0;
         const newCombinedTotal = newCombinedSubtotal;
         
-        // Đọc số vé hiện tại từ order_buffet thay vì currentOrder.buffet_quantity
+        // Đọc tổng số vé hiện tại từ order_buffet.quantity
         let currentTicketCount = 0;
         try {
           const { data: currentTickets, error: ticketError } = await supabase
             .from('order_buffet')
-            .select('id')
+            .select('quantity')
             .eq('order_id', currentOrder.id);
           
           if (!ticketError && currentTickets) {
-            currentTicketCount = currentTickets.length;
-            console.log(`🎫 [Mobile] Current tickets in order_buffet: ${currentTicketCount}`);
+            currentTicketCount = currentTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+            console.log(`🎫 [Mobile] Current tickets in order_buffet: ${currentTicketCount} (from ${currentTickets.length} rows)`);
           }
         } catch (e) {
           console.warn('🎫 [Mobile] Failed to read current tickets:', e);
@@ -426,17 +426,17 @@ const MobileBillPage: React.FC = () => {
         const newCombinedTax = 0;
         const newCombinedTotal = newCombinedSubtotal;
         
-        // Đọc số vé hiện tại từ order_buffet thay vì currentOrder.buffet_quantity
+        // Đọc tổng số vé hiện tại từ order_buffet.quantity
         let currentTicketCount = 0;
         try {
           const { data: currentTickets, error: ticketError } = await supabase
             .from('order_buffet')
-            .select('id')
+            .select('quantity')
             .eq('order_id', currentOrder.id);
           
           if (!ticketError && currentTickets) {
-            currentTicketCount = currentTickets.length;
-            console.log(`🎫 [Mobile] Current tickets in order_buffet: ${currentTicketCount}`);
+            currentTicketCount = currentTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+            console.log(`🎫 [Mobile] Current tickets in order_buffet: ${currentTicketCount} (from ${currentTickets.length} rows)`);
           }
         } catch (e) {
           console.warn('🎫 [Mobile] Failed to read current tickets:', e);
@@ -545,7 +545,7 @@ const MobileBillPage: React.FC = () => {
       <Box sx={{ flex: 1, p: 1 }}>
         <Card sx={{ height: '100%' }}>
           <CardContent sx={{ p: 1, height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {/* Vé đã chọn */}
+            {/* Vé đã chọn - hiển thị tổng số vé từ order_buffet */}
             {selectedPackage && (
               <Box sx={{ mb: 2 }}>
                 <Box sx={{ 
@@ -557,9 +557,24 @@ const MobileBillPage: React.FC = () => {
                   borderColor: 'grey.300',
                   borderRadius: 1
                 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                    {selectedPackage.name}
-                  </Typography>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {selectedPackage.name}
+                    </Typography>
+                    {currentOrder && (
+                      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        Tổng vé: {(() => {
+                          // Tính tổng số vé từ order_buffet
+                          let totalTickets = 0;
+                          if (currentOrder.items) {
+                            const buffetItems = currentOrder.items.filter((item: any) => item.is_ticket === true || item.food_item_id === currentOrder.buffet_package_id);
+                            totalTickets = buffetItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
+                          }
+                          return totalTickets;
+                        })()} vé
+                      </Typography>
+                    )}
+                  </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <IconButton 
                       size="small" 
@@ -569,7 +584,7 @@ const MobileBillPage: React.FC = () => {
                       <Remove />
                     </IconButton>
                     <Typography variant="body2" sx={{ minWidth: 20, textAlign: 'center' }}>
-                      x{packageQuantity}
+                      +{packageQuantity}
                     </Typography>
                     <IconButton 
                       size="small" 
@@ -578,6 +593,13 @@ const MobileBillPage: React.FC = () => {
                       <Add />
                     </IconButton>
                   </Box>
+                </Box>
+                
+                {/* Hiển thị giá tiền vé */}
+                <Box sx={{ mt: 1, p: 1, bgcolor: '#f0f0f0', borderRadius: 1 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#000' }}>
+                    Giá vé: {selectedPackage.price.toLocaleString('vi-VN')} ₫ × {packageQuantity} = {(selectedPackage.price * packageQuantity).toLocaleString('vi-VN')} ₫
+                  </Typography>
                 </Box>
               </Box>
             )}

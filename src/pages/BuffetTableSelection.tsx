@@ -691,25 +691,71 @@ const BuffetTableSelection: React.FC = () => {
 
                 return (
                   <>
-                    {/* Hiển thị vé buffet ở đầu */}
+                    {/* Hiển thị vé buffet ở đầu với điều chỉnh số lượng */}
                     {buffetItems.length > 0 && (
                       <Box sx={{ mb: 2, p: 2, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold', mb: 2, color: '#000' }}>
+                          Vé buffet:
+                        </Typography>
                         {buffetItems.map((item: any, index: number) => {
                           const ticketPrice = orderDetails.buffet_package_price || 0;
                           const ticketCount = item.quantity || 1;
                           return (
-                            <Typography 
-                              key={`buffet-${index}`}
-                              variant="h6" 
-                              sx={{ 
-                                fontWeight: 'bold', 
-                                color: '#1976d2',
-                                textAlign: 'center',
-                                mb: 1
-                              }}
-                            >
-                              VÉ {Math.round(ticketPrice / 1000)}K &nbsp;&nbsp;&nbsp; {ticketCount}
-                            </Typography>
+                            <Box key={`buffet-${index}`} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 'bold', 
+                                  color: '#000', // Đổi từ xanh về đen
+                                  flex: 1
+                                }}
+                              >
+                                VÉ {Math.round(ticketPrice / 1000)}K
+                              </Typography>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => {
+                                    // Giảm số lượng vé
+                                    const newQuantity = Math.max(0, ticketCount - 1);
+                                    if (newQuantity === 0) {
+                                      // Xóa dòng vé này
+                                      console.log('Xóa vé buffet');
+                                    } else {
+                                      // Cập nhật số lượng
+                                      console.log('Giảm số lượng vé:', newQuantity);
+                                    }
+                                  }}
+                                  sx={{ minWidth: '32px', height: '32px' }}
+                                >
+                                  -
+                                </Button>
+                                <Typography 
+                                  variant="h6" 
+                                  sx={{ 
+                                    fontWeight: 'bold', 
+                                    color: '#000',
+                                    minWidth: '40px',
+                                    textAlign: 'center'
+                                  }}
+                                >
+                                  {ticketCount}
+                                </Typography>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  onClick={() => {
+                                    // Tăng số lượng vé
+                                    const newQuantity = ticketCount + 1;
+                                    console.log('Tăng số lượng vé:', newQuantity);
+                                  }}
+                                  sx={{ minWidth: '32px', height: '32px' }}
+                                >
+                                  +
+                                </Button>
+                              </Box>
+                            </Box>
                           );
                         })}
                       </Box>
