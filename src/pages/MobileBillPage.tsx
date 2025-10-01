@@ -150,8 +150,7 @@ const MobileBillPage: React.FC = () => {
             price: 0,
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       });
@@ -216,8 +215,7 @@ const MobileBillPage: React.FC = () => {
             price: 0, // Buffet items are free
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       };
@@ -275,8 +273,7 @@ const MobileBillPage: React.FC = () => {
               price: 0, // Buffet items are free
               quantity: itemQuantities[item.id],
               total: 0,
-              special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+              special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
               printer_id: null
             }))
         };
@@ -344,8 +341,7 @@ const MobileBillPage: React.FC = () => {
             price: 0,
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       });
@@ -410,8 +406,7 @@ const MobileBillPage: React.FC = () => {
             price: 0, // Buffet items are free
             quantity: itemQuantities[item.id],
             total: 0,
-            special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+            special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
             printer_id: null
           }))
       };
@@ -456,8 +451,7 @@ const MobileBillPage: React.FC = () => {
               price: 0, // Buffet items are free
               quantity: itemQuantities[item.id],
               total: 0,
-              special_instructions: 'Gọi thoải mái',
-            note: itemNotes?.[item.id] || 'Buffet item',
+              special_instructions: itemNotes?.[item.id] || 'Gọi thoải mái',
               printer_id: null
             }))
         };
@@ -630,9 +624,9 @@ const MobileBillPage: React.FC = () => {
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                 {item.food_item.name}
                               </Typography>
-                              {item.note && (
+                              {item.special_instructions && (
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                                  Ghi chú: {item.note}
+                                  Ghi chú: {item.special_instructions}
                                 </Typography>
                               )}
                             </Box>

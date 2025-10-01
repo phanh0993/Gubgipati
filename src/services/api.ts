@@ -393,12 +393,12 @@ export const invoicesAPI = {
                   console.log('🔍 Looking for order_item with food_item_id:', foodItemId);
                   const { data: orderItem } = await supabase
                     .from('order_items')
-                    .select('note')
+                    .select('special_instructions')
                     .eq('food_item_id', foodItemId)
                     .maybeSingle();
                   
                   console.log('🔍 Found order_item:', orderItem);
-                  note = orderItem?.note || '';
+                  note = orderItem?.special_instructions || '';
                 } catch (e) {
                   console.warn('Could not fetch note for item:', foodItemId, e);
                 }
@@ -433,7 +433,7 @@ export const invoicesAPI = {
                     service_name: buffetPackage?.name || `VÉ ${item.unit_price.toLocaleString()}K`,
                     service_type: 'buffet_ticket',
                     food_item_id: foodItemId,
-                    note: note,
+                    special_instructions: note,
                     employee_name: employeeName || 'Chưa xác định'
                   };
                 } else {
@@ -449,7 +449,7 @@ export const invoicesAPI = {
                     service_name: foodItem?.name || `Food Item ${foodItemId}`,
                     service_type: 'food_item',
                     food_item_id: foodItemId,
-                    note: note,
+                    special_instructions: note,
                     employee_name: employeeName || 'Chưa xác định'
                   };
                 }
@@ -533,7 +533,7 @@ export const invoicesAPI = {
                 // Lấy order_items theo order_id và join tên món
                 const { data: orderItems } = await supabase
                   .from('order_items')
-                  .select('id, food_item_id, quantity, unit_price, total_price, note, food_items(name, price)')
+                  .select('id, food_item_id, quantity, unit_price, total_price, special_instructions, food_items(name, price)')
                   .eq('order_id', fallbackOrderId);
 
                 if (Array.isArray(orderItems)) {
@@ -544,7 +544,7 @@ export const invoicesAPI = {
                     unit_price: Number(it.unit_price || 0),
                     total_price: Number(it.total_price || 0),
                     service_name: it.food_items?.name || `Service ${it.food_item_id}`,
-                    note: it.note || ''
+                    special_instructions: it.special_instructions || ''
                   }));
                 }
               } catch (e) {
@@ -558,7 +558,7 @@ export const invoicesAPI = {
             ...item,
             service_name: item.service_name || `Service ${item.service_id}`,
             employee_name: employeeName,
-            note: item.note || ''
+            special_instructions: item.special_instructions || ''
           }));
 
           const invoiceWithEmployee = {
@@ -1558,7 +1558,7 @@ export const orderAPI = {
               console.log('🔍 Order items from DB:', o.order_items);
               const normalizedItems = (o.order_items || []).map((it: any, index: number) => {
                 const foodItemId = it.food_item_id;
-                const looksLikeTicketByNote = String(it.note || '').toLowerCase().includes('vé buffet');
+                const looksLikeTicketByNote = String(it.special_instructions || '').toLowerCase().includes('vé buffet');
                 const looksLikeTicketByPkg = !!o.buffet_package_id && Number(o.buffet_package_id) === Number(foodItemId);
                 const looksLikeTicketByMissingName = !it.food_items?.name && Number(it.unit_price || 0) > 0 && !!o.buffet_package_id;
                 const isTicket = looksLikeTicketByNote || looksLikeTicketByPkg || looksLikeTicketByMissingName;
@@ -1580,7 +1580,7 @@ export const orderAPI = {
                   price: Number(it.unit_price || 0),
                   total: Number(it.total_price || 0),
                   is_ticket: isTicket,
-                  note: it.note || '',
+                  special_instructions: it.special_instructions || '',
                   employee_id: it.employee_id || o.employee_id || null,
                   employee_name: undefined as any
                 };
@@ -1608,7 +1608,7 @@ export const orderAPI = {
                       price: ticketPrice,
                       total: ticketPrice * totalTicketQty,
                       is_ticket: true,
-                      note: 'Vé buffet',
+                      special_instructions: 'Vé buffet',
                       employee_id: o.employee_id || null,
                       employee_name: ''
                     });
@@ -1812,7 +1812,7 @@ export const orderAPI = {
                   quantity: quantity,
                   unit_price: unitPrice,
                   total_price: totalPrice,
-                  note: item.note || (item.is_unlimited ? 'Gọi thoải mái' : '')
+                  special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                 };
                 await supabase.from('order_items').insert(insertPayload);
               }
@@ -1966,7 +1966,7 @@ export const orderAPI = {
                     unit_price: unitPrice,
                     total_price: totalPrice,
                     employee_id: order.employee_id,
-                    note: item.note || (item.is_unlimited ? 'Gọi thoải mái' : '')
+                    special_instructions: item.special_instructions || (item.is_unlimited ? 'Gọi thoải mái' : '')
                   });
                   
                   if (insertResult.error) {

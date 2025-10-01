@@ -72,7 +72,6 @@ interface OrderItem {
   quantity: number;
   total: number;
   special_instructions?: string;
-  note?: string;
   printer_id?: number;
 }
 
@@ -233,7 +232,7 @@ const SimpleRestaurantPOS: React.FC = () => {
 
     const updatedItems = currentOrder.items?.map(item =>
       item.food_item_id === foodItemId
-        ? { ...item, note }
+        ? { ...item, special_instructions: note }
         : item
     ) || [];
     updateOrder(updatedItems);
@@ -287,8 +286,7 @@ const SimpleRestaurantPOS: React.FC = () => {
           name: item.name,
           price: parseFloat(String(item.price)) || 0,
           quantity: parseInt(String(item.quantity)) || 0,
-          special_instructions: item.special_instructions,
-          note: item.note,
+          special_instructions: item.note || item.special_instructions,
           printer_id: item.printer_id,
         })) || [],
         order_count: orderCount,
@@ -617,7 +615,7 @@ const SimpleRestaurantPOS: React.FC = () => {
                             <TextField
                               size="small"
                               placeholder="Ghi chú cho món này..."
-                              value={item.note || ''}
+                              value={item.special_instructions || ''}
                               onChange={(e) => handleUpdateItemNote(item.food_item_id, e.target.value)}
                               sx={{ mt: 1, width: '100%' }}
                               variant="outlined"
