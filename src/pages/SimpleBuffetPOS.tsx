@@ -8,6 +8,7 @@ import {
 import { Add, Remove, ArrowBack, Restaurant } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { createClient } from '@supabase/supabase-js';
+import { getVietnamTime } from '../utils/timeUtils';
 
 const supabaseUrl = 'https://rmqzggfwvhsoiijlsxwy.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtcXpnZ2Z3dmhzb2lpamxzeHd5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyODc1MjYsImV4cCI6MjA3MTg2MzUyNn0.EWtnieipmSr5prm18pNCgCYSfdGRtr-710ISCZ-Jsl4';
@@ -280,14 +281,6 @@ const SimpleBuffetPOS: React.FC = () => {
     return total_amount;
   };
 
-  // Function chuyển đổi thời gian sang timezone Việt Nam (+7)
-  const getVietnamTime = () => {
-    const now = new Date();
-    // Chuyển đổi sang GMT+7 (Việt Nam)
-    const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-    return vietnamTime.toISOString();
-  };
-
   // Function lấy employee_id từ user_id
   const getEmployeeId = async (userId: number) => {
     try {
@@ -521,7 +514,7 @@ const SimpleBuffetPOS: React.FC = () => {
         total_amount: calculateTotal(),
         buffet_package_id: selectedPackage.id,
         buffet_duration_minutes: 90,
-        buffet_start_time: new Date().toISOString(),
+        buffet_start_time: getVietnamTime(),
         buffet_quantity: packageQuantity,
         notes: `Buffet ${selectedPackage.name} x${packageQuantity} - ${selectedTable.area}${selectedTable.table_number}`,
         items: orderItems.map(item => ({

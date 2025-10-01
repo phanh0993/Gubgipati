@@ -25,6 +25,7 @@ import {
   Receipt,
   Print
 } from '@mui/icons-material';
+import { getTimeElapsed } from '../utils/timeUtils';
 
 interface Order {
   id: number;
@@ -155,34 +156,6 @@ const MobileOrderDetailsPage: React.FC = () => {
       console.error('Error fetching order details:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getTimeElapsed = (startTime: string) => {
-    // Sử dụng buffet_start_time thay vì created_at để tính thời gian
-    const start = new Date(startTime);
-    const now = new Date();
-    
-    // Điều chỉnh timezone về GMT+7 (Việt Nam)
-    const vietnamOffset = 7 * 60; // +7 giờ = 420 phút
-    const startVietnam = new Date(start.getTime() + (start.getTimezoneOffset() + vietnamOffset) * 60000);
-    const nowVietnam = new Date(now.getTime() + (now.getTimezoneOffset() + vietnamOffset) * 60000);
-    
-    // Tính toán chênh lệch thời gian chính xác
-    const diffMs = nowVietnam.getTime() - startVietnam.getTime();
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    
-    // Nếu thời gian âm, sử dụng thời gian hiện tại
-    if (diffMinutes < 0) {
-      return 'Vừa tạo';
-    }
-    
-    if (diffMinutes < 60) {
-      return `${diffMinutes} phút`;
-    } else {
-      const hours = Math.floor(diffMinutes / 60);
-      const minutes = diffMinutes % 60;
-      return `${hours}h ${minutes}p`;
     }
   };
 

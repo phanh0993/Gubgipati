@@ -36,7 +36,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { printerService } from '../services/printerService';
 import { supabase } from '../services/supabaseClient';
-import { getTimeElapsed, formatVietnamDateTime, formatDateTime } from '../utils/formatters';
+import { getTimeElapsed, formatVietnamDateTime } from '../utils/timeUtils';
 
 interface Table {
   id: number;

@@ -181,13 +181,8 @@ const MobileBillPage: React.FC = () => {
         }
       }
       
-      // Function chuyển đổi thời gian sang timezone Việt Nam (+7)
-      const getVietnamTime = () => {
-        const now = new Date();
-        // Chuyển đổi sang GMT+7 (Việt Nam)
-        const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-        return vietnamTime.toISOString();
-      };
+      // Import Vietnam time utility
+      const { getVietnamTime } = await import('../utils/timeUtils');
 
       // Tính toán tổng tiền
       const packageTotal = selectedPackage.price * packageQuantity;
@@ -377,13 +372,8 @@ const MobileBillPage: React.FC = () => {
         }
       }
       
-      // Function chuyển đổi thời gian sang timezone Việt Nam (+7)
-      const getVietnamTime = () => {
-        const now = new Date();
-        // Chuyển đổi sang GMT+7 (Việt Nam)
-        const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
-        return vietnamTime.toISOString();
-      };
+      // Import Vietnam time utility
+      const { getVietnamTime } = await import('../utils/timeUtils');
 
       // Tính toán tổng tiền
       const packageTotal = selectedPackage.price * packageQuantity;
