@@ -48,6 +48,7 @@ interface BuffetPackageItem {
     name: string;
     image_url?: string;
   };
+  note?: string;
 }
 
 interface Order {
