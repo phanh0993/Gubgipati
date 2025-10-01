@@ -167,9 +167,14 @@ const MobileOrderDetailsPage: React.FC = () => {
 
   const calculateTotalAmount = () => {
     if (!order) return 0;
-    // Tính tổng hoàn toàn từ items, bỏ thuế
+    
+    // Tính tổng từ vé buffet
+    const buffetTotal = (order.buffet_quantity || 0) * (order.buffet_package_price || 0);
+    
+    // Tính tổng từ món ăn
     const itemsTotal = (order.food_items || []).reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0);
-    return itemsTotal;
+    
+    return buffetTotal + itemsTotal;
   };
 
   const handleBack = () => {
@@ -452,9 +457,35 @@ const MobileOrderDetailsPage: React.FC = () => {
             </Typography>
             
             <List>
+              {/* Hiển thị vé buffet ở trên cùng */}
+              {order.buffet_package_id && order.buffet_quantity && order.buffet_quantity > 0 && (
+                <>
+                  <ListItem sx={{ px: 0, py: 2 }}>
+                    <ListItemText
+                      primary={
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#000' }}>
+                              VÉ {Math.round((order.buffet_package_price || 0) / 1000)}K
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#000' }}>
+                              {order.buffet_quantity}
+                            </Typography>
+                          </Box>
+                          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                            {((order.buffet_quantity || 0) * (order.buffet_package_price || 0)).toLocaleString('vi-VN')} ₫
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                  <Divider sx={{ my: 1 }} />
+                </>
+              )}
+              
+              {/* Hiển thị món ăn */}
               {order.food_items && order.food_items.length > 0 && (
                 <>
-                  <Divider sx={{ my: 1 }} />
                   {order.food_items.map((item: any, index: number) => (
                     <ListItem key={index} sx={{ px: 0 }}>
                       <ListItemText
@@ -487,6 +518,30 @@ const MobileOrderDetailsPage: React.FC = () => {
             </List>
             
             <Divider sx={{ my: 2 }} />
+            
+            {/* Chi tiết tổng tiền */}
+            {order.buffet_package_id && order.buffet_quantity && order.buffet_quantity > 0 && (
+              <Box sx={{ mb: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                  <Typography variant="body2">
+                    Vé buffet ({order.buffet_quantity} × {Math.round((order.buffet_package_price || 0) / 1000)}K):
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {((order.buffet_quantity || 0) * (order.buffet_package_price || 0)).toLocaleString('vi-VN')} ₫
+                  </Typography>
+                </Box>
+                {(order.food_items && order.food_items.length > 0) && (
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                    <Typography variant="body2">
+                      Món ăn:
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {(order.food_items || []).reduce((sum: number, item: any) => sum + (item.quantity || 1) * (item.price || 0), 0).toLocaleString('vi-VN')} ₫
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
             
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
