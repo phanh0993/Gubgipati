@@ -121,7 +121,7 @@ const MobileOrderDetailsPage: React.FC = () => {
         // Đọc số vé thực tế từ order_buffet thay vì dùng buffet_quantity cũ
         if (orderData.buffet_package_id) {
           try {
-            const { supabase } = await import('../services/api');
+            const { supabase } = await import('../services/supabaseClient');
             const { data: buffetTickets, error: buffetError } = await supabase
               .from('order_buffet')
               .select('quantity')
