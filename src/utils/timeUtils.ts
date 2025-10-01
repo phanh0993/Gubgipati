@@ -13,6 +13,17 @@ export const getVietnamTime = (): string => {
 };
 
 /**
+ * Get current time in Vietnam timezone for database operations
+ * @returns ISO string with timezone info
+ */
+export const getVietnamTimeForDB = (): string => {
+  const now = new Date();
+  // Convert to Vietnam timezone (+7 hours) and format for database
+  const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return vietnamTime.toISOString().replace('Z', '+07:00');
+};
+
+/**
  * Get current time in Vietnam timezone as Date object
  * @returns Date object in Vietnam timezone
  */

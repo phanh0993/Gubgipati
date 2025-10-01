@@ -182,7 +182,7 @@ const MobileBillPage: React.FC = () => {
       }
       
       // Import Vietnam time utility
-      const { getVietnamTime } = await import('../utils/timeUtils');
+      const { getVietnamTime, getVietnamTimeForDB } = await import('../utils/timeUtils');
 
       // Tính toán tổng tiền
       const packageTotal = selectedPackage.price * packageQuantity;
@@ -202,7 +202,7 @@ const MobileBillPage: React.FC = () => {
         total_amount: total_amount,
         buffet_package_id: selectedPackage.id,
         buffet_duration_minutes: 90,
-        buffet_start_time: getVietnamTime(),
+        buffet_start_time: getVietnamTimeForDB(),
         buffet_quantity: packageQuantity,
         notes: `Buffet ${selectedPackage.name} x${packageQuantity} - ${selectedTable.area}${selectedTable.table_number}`,
         items: selectedItems
@@ -373,7 +373,7 @@ const MobileBillPage: React.FC = () => {
       }
       
       // Import Vietnam time utility
-      const { getVietnamTime } = await import('../utils/timeUtils');
+      const { getVietnamTime, getVietnamTimeForDB } = await import('../utils/timeUtils');
 
       // Tính toán tổng tiền
       const packageTotal = selectedPackage.price * packageQuantity;
@@ -393,7 +393,7 @@ const MobileBillPage: React.FC = () => {
         total_amount: total_amount,
         buffet_package_id: selectedPackage.id,
         buffet_duration_minutes: 90,
-        buffet_start_time: getVietnamTime(),
+        buffet_start_time: getVietnamTimeForDB(),
         buffet_quantity: packageQuantity,
         notes: `Buffet ${selectedPackage.name} x${packageQuantity} - ${selectedTable.area}${selectedTable.table_number}`,
         items: selectedItems

@@ -118,7 +118,7 @@ async function handleInvoices(req, res) {
           invoice_number, customer_id, employee_id, subtotal, tax_amount, 
           total_amount, payment_method, payment_status, invoice_date, notes,
           created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, NOW(), NOW())
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh', $9, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh')
         RETURNING *
       `, [invoice_number, customer_id, employee_id, subtotal, tax_amount, total_amount, payment_method, payment_status, notes]);
       
@@ -162,7 +162,7 @@ async function handleInvoices(req, res) {
         return;
       }
       
-      updateFields.push(`updated_at = NOW()`);
+      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
       values.push(invoiceId);
       
       const result = await client.query(`
@@ -239,7 +239,7 @@ async function createInvoiceFromOrder(orderId, client) {
         invoice_number, customer_id, employee_id, subtotal, tax_amount, 
         total_amount, payment_method, payment_status, invoice_date, notes,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
       RETURNING id
     `, [
       invoiceNumber,
@@ -274,7 +274,7 @@ async function createInvoiceFromOrder(orderId, client) {
           await client.query(`
             INSERT INTO invoice_items (
               invoice_id, service_id, employee_id, quantity, unit_price, created_at
-            ) VALUES ($1, $2, $3, $4, $5, NOW())
+            ) VALUES ($1, $2, $3, $4, $5, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
           `, [
             invoiceId,
             null, // Không có service_id cho buffet package
@@ -298,7 +298,7 @@ async function createInvoiceFromOrder(orderId, client) {
       await client.query(`
         INSERT INTO invoice_items (
           invoice_id, service_id, employee_id, quantity, unit_price, created_at
-        ) VALUES ($1, $2, $3, $4, $5, NOW())
+        ) VALUES ($1, $2, $3, $4, $5, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
       `, [
         invoiceId,
         null, // Không có service_id cho food items
@@ -512,7 +512,7 @@ async function handleTables(req, res) {
         
         const result = await client.query(`
           INSERT INTO tables (table_number, table_name, capacity, area, status, is_active, created_at, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+          VALUES ($1, $2, $3, $4, $5, $6, NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh', NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh')
           RETURNING *
         `, [table_number, table_name, capacity, area || 'A', status || 'empty', true]);
         
@@ -536,7 +536,7 @@ async function handleTables(req, res) {
       
       const result = await client.query(`
         UPDATE tables 
-        SET table_number = $1, table_name = $2, capacity = $3, area = $4, status = $5, updated_at = NOW()
+        SET table_number = $1, table_name = $2, capacity = $3, area = $4, status = $5, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $6
         RETURNING *
       `, [table_number, table_name, capacity, area, status, id]);
@@ -646,7 +646,7 @@ async function handleFoodItems(req, res) {
       const result = await client.query(`
         UPDATE food_items 
         SET name = $1, description = $2, category_id = $3, type = $4, price = $5, cost = $6, 
-            preparation_time = $7, is_available = $8, image_url = $9, updated_at = NOW()
+            preparation_time = $7, is_available = $8, image_url = $9, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $10
         RETURNING *
       `, [name, description, category_id, type, price, cost, preparation_time, is_available, image_url, id]);
@@ -700,7 +700,7 @@ async function handleIngredients(req, res) {
       
       const result = await client.query(`
         UPDATE ingredients 
-        SET name = $1, unit = $2, current_stock = $3, min_stock = $4, cost_per_unit = $5, supplier = $6, updated_at = NOW()
+        SET name = $1, unit = $2, current_stock = $3, min_stock = $4, cost_per_unit = $5, supplier = $6, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $7
         RETURNING *
       `, [name, unit, current_stock, min_stock, cost_per_unit, supplier, id]);
@@ -914,7 +914,7 @@ async function handleOrders(req, res) {
         // Update existing order
         const result = await client.query(`
           UPDATE orders 
-          SET subtotal = $1, tax_amount = $2, total_amount = $3, notes = $4, updated_at = NOW()
+          SET subtotal = $1, tax_amount = $2, total_amount = $3, notes = $4, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
           WHERE id = $5
           RETURNING *
         `, [subtotalNum, taxAmountNum, totalAmountNum, notes || `Order lần ${order_count || 1}`, existingOrder.rows[0].id]);
@@ -1004,7 +1004,7 @@ async function handleOrders(req, res) {
         updateValues.push(total_amount);
       }
       
-      updateFields.push(`updated_at = NOW()`);
+      updateFields.push(`updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'Asia/Ho_Chi_Minh'`);
       updateValues.push(id);
       
       const result = await client.query(`
@@ -1148,7 +1148,7 @@ async function handlePrinters(req, res) {
       
       const result = await client.query(`
         UPDATE printers 
-        SET name = $1, location = $2, ip_address = $3, printer_type = $4, is_active = $5, updated_at = NOW()
+        SET name = $1, location = $2, ip_address = $3, printer_type = $4, is_active = $5, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $6
         RETURNING *
       `, [name, location, ip_address, printer_type, is_active, id]);
@@ -1209,7 +1209,7 @@ async function handleInventoryTransactions(req, res) {
       const stockChange = transaction_type === 'in' ? quantity : -quantity;
       await client.query(`
         UPDATE ingredients 
-        SET current_stock = current_stock + $1, updated_at = NOW()
+        SET current_stock = current_stock + $1, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $2
       `, [stockChange, ingredient_id]);
       
@@ -1255,7 +1255,7 @@ async function handleCustomers(req, res) {
       
       const result = await client.query(`
         UPDATE customers 
-        SET fullname = $1, phone = $2, email = $3, address = $4, birthday = $5, gender = $6, notes = $7, updated_at = NOW()
+        SET fullname = $1, phone = $2, email = $3, address = $4, birthday = $5, gender = $6, notes = $7, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $8
         RETURNING *
       `, [fullname, phone, email, address, birthday, gender, notes, id]);
@@ -1339,7 +1339,7 @@ async function handleEmployees(req, res) {
       const result = await client.query(`
         UPDATE employees 
         SET employee_code = $1, position = $2, base_salary = $3, commission_rate = $4, 
-            hire_date = $5, is_active = $6, fullname = $7, email = $8, phone = $9, updated_at = NOW()
+            hire_date = $5, is_active = $6, fullname = $7, email = $8, phone = $9, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $10
         RETURNING *
       `, [
@@ -1535,7 +1535,7 @@ async function handleBuffetPackages(req, res) {
       
       const result = await client.query(`
         UPDATE buffet_packages
-        SET name = $1, description = $2, price = $3, duration_minutes = $4, is_active = $5, updated_at = NOW()
+        SET name = $1, description = $2, price = $3, duration_minutes = $4, is_active = $5, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh'
         WHERE id = $6
         RETURNING *
       `, [name, description, price, duration_minutes, is_active, id]);
