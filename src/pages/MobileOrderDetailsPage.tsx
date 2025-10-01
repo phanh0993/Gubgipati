@@ -504,10 +504,12 @@ const MobileOrderDetailsPage: React.FC = () => {
                 </>
               )}
               
-              {/* Hiển thị món ăn */}
+              {/* Hiển thị món ăn (loại bỏ vé buffet) */}
               {order.food_items && order.food_items.length > 0 && (
                 <>
-                  {order.food_items.map((item: any, index: number) => (
+                  {order.food_items
+                    .filter((item: any) => !item.is_ticket && item.food_item_id !== order.buffet_package_id) // Loại bỏ vé buffet
+                    .map((item: any, index: number) => (
                     <ListItem key={index} sx={{ px: 0 }}>
                       <ListItemText
                         primary={
