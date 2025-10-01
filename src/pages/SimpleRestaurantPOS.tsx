@@ -72,6 +72,7 @@ interface OrderItem {
   quantity: number;
   total: number;
   special_instructions?: string;
+  note?: string;
   printer_id?: number;
 }
 
@@ -227,6 +228,17 @@ const SimpleRestaurantPOS: React.FC = () => {
     }
   };
 
+  const handleUpdateItemNote = (foodItemId: number, note: string) => {
+    if (!currentOrder) return;
+
+    const updatedItems = currentOrder.items?.map(item =>
+      item.food_item_id === foodItemId
+        ? { ...item, note }
+        : item
+    ) || [];
+    updateOrder(updatedItems);
+  };
+
   const updateOrder = (items: OrderItem[]) => {
     if (!currentOrder) return;
 
@@ -276,6 +288,7 @@ const SimpleRestaurantPOS: React.FC = () => {
           price: parseFloat(String(item.price)) || 0,
           quantity: parseInt(String(item.quantity)) || 0,
           special_instructions: item.special_instructions,
+          note: item.note,
           printer_id: item.printer_id,
         })) || [],
         order_count: orderCount,
@@ -564,18 +577,18 @@ const SimpleRestaurantPOS: React.FC = () => {
                     <Box>
                       <List dense>
                         {currentOrder.items.map((item, index) => (
-                          <ListItem key={index} sx={{ px: 0 }}>
-                            <ListItemText
-                              primary={item.name}
-                              secondary={
-                                <Box component="div">
-                                  <Typography component="span" variant="body2">
-                                    {formatCurrency(item.price)} x {item.quantity}
-                                  </Typography>
-                                </Box>
-                              }
-                            />
-                            <ListItemSecondaryAction>
+                          <ListItem key={index} sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                              <ListItemText
+                                primary={item.name}
+                                secondary={
+                                  <Box component="div">
+                                    <Typography component="span" variant="body2">
+                                      {formatCurrency(item.price)} x {item.quantity}
+                                    </Typography>
+                                  </Box>
+                                }
+                              />
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <IconButton
                                   size="small"
@@ -600,7 +613,15 @@ const SimpleRestaurantPOS: React.FC = () => {
                                   <Delete />
                                 </IconButton>
                               </Box>
-                            </ListItemSecondaryAction>
+                            </Box>
+                            <TextField
+                              size="small"
+                              placeholder="Ghi chú cho món này..."
+                              value={item.note || ''}
+                              onChange={(e) => handleUpdateItemNote(item.food_item_id, e.target.value)}
+                              sx={{ mt: 1, width: '100%' }}
+                              variant="outlined"
+                            />
                           </ListItem>
                         ))}
                       </List>

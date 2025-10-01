@@ -149,6 +149,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
             printer_id: null
           }))
       });
@@ -214,6 +215,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
             printer_id: null
           }))
       };
@@ -272,6 +274,7 @@ const MobileBillPage: React.FC = () => {
               quantity: itemQuantities[item.id],
               total: 0,
               special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
               printer_id: null
             }))
         };
@@ -340,6 +343,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
             printer_id: null
           }))
       });
@@ -405,6 +409,7 @@ const MobileBillPage: React.FC = () => {
             quantity: itemQuantities[item.id],
             total: 0,
             special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
             printer_id: null
           }))
       };
@@ -450,6 +455,7 @@ const MobileBillPage: React.FC = () => {
               quantity: itemQuantities[item.id],
               total: 0,
               special_instructions: 'Gọi thoải mái',
+            note: 'Buffet item',
               printer_id: null
             }))
         };
@@ -618,9 +624,16 @@ const MobileBillPage: React.FC = () => {
                       >
                         <ListItemText
                           primary={
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                              {item.food_item.name}
-                            </Typography>
+                            <Box>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {item.food_item.name}
+                              </Typography>
+                              {item.note && (
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                  Ghi chú: {item.note}
+                                </Typography>
+                              )}
+                            </Box>
                           }
                         />
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

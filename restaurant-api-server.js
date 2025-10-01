@@ -822,7 +822,7 @@ async function handleOrders(req, res) {
         
         // Lấy order items
         const itemsResult = await client.query(`
-          SELECT oi.id, oi.food_item_id, oi.quantity, oi.unit_price, oi.total_price, oi.special_instructions,
+          SELECT oi.id, oi.food_item_id, oi.quantity, oi.unit_price, oi.total_price, oi.special_instructions, oi.note,
                  fi.name, fi.printer_id
           FROM order_items oi
           LEFT JOIN food_items fi ON oi.food_item_id = fi.id
@@ -837,6 +837,7 @@ async function handleOrders(req, res) {
           quantity: parseInt(item.quantity) || 0,
           total: parseFloat(item.total_price) || 0,
           special_instructions: item.special_instructions,
+          note: item.note,
           printer_id: item.printer_id
         }));
         
@@ -871,7 +872,7 @@ async function handleOrders(req, res) {
       }
       for (const order of orders) {
         const itemsResult = await client.query(`
-          SELECT oi.id, oi.food_item_id, oi.quantity, oi.unit_price, oi.total_price, oi.special_instructions,
+          SELECT oi.id, oi.food_item_id, oi.quantity, oi.unit_price, oi.total_price, oi.special_instructions, oi.note,
                  fi.name, fi.printer_id
           FROM order_items oi
           LEFT JOIN food_items fi ON oi.food_item_id = fi.id
@@ -886,6 +887,7 @@ async function handleOrders(req, res) {
           quantity: parseInt(item.quantity) || 0,
           total: parseFloat(item.total_price) || 0,
           special_instructions: item.special_instructions,
+          note: item.note,
           printer_id: item.printer_id
         }));
         
@@ -951,10 +953,10 @@ async function handleOrders(req, res) {
       if (items && items.length > 0) {
         for (const item of items) {
           const orderItemResult = await client.query(`
-            INSERT INTO order_items (order_id, food_item_id, quantity, unit_price, total_price, special_instructions)
+            INSERT INTO order_items (order_id, food_item_id, quantity, unit_price, total_price, note)
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING id
-          `, [order.id, item.food_item_id, parseInt(item.quantity) || 0, parseFloat(item.price) || 0, parseFloat(item.total) || 0, item.special_instructions]);
+          `, [order.id, item.food_item_id, parseInt(item.quantity) || 0, parseFloat(item.price) || 0, parseFloat(item.total) || 0, item.note || item.special_instructions]);
           
           const orderItemId = orderItemResult.rows[0].id;
           
@@ -962,7 +964,7 @@ async function handleOrders(req, res) {
           await client.query(`
             INSERT INTO kitchen_orders (order_id, order_item_id, food_item_name, quantity, table_number, special_instructions)
             VALUES ($1, $2, $3, $4, $5, $6)
-          `, [order.id, orderItemId, item.name, item.quantity, order.table_id, item.special_instructions]);
+          `, [order.id, orderItemId, item.name, item.quantity, order.table_id, item.note || item.special_instructions]);
         }
       }
       
@@ -1058,9 +1060,9 @@ async function handleOrders(req, res) {
           // Chỉ insert nếu có food_item_id hợp lệ
           if (item.food_item_id) {
             await client.query(`
-              INSERT INTO order_items (order_id, food_item_id, quantity, unit_price, total_price, special_instructions)
+              INSERT INTO order_items (order_id, food_item_id, quantity, unit_price, total_price, note)
               VALUES ($1, $2, $3, $4, $5, $6)
-            `, [id, item.food_item_id, item.quantity, item.price, item.total, item.special_instructions]);
+            `, [id, item.food_item_id, item.quantity, item.price, item.total, item.note || item.special_instructions]);
           }
         }
       }
