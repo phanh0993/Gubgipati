@@ -633,9 +633,9 @@ const MobileBillPage: React.FC = () => {
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                 {item.food_item.name}
                               </Typography>
-                              {itemNotesState[item.id] && (
+                              {(item.special_instructions || itemNotesState[item.id]) && (
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-                                  Ghi chú: {itemNotesState[item.id]}
+                                  Ghi chú: {item.special_instructions || itemNotesState[item.id]}
                                 </Typography>
                               )}
                             </Box>
@@ -665,7 +665,7 @@ const MobileBillPage: React.FC = () => {
                         <TextField
                           size="small"
                           placeholder="Ghi chú cho món này..."
-                          value={itemNotesState[item.id] || ''}
+                          value={itemNotesState[item.id] || item.special_instructions || ''}
                           onChange={(e) => handleUpdateItemNote(item.id, e.target.value)}
                           sx={{ 
                             width: '100%',

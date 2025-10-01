@@ -578,7 +578,18 @@ const SimpleRestaurantPOS: React.FC = () => {
                           <ListItem key={index} sx={{ px: 0, flexDirection: 'column', alignItems: 'stretch' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                               <ListItemText
-                                primary={item.name}
+                                primary={
+                                  <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                      {item.name}
+                                    </Typography>
+                                    {item.special_instructions && (
+                                      <Typography variant="caption" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                        Ghi chú: {item.special_instructions}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                }
                                 secondary={
                                   <Box component="div">
                                     <Typography component="span" variant="body2">
