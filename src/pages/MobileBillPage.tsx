@@ -618,15 +618,15 @@ const MobileBillPage: React.FC = () => {
                     if (quantity === 0) return null;
                     
                     return (
-                      <ListItem 
-                        key={item.id}
-                        sx={{ 
-                          py: 0.5,
-                          px: 0,
-                          borderBottom: 1,
-                          borderColor: 'grey.200'
-                        }}
-                      >
+                      <Box key={item.id}>
+                        <ListItem 
+                          sx={{ 
+                            py: 0.5,
+                            px: 0,
+                            borderBottom: 1,
+                            borderColor: 'grey.200'
+                          }}
+                        >
                         <ListItemText
                           primary={
                             <Box>
@@ -679,7 +679,8 @@ const MobileBillPage: React.FC = () => {
                           maxRows={2}
                         />
                       </Box>
-                    );
+                    </Box>
+                  );
                   })}
                 </List>
               ) : (
