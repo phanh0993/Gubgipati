@@ -168,8 +168,6 @@ const BuffetTableSelection: React.FC = () => {
     );
   };
 
-  // getTimeElapsed and formatDateTime are now imported from formatters
-
   // Function gộp món trùng nhau
   const mergeDuplicateItems = (items: any[]) => {
     if (!items || items.length === 0) return [];
@@ -664,7 +662,7 @@ const BuffetTableSelection: React.FC = () => {
                 Nhân viên order: {orderDetails?.employee_name || 'Chưa xác định'}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Thời gian tạo: {orderDetails ? formatDateTime(orderDetails.created_at) : (selectedOrder ? formatDateTime(selectedOrder.created_at) : '')}
+                Thời gian tạo: {orderDetails ? formatVietnamDateTime(orderDetails.created_at) : (selectedOrder ? formatVietnamDateTime(selectedOrder.created_at) : '')}
               </Typography>
               
               <Divider sx={{ my: 2 }} />
