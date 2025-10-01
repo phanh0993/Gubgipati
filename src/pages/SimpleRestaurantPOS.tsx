@@ -286,7 +286,7 @@ const SimpleRestaurantPOS: React.FC = () => {
           name: item.name,
           price: parseFloat(String(item.price)) || 0,
           quantity: parseInt(String(item.quantity)) || 0,
-          special_instructions: item.note || item.special_instructions,
+          special_instructions: item.special_instructions,
           printer_id: item.printer_id,
         })) || [],
         order_count: orderCount,
