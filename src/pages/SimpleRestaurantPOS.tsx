@@ -142,8 +142,17 @@ const SimpleRestaurantPOS: React.FC = () => {
 
       setTables(tablesData);
       const availableItems = foodItemsData.filter((item: FoodItem) => item.is_available);
-      setFoodItems(availableItems.filter((item: FoodItem) => item.type !== 'service'));
-      setServiceItems(availableItems.filter((item: FoodItem) => item.type === 'service'));
+      const buffetItems = availableItems.filter((item: FoodItem) => item.type !== 'service');
+      const serviceItemsData = availableItems.filter((item: FoodItem) => item.type === 'service');
+      
+      console.log('📊 Data loaded:', {
+        total: availableItems.length,
+        buffet: buffetItems.length,
+        service: serviceItemsData.length
+      });
+      
+      setFoodItems(buffetItems);
+      setServiceItems(serviceItemsData);
       setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -543,7 +552,10 @@ const SimpleRestaurantPOS: React.FC = () => {
                     <Button
                       variant={serviceMode ? 'outlined' : 'contained'}
                       size="small"
-                      onClick={() => setServiceMode(!serviceMode)}
+                      onClick={() => {
+                        console.log('🔄 Switching mode:', !serviceMode);
+                        setServiceMode(!serviceMode);
+                      }}
                       sx={{ 
                         minWidth: 100,
                         fontWeight: 'bold',
@@ -559,6 +571,12 @@ const SimpleRestaurantPOS: React.FC = () => {
                     </Button>
                   </Box>
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
+                    {console.log('📋 Rendering items:', {
+                      mode: serviceMode ? 'service' : 'buffet',
+                      serviceItems: serviceItems.length,
+                      foodItems: foodItems.length,
+                      currentItems: (serviceMode ? serviceItems : foodItems).length
+                    })}
                     {(serviceMode ? serviceItems : foodItems).map((item) => (
                       <Card key={item.id} sx={{ mb: 1 }}>
                         <CardContent sx={{ p: 2 }}>
