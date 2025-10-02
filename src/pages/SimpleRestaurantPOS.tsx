@@ -63,6 +63,7 @@ interface FoodItem {
   category_id: number;
   printer_id?: number;
   is_available: boolean;
+  type?: string;
 }
 
 interface OrderItem {
@@ -96,6 +97,8 @@ const SimpleRestaurantPOS: React.FC = () => {
   const navigate = useNavigate();
   const [tables, setTables] = useState<Table[]>([]);
   const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [serviceItems, setServiceItems] = useState<FoodItem[]>([]);
+  const [serviceMode, setServiceMode] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
@@ -138,7 +141,9 @@ const SimpleRestaurantPOS: React.FC = () => {
       const ordersData = ordersRes.data;
 
       setTables(tablesData);
-      setFoodItems(foodItemsData.filter((item: FoodItem) => item.is_available));
+      const availableItems = foodItemsData.filter((item: FoodItem) => item.is_available);
+      setFoodItems(availableItems.filter((item: FoodItem) => item.type !== 'service'));
+      setServiceItems(availableItems.filter((item: FoodItem) => item.type === 'service'));
       setOrders(ordersData);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -530,12 +535,22 @@ const SimpleRestaurantPOS: React.FC = () => {
             <Grid item xs={12} md={4}>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom>
-                    <Restaurant sx={{ mr: 1, verticalAlign: 'middle' }} />
-                    Thực Đơn
-                  </Typography>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6">
+                      <Restaurant sx={{ mr: 1, verticalAlign: 'middle' }} />
+                      {serviceMode ? 'Dịch vụ' : 'Thực Đơn'}
+                    </Typography>
+                    <Button
+                      variant={serviceMode ? 'outlined' : 'contained'}
+                      size="small"
+                      onClick={() => setServiceMode(!serviceMode)}
+                      sx={{ minWidth: 100 }}
+                    >
+                      {serviceMode ? 'Thực đơn' : 'Dịch vụ'}
+                    </Button>
+                  </Box>
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                    {foodItems.map((item) => (
+                    {(serviceMode ? serviceItems : foodItems).map((item) => (
                       <Card key={item.id} sx={{ mb: 1 }}>
                         <CardContent sx={{ p: 2 }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -68,6 +68,8 @@ const MobileMenuPage: React.FC = () => {
   const [selectedPackage, setSelectedPackage] = useState<BuffetPackage | null>(null);
   const [packageQuantity, setPackageQuantity] = useState(1);
   const [packageItems, setPackageItems] = useState<BuffetPackageItem[]>([]);
+  const [serviceMode, setServiceMode] = useState(false);
+  const [serviceItems, setServiceItems] = useState<any[]>([]);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(existingOrder || null);
   const [selectedItems, setSelectedItems] = useState<{ [key: number]: boolean }>({});
   const [orderItems, setOrderItems] = useState<{ [key: number]: number }>({});
@@ -75,6 +77,7 @@ const MobileMenuPage: React.FC = () => {
 
   useEffect(() => {
     fetchPackages();
+    fetchServiceItems();
     if (existingOrder) {
       setCurrentOrder(existingOrder);
       // Auto peek VÉ từ lần order thứ 2 trở đi
@@ -96,6 +99,17 @@ const MobileMenuPage: React.FC = () => {
       setPackages(response.data);
     } catch (error) {
       console.error('Error fetching packages:', error);
+    }
+  };
+
+  const fetchServiceItems = async () => {
+    try {
+      const { foodAPI } = await import('../services/api');
+      const response = await foodAPI.getItems();
+      const serviceItemsData = response.data.filter((item: any) => item.type === 'service');
+      setServiceItems(serviceItemsData);
+    } catch (error) {
+      console.error('Error fetching service items:', error);
     }
   };
 
@@ -149,6 +163,27 @@ const MobileMenuPage: React.FC = () => {
     }));
   };
 
+  const handleServiceItemSelect = (itemId: number) => {
+    const isSelected = selectedItems[itemId];
+    setSelectedItems(prev => ({
+      ...prev,
+      [itemId]: !isSelected
+    }));
+    
+    if (!isSelected) {
+      setOrderItems(prev => ({
+        ...prev,
+        [itemId]: 1
+      }));
+    } else {
+      setOrderItems(prev => {
+        const newOrderItems = { ...prev };
+        delete newOrderItems[itemId];
+        return newOrderItems;
+      });
+    }
+  };
+
   const handleViewOrder = () => {
     const selectedItemsList = packageItems.filter(item => selectedItems[item.id]);
     const orderData = {
@@ -191,11 +226,54 @@ const MobileMenuPage: React.FC = () => {
         <Box sx={{ width: '30%', minWidth: '100px' }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 1, height: '100%' }}>
-              <Typography variant="body2" gutterBottom sx={{ fontWeight: 'bold', mb: 1 }}>
-                Chọn Vé
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                  {serviceMode ? 'Dịch vụ' : 'Chọn Vé'}
+                </Typography>
+                <Button
+                  variant={serviceMode ? 'outlined' : 'contained'}
+                  size="small"
+                  onClick={() => setServiceMode(!serviceMode)}
+                  sx={{ minWidth: 80, fontSize: '0.7rem' }}
+                >
+                  {serviceMode ? 'Vé' : 'Dịch vụ'}
+                </Button>
+              </Box>
               <List sx={{ p: 0 }}>
-                {packages.map((pkg) => (
+                {serviceMode ? (
+                  serviceItems.map((item) => (
+                    <ListItem
+                      key={item.id}
+                      button
+                      onClick={() => handleServiceItemSelect(item.id)}
+                      sx={{
+                        border: 1,
+                        borderColor: selectedItems[item.id] ? 'primary.main' : 'grey.300',
+                        mb: 0.5,
+                        borderRadius: 1,
+                        backgroundColor: selectedItems[item.id] ? 'primary.light' : 'white',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          backgroundColor: selectedItems[item.id] ? 'primary.light' : 'grey.50'
+                        }
+                      }}
+                    >
+                      <ListItemText
+                        primary={
+                          <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.8rem' }}>
+                            {item.name}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="caption" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                              {serviceMode ? item.price.toLocaleString('vi-VN') : item.price.toLocaleString('vi-VN')}₫
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))
+                ) : (
+                  packages.map((pkg) => (
                   <ListItem
                     key={pkg.id}
                     button
@@ -253,13 +331,13 @@ const MobileMenuPage: React.FC = () => {
                   rowGap: 1.5,
                   p: 0.5
                 }}>
-                  {packageItems.map((item) => {
+                  {(serviceMode ? serviceItems : packageItems).map((item) => {
                     const isSelected = selectedItems[item.id] || false;
                     const currentNote = itemNotes[item.id] || '';
                     return (
                       <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
                         <Card
-                          onClick={() => handleSelectItem(item.id)}
+                          onClick={() => serviceMode ? handleServiceItemSelect(item.id) : handleSelectItem(item.id)}
                           sx={{
                             cursor: 'pointer',
                             border: 2,
@@ -290,8 +368,8 @@ const MobileMenuPage: React.FC = () => {
                             }}
                           >
                             <img
-                              src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent(item.food_item.name.charAt(0))}`}
-                              alt={item.food_item.name}
+                              src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent((serviceMode ? item.name : item.food_item.name).charAt(0))}`}
+                              alt={serviceMode ? item.name : item.food_item.name}
                               style={{ width: 35, height: 35, borderRadius: 4 }}
                             />
                           </Box>
@@ -311,7 +389,7 @@ const MobileMenuPage: React.FC = () => {
                                 color: isSelected ? 'primary.main' : 'text.primary'
                               }}
                             >
-                              {item.food_item.name}
+                              {serviceMode ? item.name : item.food_item.name}
                             </Typography>
                             {currentNote && (
                               <Chip
