@@ -80,16 +80,21 @@ export const printerService = {
       }
       
       // Fallback: thử dùng agent
-      const res = await fetch(`${AGENT_BASE}/print`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ printerName, content, title })
-      });
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(`Print failed: ${res.status} ${errorText}`);
+      try {
+        const res = await fetch(`${AGENT_BASE}/print`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ printerName, content, title })
+        });
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(`Print failed: ${res.status} ${errorText}`);
+        }
+        console.log('✅ Print command sent via agent');
+      } catch (agentError) {
+        console.error('❌ Both restaurant API and agent failed:', agentError);
+        throw new Error(`Print failed: No printing method available. ${agentError.message}`);
       }
-      console.log('✅ Print command sent via agent');
     } catch (error) {
       console.error('❌ Print error:', error);
       throw error;

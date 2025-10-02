@@ -1385,14 +1385,14 @@ async function handlePrinters(req, res) {
           sendJSON(res, 500, { error: `Print failed: ${printError.message}` });
         }
       } else {
-        // Tạo printer mới trong database
-        const { name, location, ip_address, printer_type, is_active } = body;
+        // Tạo printer mới trong database (manual entry)
+        const { name, ip_address, port, driver, printer_type = 'manual', is_active = true } = body;
         
         const result = await client.query(`
-          INSERT INTO printers (name, location, ip_address, printer_type, is_active)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO printers (name, ip_address, printer_type, is_active, driver, port)
+          VALUES ($1, $2, $3, $4, $5, $6)
           RETURNING *
-        `, [name, location, ip_address, printer_type, is_active]);
+        `, [name, ip_address, printer_type, is_active, driver, port]);
         
         sendJSON(res, 201, result.rows[0]);
       }

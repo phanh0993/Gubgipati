@@ -161,7 +161,13 @@ const PrinterManagementPage: React.FC = () => {
 
       // Lưu DB (printers)
       try {
-        await printersAPI.createManual({ name: manualPrinter.name, ip: newPrinter.ip, port: newPrinter.port, driver: newPrinter.driver });
+        const result = await printersAPI.createManual({ 
+          name: manualPrinter.name, 
+          ip_address: newPrinter.ip, 
+          port: newPrinter.port, 
+          driver: newPrinter.driver 
+        });
+        console.log('✅ Manual printer saved to DB:', result.data);
       } catch (dbErr: any) {
         console.warn('Could not persist manual printer, continue local only:', dbErr?.message || dbErr);
       }

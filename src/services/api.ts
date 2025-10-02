@@ -1521,15 +1521,15 @@ export const printersAPI = {
     }
     return api.get('/printers');
   },
-  createManual: (payload: { name: string; ip?: string; port?: string; driver?: string }): Promise<AxiosResponse<any>> => {
+  createManual: (payload: { name: string; ip_address?: string; port?: string; driver?: string }): Promise<AxiosResponse<any>> => {
     if (USE_SUPABASE) {
       const row: any = {
         name: payload.name,
-        ip_address: payload.ip || null,
+        ip_address: payload.ip_address || null,
         printer_type: 'manual',
         location: null,
         is_active: true,
-        driver: (payload as any).driver || null,
+        driver: payload.driver || null,
         port: payload.port || null,
       };
       return new Promise((resolve, reject) => {
@@ -1545,7 +1545,7 @@ export const printersAPI = {
           }, reject);
       });
     }
-    return api.post('/printers', { name: payload.name, host: payload.ip, port: payload.port, protocol: 'manual', uri: payload.name });
+    return api.post('/printers', { name: payload.name, ip_address: payload.ip_address, port: payload.port, driver: payload.driver });
   },
 };
 
