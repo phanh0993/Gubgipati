@@ -34,9 +34,30 @@ const PrinterManagementPage: React.FC = () => {
   };
 
   const loadMappings = async () => {
-    // Tắt hoàn toàn logic printer_mappings để tránh 404
-    console.log('🖨️ Printer mappings disabled to avoid 404 errors');
-    setMappings({});
+    try {
+      console.log('🖨️ Loading printer mappings from database...');
+      const { data, error } = await supabase
+        .from('printer_mappings')
+        .select('*');
+      
+      if (error) {
+        console.error('❌ Error loading mappings:', error);
+        setMappings({});
+        return;
+      }
+      
+      const mappingDict: Record<string, PrinterMapping | null> = {};
+      GROUPS.forEach(group => {
+        const mapping = data?.find(m => m.group_key === group.key);
+        mappingDict[group.key] = mapping || null;
+      });
+      
+      setMappings(mappingDict);
+      console.log('✅ Loaded mappings:', mappingDict);
+    } catch (e: any) {
+      console.error('❌ Error loading mappings:', e);
+      setMappings({});
+    }
   };
 
   useEffect(() => {
@@ -47,24 +68,41 @@ const PrinterManagementPage: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Tắt hoàn toàn logic lưu printer_mappings để tránh 404
-      console.log('🖨️ Printer mappings save disabled to avoid 404 errors');
-      alert('Cấu hình máy in đã được tắt để tránh lỗi 404. Sử dụng printer-agent trực tiếp.');
+      console.log('🖨️ Saving printer mappings to database...');
+      
+      // Xóa mappings cũ
+      await supabase.from('printer_mappings').delete().neq('id', 0);
+      
+      // Thêm mappings mới
+      const mappingsToSave = Object.values(mappings).filter(Boolean) as PrinterMapping[];
+      if (mappingsToSave.length > 0) {
+        const { error } = await supabase
+          .from('printer_mappings')
+          .insert(mappingsToSave);
+        
+        if (error) {
+          throw error;
+        }
+      }
+      
+      console.log('✅ Saved mappings:', mappingsToSave);
+      alert('Đã lưu cấu hình máy in thành công!');
     } catch (e: any) {
+      console.error('❌ Error saving mappings:', e);
       alert('Lỗi khi lưu cấu hình: ' + e.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelect = (groupKey: string, uri: string) => {
-    const p = printers.find((x) => x.uri === uri);
+  const handleSelect = (groupKey: string, printerId: string) => {
+    const p = printers.find((x) => x.id === printerId);
     if (!p) return;
     setMappings((prev) => ({
       ...prev,
       [groupKey]: {
         ...(prev[groupKey] || { group_key: groupKey }),
-        printer_uri: p.uri,
+        printer_uri: p.name, // Dùng tên máy in làm URI
         printer_name: p.name
       }
     }));
@@ -88,7 +126,9 @@ const PrinterManagementPage: React.FC = () => {
             <div key={p.id} className="flex items-center justify-between px-3 py-2 border-b last:border-b-0">
               <div>
                 <div className="font-medium">{p.name}</div>
-                <div className="text-sm text-gray-500">{p.uri} {p.protocol === 'system' ? '(Đã cài trên Windows/macOS)' : ''}</div>
+                <div className="text-sm text-gray-500">
+                  Driver: {p.driver || 'Unknown'} | Port: {p.port || 'Unknown'} | Status: {p.status || 'Unknown'}
+                </div>
               </div>
             </div>
           ))}
@@ -104,12 +144,12 @@ const PrinterManagementPage: React.FC = () => {
               <div className="w-56">{g.label}</div>
               <select
                 className="flex-1 border rounded px-2 py-2"
-                value={mappings[g.key]?.printer_uri || ''}
+                value={printers.find(p => p.name === mappings[g.key]?.printer_name)?.id || ''}
                 onChange={(e) => handleSelect(g.key, e.target.value)}
               >
                 <option value="">-- Chọn máy in --</option>
                 {printers.map((p) => (
-                  <option key={p.id} value={p.uri}>{p.name} ({p.uri})</option>
+                  <option key={p.id} value={p.id}>{p.name} ({p.driver || 'Unknown Driver'})</option>
                 ))}
               </select>
             </div>

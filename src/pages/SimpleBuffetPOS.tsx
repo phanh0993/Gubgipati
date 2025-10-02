@@ -437,7 +437,27 @@ const SimpleBuffetPOS: React.FC = () => {
 
         const { orderAPI } = await import('../services/api');
         const { data: newOrder } = await orderAPI.createOrder(orderData);
-          console.log('✅ Order created in database:', newOrder);
+        console.log('✅ Order created in database:', newOrder);
+        
+        // In order cho bếp (async - không đợi kết quả)
+        try {
+          const printResponse = await fetch('/api/print-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              order_id: newOrder.id, 
+              order_type: 'kitchen' 
+            })
+          });
+          
+          if (printResponse.ok) {
+            console.log('✅ Print job sent for new order');
+          } else {
+            console.warn('⚠️ Print job failed for new order');
+          }
+        } catch (printError) {
+          console.error('❌ Print error:', printError);
+        }
           
           // Cập nhật currentOrder để hiển thị
           const convertedOrder: BuffetOrder = {

@@ -1093,24 +1093,100 @@ async function handlePrintOrder(req, res) {
   try {
     if (req.method === 'POST') {
       const body = await parseBody(req);
-      const { printer_id, order_number, table_name, items, order_count } = body;
+      const { order_id, order_type = 'kitchen' } = body;
       
-      // Simulate printing to different printers
-      console.log(`🖨️  Printing to Printer ${printer_id}:`);
-      console.log(`📋 Order: ${order_number} - Table: ${table_name} (Order #${order_count})`);
-      console.log('📝 Items:');
-      items.forEach(item => {
-        console.log(`   - ${item.name} x${item.quantity} - ${formatCurrency(item.price * item.quantity)}`);
-        if (item.special_instructions) {
-          console.log(`     Note: ${item.special_instructions}`);
-        }
+      console.log(`🖨️ Printing order ${order_id} (${order_type})`);
+      
+      // Lấy thông tin order và items
+      const orderResult = await client.query(`
+        SELECT o.*, t.name as table_name 
+        FROM orders o 
+        LEFT JOIN tables t ON o.table_id = t.id 
+        WHERE o.id = $1
+      `, [order_id]);
+      
+      if (orderResult.rows.length === 0) {
+        return sendJSON(res, 404, { error: 'Order not found' });
+      }
+      
+      const order = orderResult.rows[0];
+      
+      // Lấy items của order
+      const itemsResult = await client.query(`
+        SELECT oi.*, fi.name, fi.printer_id, fi.type
+        FROM order_items oi
+        JOIN food_items fi ON oi.food_item_id = fi.id
+        WHERE oi.order_id = $1
+      `, [order_id]);
+      
+      const items = itemsResult.rows;
+      
+      // Lấy printer mappings
+      const mappingsResult = await client.query(`
+        SELECT group_key, printer_name FROM printer_mappings
+      `);
+      
+      const mappings = {};
+      mappingsResult.rows.forEach(row => {
+        mappings[row.group_key] = row.printer_name;
       });
-      console.log('---');
       
-      // In real implementation, you would send to actual printer
-      // await sendToPrinter(printer_id, printData);
+      // In theo nhóm món ăn
+      const printJobs = [];
       
-      sendJSON(res, 200, { message: 'Print job sent successfully', printer_id });
+      if (order_type === 'kitchen') {
+        // In cho bếp
+        const groupedItems = {};
+        
+        items.forEach(item => {
+          let groupKey = 'kitchen_other'; // default
+          
+          // Phân loại theo tên món hoặc type
+          if (item.type === 'service') {
+            groupKey = 'bar';
+          } else if (item.name.toLowerCase().includes('nướng') || item.name.toLowerCase().includes('grill')) {
+            groupKey = 'kitchen_grill';
+          } else if (item.name.toLowerCase().includes('chiên') || item.name.toLowerCase().includes('fry')) {
+            groupKey = 'kitchen_fry';
+          }
+          
+          if (!groupedItems[groupKey]) {
+            groupedItems[groupKey] = [];
+          }
+          groupedItems[groupKey].push(item);
+        });
+        
+        // Tạo print jobs cho từng nhóm
+        Object.entries(groupedItems).forEach(([groupKey, groupItems]) => {
+          const printerName = mappings[groupKey];
+          if (printerName && groupItems.length > 0) {
+            const content = generateKitchenPrintContent(order, groupItems, groupKey);
+            printJobs.push({ printerName, content, title: `Kitchen Order - ${groupKey}` });
+          }
+        });
+        
+      } else if (order_type === 'invoice') {
+        // In hóa đơn
+        const printerName = mappings['invoice_main'];
+        if (printerName) {
+          const content = generateInvoicePrintContent(order, items);
+          printJobs.push({ printerName, content, title: 'Invoice' });
+        }
+      }
+      
+      // Gửi tất cả print jobs (async - không đợi kết quả)
+      printJobs.forEach(job => {
+        sendPrintJobAsync(job.printerName, job.content, job.title);
+      });
+      
+      console.log(`✅ Sent ${printJobs.length} print jobs for order ${order_id}`);
+      
+      sendJSON(res, 200, { 
+        message: `Sent ${printJobs.length} print jobs`, 
+        printJobs: printJobs.length,
+        order_id 
+      });
+      
     } else {
       sendJSON(res, 405, { error: 'Method not allowed' });
     }
@@ -1120,26 +1196,198 @@ async function handlePrintOrder(req, res) {
   }
 }
 
+// Helper function: Gửi print job async (không đợi kết quả)
+async function sendPrintJobAsync(printerName, content, title) {
+  try {
+    // Thử dùng Windows Printer Agent trước
+    const agentUrl = process.env.PRINTER_AGENT_URL || 'http://localhost:9977';
+    
+    try {
+      const response = await fetch(`${agentUrl}/print`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ printerName, content, title })
+      });
+      
+      if (response.ok) {
+        console.log(`✅ Print job sent to ${printerName} via agent`);
+        return;
+      }
+    } catch (agentError) {
+      console.log(`⚠️ Agent not available, trying direct Windows print...`);
+    }
+    
+    // Fallback: In trực tiếp tới Windows
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const fs = require('fs');
+    const path = require('path');
+    
+    const execAsync = promisify(exec);
+    
+    // Tạo file tạm
+    const tempFile = path.join(__dirname, `temp_print_${Date.now()}.txt`);
+    fs.writeFileSync(tempFile, content, 'utf8');
+    
+    // In file tạm
+    const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printerName}'"`;
+    
+    await execAsync(printCommand);
+    
+    // Xóa file tạm
+    fs.unlinkSync(tempFile);
+    
+    console.log(`✅ Print job sent directly to Windows printer: ${printerName}`);
+    
+  } catch (error) {
+    console.error(`❌ Print job failed for ${printerName}:`, error.message);
+  }
+}
+
+// Helper function: Tạo nội dung in cho bếp
+function generateKitchenPrintContent(order, items, groupKey) {
+  const groupNames = {
+    'bar': 'QUẦY BAR / NƯỚC',
+    'kitchen_grill': 'BẾP NƯỚNG',
+    'kitchen_fry': 'BẾP CHIÊN',
+    'kitchen_other': 'BẾP KHÁC'
+  };
+  
+  let content = `\n`;
+  content += `================================\n`;
+  content += `    ${groupNames[groupKey] || 'BẾP'}\n`;
+  content += `================================\n`;
+  content += `Đơn: ${order.order_number}\n`;
+  content += `Bàn: ${order.table_name || order.table_id}\n`;
+  content += `Thời gian: ${new Date().toLocaleString('vi-VN')}\n`;
+  content += `--------------------------------\n`;
+  
+  items.forEach(item => {
+    content += `${item.name} x${item.quantity}\n`;
+    if (item.special_instructions) {
+      content += `  Ghi chú: ${item.special_instructions}\n`;
+    }
+    content += `\n`;
+  });
+  
+  content += `================================\n`;
+  content += `\n\n\n`; // Tách trang cho máy in nhiệt
+  
+  return content;
+}
+
+// Helper function: Tạo nội dung in hóa đơn
+function generateInvoicePrintContent(order, items) {
+  let content = `\n`;
+  content += `        HÓA ĐƠN THANH TOÁN\n`;
+  content += `================================\n`;
+  content += `Đơn: ${order.order_number}\n`;
+  content += `Bàn: ${order.table_name || order.table_id}\n`;
+  content += `Thời gian: ${new Date().toLocaleString('vi-VN')}\n`;
+  content += `--------------------------------\n`;
+  
+  let total = 0;
+  items.forEach(item => {
+    const itemTotal = parseFloat(item.total_price) || 0;
+    content += `${item.name} x${item.quantity}\n`;
+    if (item.special_instructions) {
+      content += `  Ghi chú: ${item.special_instructions}\n`;
+    }
+    content += `${formatCurrency(itemTotal)}\n\n`;
+    total += itemTotal;
+  });
+  
+  content += `--------------------------------\n`;
+  content += `TỔNG CỘNG: ${formatCurrency(total)}\n`;
+  content += `================================\n`;
+  content += `    Cảm ơn quý khách!\n`;
+  content += `\n\n\n`;
+  
+  return content;
+}
+
 // Printers endpoint
 async function handlePrinters(req, res) {
   const client = await pool.connect();
   try {
     if (req.method === 'GET') {
-      const result = await client.query(`
-        SELECT * FROM printers ORDER BY created_at DESC
-      `);
-      sendJSON(res, 200, result.rows);
+      console.log('🔍 Scanning Windows printers...');
+      
+      // Quét máy in Windows trực tiếp
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+      
+      try {
+        // Sử dụng PowerShell để lấy danh sách máy in
+        const { stdout } = await execAsync('powershell "Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | ConvertTo-Json"');
+        
+        const printerList = JSON.parse(stdout);
+        
+        const printers = printerList.map((printer, index) => ({
+          id: `printer_${index}`,
+          name: printer.Name,
+          driver: printer.DriverName,
+          port: printer.PortName,
+          status: printer.PrinterStatus === 'Normal' ? 'ready' : 'error'
+        }));
+        
+        console.log(`✅ Found ${printers.length} Windows printers`);
+        sendJSON(res, 200, printers);
+        
+      } catch (scanError) {
+        console.error('❌ Error scanning Windows printers:', scanError);
+        // Fallback: trả về database printers nếu có
+        const result = await client.query(`SELECT * FROM printers ORDER BY created_at DESC`);
+        sendJSON(res, 200, result.rows);
+      }
     } else if (req.method === 'POST') {
       const body = await parseBody(req);
-      const { name, location, ip_address, printer_type, is_active } = body;
       
-      const result = await client.query(`
-        INSERT INTO printers (name, location, ip_address, printer_type, is_active)
-        VALUES ($1, $2, $3, $4, $5)
-        RETURNING *
-      `, [name, location, ip_address, printer_type, is_active]);
-      
-      sendJSON(res, 201, result.rows[0]);
+      // Kiểm tra xem có phải test print không
+      if (body.printerName && body.content) {
+        // Test in máy in
+        const { printerName, content, title } = body;
+        
+        try {
+          const { exec } = require('child_process');
+          const { promisify } = require('util');
+          const fs = require('fs');
+          const path = require('path');
+          
+          const execAsync = promisify(exec);
+          
+          // Tạo file tạm
+          const tempFile = path.join(__dirname, `test_print_${Date.now()}.txt`);
+          fs.writeFileSync(tempFile, content, 'utf8');
+          
+          // In file tạm
+          const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printerName}'"`;
+          
+          await execAsync(printCommand);
+          
+          // Xóa file tạm
+          fs.unlinkSync(tempFile);
+          
+          console.log(`✅ Test print successful to ${printerName}`);
+          sendJSON(res, 200, { message: `Printed to ${printerName}`, success: true });
+          
+        } catch (printError) {
+          console.error(`❌ Test print failed: ${printError.message}`);
+          sendJSON(res, 500, { error: `Print failed: ${printError.message}` });
+        }
+      } else {
+        // Tạo printer mới trong database
+        const { name, location, ip_address, printer_type, is_active } = body;
+        
+        const result = await client.query(`
+          INSERT INTO printers (name, location, ip_address, printer_type, is_active)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING *
+        `, [name, location, ip_address, printer_type, is_active]);
+        
+        sendJSON(res, 201, result.rows[0]);
+      }
     } else if (req.method === 'PUT') {
       const pathParts = req.url.split('/');
       const id = pathParts[pathParts.length - 1];
