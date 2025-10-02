@@ -20,13 +20,15 @@ CREATE TABLE IF NOT EXISTS public.printers (
 ALTER TABLE public.printers ENABLE ROW LEVEL SECURITY;
 
 -- Policy cho tất cả users
-CREATE POLICY IF NOT EXISTS "Enable all for authenticated users" 
+DROP POLICY IF EXISTS "Enable all for authenticated users" ON public.printers;
+CREATE POLICY "Enable all for authenticated users" 
 ON public.printers FOR ALL 
 TO authenticated 
 USING (true);
 
 -- Policy cho anon users (để Vercel có thể truy cập)
-CREATE POLICY IF NOT EXISTS "Enable read access for anon users" 
+DROP POLICY IF EXISTS "Enable read access for anon users" ON public.printers;
+CREATE POLICY "Enable read access for anon users" 
 ON public.printers FOR SELECT 
 TO anon 
 USING (true);
