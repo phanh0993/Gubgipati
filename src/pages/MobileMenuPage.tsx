@@ -274,38 +274,39 @@ const MobileMenuPage: React.FC = () => {
                   ))
                 ) : (
                   packages.map((pkg) => (
-                  <ListItem
-                    key={pkg.id}
-                    button
-                    selected={selectedPackage?.id === pkg.id}
-                    onClick={() => handleSelectPackage(pkg)}
-                    sx={{
-                      border: 1,
-                      borderColor: selectedPackage?.id === pkg.id ? 'primary.main' : 'grey.300',
-                      mb: 0.5,
-                      borderRadius: 1,
-                      minHeight: 40,
-                      bgcolor: selectedPackage?.id === pkg.id ? 'primary.light' : 'transparent',
-                      '&:hover': {
-                        bgcolor: selectedPackage?.id === pkg.id ? 'primary.light' : 'grey.100'
-                      }
-                    }}
-                  >
-                    <ListItemText
-                      primary={pkg.name}
-                      secondary={`${pkg.price.toLocaleString()}₫`}
-                      primaryTypographyProps={{ 
-                        fontSize: '0.8rem',
-                        fontWeight: 'bold',
-                        textAlign: 'center'
+                    <ListItem
+                      key={pkg.id}
+                      button
+                      selected={selectedPackage?.id === pkg.id}
+                      onClick={() => handleSelectPackage(pkg)}
+                      sx={{
+                        border: 1,
+                        borderColor: selectedPackage?.id === pkg.id ? 'primary.main' : 'grey.300',
+                        mb: 0.5,
+                        borderRadius: 1,
+                        minHeight: 40,
+                        bgcolor: selectedPackage?.id === pkg.id ? 'primary.light' : 'transparent',
+                        '&:hover': {
+                          bgcolor: selectedPackage?.id === pkg.id ? 'primary.light' : 'grey.100'
+                        }
                       }}
-                      secondaryTypographyProps={{ 
-                        fontSize: '0.7rem',
-                        textAlign: 'center'
-                      }}
-                    />
-                  </ListItem>
-                ))}
+                    >
+                      <ListItemText
+                        primary={pkg.name}
+                        secondary={`${pkg.price.toLocaleString()}₫`}
+                        primaryTypographyProps={{ 
+                          fontSize: '0.8rem',
+                          fontWeight: 'bold',
+                          textAlign: 'center'
+                        }}
+                        secondaryTypographyProps={{ 
+                          fontSize: '0.7rem',
+                          textAlign: 'center'
+                        }}
+                      />
+                    </ListItem>
+                  ))
+                )}
               </List>
             </CardContent>
           </Card>
