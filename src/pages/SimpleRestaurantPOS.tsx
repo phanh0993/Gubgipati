@@ -126,9 +126,18 @@ const SimpleRestaurantPOS: React.FC = () => {
     fetchData();
   }, [navigate]);
 
+  useEffect(() => {
+    console.log('📋 Service mode changed:', {
+      serviceMode,
+      serviceItems: serviceItems.length,
+      foodItems: foodItems.length
+    });
+  }, [serviceMode, serviceItems.length, foodItems.length]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Loading data...');
       const { tableAPI, buffetAPI, orderAPI } = await import('../services/api');
       const [tablesRes, foodItemsRes, ordersRes] = await Promise.all([
         tableAPI.getTables(),
@@ -571,12 +580,6 @@ const SimpleRestaurantPOS: React.FC = () => {
                     </Button>
                   </Box>
                   <Box sx={{ maxHeight: 400, overflow: 'auto' }}>
-                    {console.log('📋 Rendering items:', {
-                      mode: serviceMode ? 'service' : 'buffet',
-                      serviceItems: serviceItems.length,
-                      foodItems: foodItems.length,
-                      currentItems: (serviceMode ? serviceItems : foodItems).length
-                    })}
                     {(serviceMode ? serviceItems : foodItems).map((item) => (
                       <Card key={item.id} sx={{ mb: 1 }}>
                         <CardContent sx={{ p: 2 }}>
