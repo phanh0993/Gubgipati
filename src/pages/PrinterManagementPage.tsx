@@ -307,7 +307,7 @@ const PrinterManagementPage: React.FC = () => {
     switch (status) {
       case 'active': return <CheckCircleIcon />;
       case 'error': return <ErrorIcon />;
-      default: return null;
+      default: return undefined;
     }
   };
 
@@ -391,7 +391,7 @@ const PrinterManagementPage: React.FC = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      icon={getStatusIcon(printer.status)}
+                      {...(getStatusIcon(printer.status) && { icon: getStatusIcon(printer.status) })}
                       label={printer.status}
                       color={getStatusColor(printer.status) as any}
                       size="small"
