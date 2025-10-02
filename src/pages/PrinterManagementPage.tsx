@@ -174,7 +174,7 @@ const PrinterManagementPage: React.FC = () => {
   };
 
   const handleRemovePrinter = (printerId: string) => {
-    if (confirm('Bạn có chắc muốn xóa máy in này?')) {
+    if (window.confirm('Bạn có chắc muốn xóa máy in này?')) {
       setPrinters(prev => prev.filter(p => p.id !== printerId));
       
       // Xóa khỏi mappings nếu có
