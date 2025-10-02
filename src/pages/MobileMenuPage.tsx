@@ -104,8 +104,8 @@ const MobileMenuPage: React.FC = () => {
 
   const fetchServiceItems = async () => {
     try {
-      const { foodAPI } = await import('../services/api');
-      const response = await foodAPI.getItems();
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getFoodItems();
       const serviceItemsData = response.data.filter((item: any) => item.type === 'service');
       setServiceItems(serviceItemsData);
     } catch (error) {
