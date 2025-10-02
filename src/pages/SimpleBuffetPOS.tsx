@@ -88,6 +88,10 @@ const SimpleBuffetPOS: React.FC = () => {
   const [orderItems, setOrderItems] = useState<OrderItemWithQuantity[]>([]);
   const [currentOrder, setCurrentOrder] = useState<BuffetOrder | null>(null);
 
+  // Service mode states
+  const [serviceMode, setServiceMode] = useState(false);
+  const [serviceItems, setServiceItems] = useState<any[]>([]);
+
   // Fetch data from API
   const [packages, setPackages] = useState<BuffetPackage[]>([]);
 
@@ -95,6 +99,7 @@ const SimpleBuffetPOS: React.FC = () => {
   // Load packages on component mount
   useEffect(() => {
     fetchPackages();
+    fetchServiceItems();
     
     // Auto-refresh every 30 seconds để cập nhật thời gian
     const interval = setInterval(() => {
@@ -113,6 +118,17 @@ const SimpleBuffetPOS: React.FC = () => {
       setPackages(response.data);
     } catch (error) {
       console.error('Error fetching packages:', error);
+    }
+  };
+
+  const fetchServiceItems = async () => {
+    try {
+      const { buffetAPI } = await import('../services/api');
+      const response = await buffetAPI.getFoodItems();
+      const serviceItemsData = response.data.filter((item: any) => item.type === 'service');
+      setServiceItems(serviceItemsData);
+    } catch (error) {
+      console.error('Error fetching service items:', error);
     }
   };
 
@@ -584,11 +600,55 @@ const SimpleBuffetPOS: React.FC = () => {
         <Box sx={{ width: '25%', minWidth: '200px' }}>
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 1 }}>
-              <Typography variant="h6" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', mb: 2 }}>
-                Tùy chọn
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                  {serviceMode ? 'Dịch vụ' : 'Buffet'}
+                </Typography>
+                <Button
+                  variant={serviceMode ? 'outlined' : 'contained'}
+                  size="small"
+                  onClick={() => setServiceMode(!serviceMode)}
+                  sx={{ 
+                    minWidth: 100,
+                    fontWeight: 'bold',
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    boxShadow: serviceMode ? 'none' : 2,
+                    '&:hover': {
+                      boxShadow: 3
+                    }
+                  }}
+                >
+                  {serviceMode ? 'Buffet' : 'Dịch vụ'}
+                </Button>
+              </Box>
               <List sx={{ flex: 1, overflow: 'auto' }}>
-                {packages.map((pkg) => (
+                {serviceMode ? (
+                  serviceItems.map((item) => (
+                    <ListItem
+                      key={item.id}
+                      button
+                      sx={{ 
+                        border: 1, 
+                        borderColor: 'grey.300', 
+                        mb: 1, 
+                        borderRadius: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        p: 1
+                      }}
+                    >
+                      <Typography variant="body1" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        {item.name}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                        {item.price.toLocaleString('vi-VN')}₫
+                      </Typography>
+                    </ListItem>
+                  ))
+                ) : (
+                  packages.map((pkg) => (
                   <ListItem
                     key={pkg.id}
                     button
@@ -612,7 +672,8 @@ const SimpleBuffetPOS: React.FC = () => {
                       secondaryTypographyProps={{ textAlign: 'center' }}
                     />
                   </ListItem>
-                ))}
+                  ))
+                )}
               </List>
             </CardContent>
           </Card>
