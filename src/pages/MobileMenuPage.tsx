@@ -227,14 +227,24 @@ const MobileMenuPage: React.FC = () => {
           <Card sx={{ height: '100%' }}>
             <CardContent sx={{ p: 1, height: '100%' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="body2" sx={{ fontWeight: 'bold', fontSize: '0.9rem' }}>
                   {serviceMode ? 'Dịch vụ' : 'Buffet'}
                 </Typography>
                 <Button
                   variant={serviceMode ? 'outlined' : 'contained'}
                   size="small"
                   onClick={() => setServiceMode(!serviceMode)}
-                  sx={{ minWidth: 80, fontSize: '0.7rem' }}
+                  sx={{ 
+                    minWidth: 80, 
+                    fontSize: '0.7rem',
+                    fontWeight: 'bold',
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    boxShadow: serviceMode ? 'none' : 1,
+                    '&:hover': {
+                      boxShadow: 2
+                    }
+                  }}
                 >
                   {serviceMode ? 'Buffet' : 'Dịch vụ'}
                 </Button>
@@ -326,72 +336,68 @@ const MobileMenuPage: React.FC = () => {
                 <Box sx={{ 
                   height: 'calc(100% - 40px)', 
                   overflow: 'auto',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 1,
-                  rowGap: 1.5,
                   p: 0.5
                 }}>
                   {(serviceMode ? serviceItems : packageItems).map((item) => {
                     const isSelected = selectedItems[item.id] || false;
                     const currentNote = itemNotes[item.id] || '';
                     return (
-                      <Box key={item.id} sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-                        <Card
-                          onClick={() => serviceMode ? handleServiceItemSelect(item.id) : handleSelectItem(item.id)}
-                          sx={{
-                            cursor: 'pointer',
-                            border: 2,
-                            borderColor: isSelected ? 'primary.main' : 'grey.300',
-                            height: isSelected ? 'auto' : '90px',
-                            minHeight: '90px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            bgcolor: isSelected ? 'primary.light' : 'white',
-                            '&:hover': {
-                              borderColor: 'primary.main',
-                              boxShadow: 2
-                            }
-                          }}
-                        >
+                      <Card
+                        key={item.id}
+                        onClick={() => serviceMode ? handleServiceItemSelect(item.id) : handleSelectItem(item.id)}
+                        sx={{
+                          cursor: 'pointer',
+                          border: 2,
+                          borderColor: isSelected ? 'primary.main' : 'grey.300',
+                          mb: 1,
+                          bgcolor: isSelected ? 'primary.light' : 'white',
+                          '&:hover': {
+                            borderColor: 'primary.main',
+                            boxShadow: 2
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', p: 1.5 }}>
                           <Box
                             sx={{
-                              width: 35,
-                              height: 35,
+                              width: 40,
+                              height: 40,
                               bgcolor: isSelected ? 'primary.main' : 'primary.light',
                               borderRadius: 1,
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              mb: 0.5
+                              mr: 2
                             }}
                           >
                             <img
-                              src={`https://via.placeholder.com/35x35/1976d2/FFFFFF?text=${encodeURIComponent((serviceMode ? item.name : item.food_item.name).charAt(0))}`}
+                              src={`https://via.placeholder.com/40x40/1976d2/FFFFFF?text=${encodeURIComponent((serviceMode ? item.name : item.food_item.name).charAt(0))}`}
                               alt={serviceMode ? item.name : item.food_item.name}
-                              style={{ width: 35, height: 35, borderRadius: 4 }}
+                              style={{ width: 40, height: 40, borderRadius: 4 }}
                             />
                           </Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+                          <Box sx={{ flex: 1 }}>
                             <Typography 
-                              variant="caption" 
+                              variant="body2" 
                               sx={{ 
-                                fontSize: '0.65rem',
-                                textAlign: 'center',
                                 fontWeight: 'bold',
-                                px: 0.5,
-                                lineHeight: 1.2,
-                                display: '-webkit-box',
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden',
-                                color: isSelected ? 'primary.main' : 'text.primary'
+                                color: isSelected ? 'primary.main' : 'text.primary',
+                                mb: 0.5
                               }}
                             >
                               {serviceMode ? item.name : item.food_item.name}
                             </Typography>
+                            {serviceMode && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  color: 'primary.main',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                {item.price.toLocaleString('vi-VN')}₫
+                              </Typography>
+                            )}
                             {currentNote && (
                               <Chip
                                 label="Có ghi chú"
@@ -400,15 +406,16 @@ const MobileMenuPage: React.FC = () => {
                                   fontSize: '0.6rem',
                                   height: '16px',
                                   backgroundColor: 'success.light',
-                                  color: 'success.contrastText'
+                                  color: 'success.contrastText',
+                                  mt: 0.5
                                 }}
                               />
                             )}
                           </Box>
-                        </Card>
+                        </Box>
                         
                         {isSelected && (
-                          <Box sx={{ mt: 1, width: '100%' }}>
+                          <Box sx={{ px: 1.5, pb: 1.5 }}>
                             <TextField
                               size="small"
                               placeholder="Ghi chú cho món này..."
@@ -432,7 +439,7 @@ const MobileMenuPage: React.FC = () => {
                             />
                           </Box>
                         )}
-                      </Box>
+                      </Card>
                     );
                   })}
                 </Box>

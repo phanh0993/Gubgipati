@@ -536,7 +536,7 @@ const SimpleRestaurantPOS: React.FC = () => {
               <Card>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
                       <Restaurant sx={{ mr: 1, verticalAlign: 'middle' }} />
                       {serviceMode ? 'Dịch vụ' : 'Thực Đơn'}
                     </Typography>
@@ -544,7 +544,16 @@ const SimpleRestaurantPOS: React.FC = () => {
                       variant={serviceMode ? 'outlined' : 'contained'}
                       size="small"
                       onClick={() => setServiceMode(!serviceMode)}
-                      sx={{ minWidth: 100 }}
+                      sx={{ 
+                        minWidth: 100,
+                        fontWeight: 'bold',
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        boxShadow: serviceMode ? 'none' : 2,
+                        '&:hover': {
+                          boxShadow: 3
+                        }
+                      }}
                     >
                       {serviceMode ? 'Thực đơn' : 'Dịch vụ'}
                     </Button>
