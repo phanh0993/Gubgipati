@@ -37,6 +37,7 @@ import SimpleBuffetPOS from './pages/SimpleBuffetPOS';
 import MobileTablesPage from './pages/MobileTablesPage';
 import MobileMenuPage from './pages/MobileMenuPage';
 import MobileBillPage from './pages/MobileBillPage';
+import PrinterManagementPage from './pages/PrinterManagementPage';
 import MobileLoginPage from './pages/MobileLoginPage';
 import MobileInvoicesPage from './pages/MobileInvoicesPage';
 import MobileOrderDetailsPage from './pages/MobileOrderDetailsPage';
@@ -174,6 +175,7 @@ function App() {
                   <Route path="/inventory" element={<InventoryManagementPage />} />
                   <Route path="/food" element={<FoodManagementPage />} />
                   <Route path="/buffet-food" element={<BuffetFoodManagement />} />
+                  <Route path="/printers" element={<PrinterManagementPage />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

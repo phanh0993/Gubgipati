@@ -55,6 +55,7 @@ const menuItems = [
           { text: 'Quản Lý Kho', icon: <InventoryIcon />, path: '/inventory' },
           { text: 'Quản Lý Món Ăn', icon: <FoodIcon />, path: '/food' },
           { text: 'Quản Lý Món Buffet', icon: <BuffetIcon />, path: '/buffet-food' },
+          { text: 'Quản Lý Máy In', icon: <PrintIcon />, path: '/printers' },
   
   // Legacy SPA Management
   { text: 'Khách hàng', icon: <People />, path: '/customers' },

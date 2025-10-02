@@ -1388,6 +1388,8 @@ const server = http.createServer(async (req, res) => {
       await handleOrders(req, res);
     } else if (path.startsWith('/api/buffet-packages') || path.startsWith('/buffet-packages')) {
       await handleBuffetPackages(req, res);
+    } else if (path.startsWith('/api/printers') || path.startsWith('/printers')) {
+      await handlePrinters(req, res);
     } else if (path.startsWith('/api/buffet-package-items') || path.startsWith('/buffet-package-items')) {
       await handleBuffetPackageItems(req, res);
     } else if (path.startsWith('/api/customers') || path.startsWith('/customers')) {
@@ -1551,6 +1553,143 @@ async function handleBuffetPackageItems(req, res) {
     }
   } catch (error) {
     console.error('Buffet Package Items error:', error);
+    sendJSON(res, 500, { error: 'Internal server error' });
+  } finally {
+    client.release();
+  }
+}
+
+// Printers endpoint
+async function handlePrinters(req, res) {
+  const client = await pool.connect();
+  try {
+    const path = req.url;
+    
+    if (path.includes('/scan')) {
+      // Quét máy in từ Windows
+      if (req.method === 'POST') {
+        console.log('🔍 Scanning Windows printers...');
+        
+        const { exec } = require('child_process');
+        const { promisify } = require('util');
+        const execAsync = promisify(exec);
+        
+        try {
+          // Sử dụng PowerShell để lấy danh sách máy in
+          const { stdout } = await execAsync('powershell "Get-Printer | Select-Object Name, DriverName, PortName, PrinterStatus | ConvertTo-Json"');
+          
+          const printerList = JSON.parse(stdout);
+          
+          const printers = printerList.map((printer, index) => ({
+            id: `printer_${index}`,
+            name: printer.Name,
+            driver: printer.DriverName,
+            port: printer.PortName,
+            status: printer.PrinterStatus === 'Normal' ? 'ready' : 'error'
+          }));
+          
+          console.log(`✅ Found ${printers.length} Windows printers`);
+          sendJSON(res, 200, { printers });
+          
+        } catch (scanError) {
+          console.error('❌ Error scanning Windows printers:', scanError);
+          sendJSON(res, 500, { error: 'Failed to scan printers', details: scanError.message });
+        }
+      } else {
+        sendJSON(res, 405, { error: 'Method not allowed' });
+      }
+    } else if (path.includes('/test')) {
+      // Test in máy in
+      if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { printer_id, content } = body;
+        
+        try {
+          // Lấy thông tin máy in từ database
+          const printerResult = await client.query('SELECT * FROM printers WHERE id = $1', [printer_id]);
+          
+          if (printerResult.rows.length === 0) {
+            return sendJSON(res, 404, { error: 'Printer not found' });
+          }
+          
+          const printer = printerResult.rows[0];
+          
+          // In test
+          const { exec } = require('child_process');
+          const { promisify } = require('util');
+          const fs = require('fs');
+          const path = require('path');
+          
+          const execAsync = promisify(exec);
+          
+          // Tạo file tạm
+          const tempFile = path.join(__dirname, `test_print_${Date.now()}.txt`);
+          fs.writeFileSync(tempFile, content, 'utf8');
+          
+          // In file tạm
+          const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer.name}'"`;
+          
+          await execAsync(printCommand);
+          
+          // Xóa file tạm
+          fs.unlinkSync(tempFile);
+          
+          console.log(`✅ Test print successful to ${printer.name}`);
+          sendJSON(res, 200, { message: `Printed to ${printer.name}`, success: true });
+          
+        } catch (printError) {
+          console.error(`❌ Test print failed: ${printError.message}`);
+          sendJSON(res, 500, { error: `Print failed: ${printError.message}` });
+        }
+      } else {
+        sendJSON(res, 405, { error: 'Method not allowed' });
+      }
+    } else {
+      // CRUD operations cho printers
+      if (req.method === 'GET') {
+        const result = await client.query(`
+          SELECT * FROM printers 
+          ORDER BY created_at DESC
+        `);
+        sendJSON(res, 200, result.rows);
+      } else if (req.method === 'POST') {
+        const body = await parseBody(req);
+        const { name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes } = body;
+        
+        const result = await client.query(`
+          INSERT INTO printers (name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING *
+        `, [name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes]);
+        
+        sendJSON(res, 201, result.rows[0]);
+      } else if (req.method === 'PUT') {
+        const pathParts = req.url.split('/');
+        const id = pathParts[pathParts.length - 1];
+        const body = await parseBody(req);
+        const { name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes, status } = body;
+        
+        const result = await client.query(`
+          UPDATE printers 
+          SET name = $1, connection_type = $2, usb_port = $3, ip_address = $4, port_number = $5, 
+              driver_name = $6, location = $7, notes = $8, status = $9, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'UTC'
+          WHERE id = $10
+          RETURNING *
+        `, [name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes, status, id]);
+        
+        sendJSON(res, 200, result.rows[0]);
+      } else if (req.method === 'DELETE') {
+        const pathParts = req.url.split('/');
+        const id = pathParts[pathParts.length - 1];
+        
+        await client.query(`DELETE FROM printers WHERE id = $1`, [id]);
+        sendJSON(res, 200, { message: 'Printer deleted successfully' });
+      } else {
+        sendJSON(res, 405, { error: 'Method not allowed' });
+      }
+    }
+  } catch (error) {
+    console.error('Printers error:', error);
     sendJSON(res, 500, { error: 'Internal server error' });
   } finally {
     client.release();
