@@ -53,11 +53,26 @@ app.post('/printers/test', async (req, res) => {
   try {
     const { printer_name, content } = req.body;
     
+    console.log('Test print request:', { printer_name, content });
+    
     if (!printer_name || !content) {
       return sendJSON(res, 400, { error: 'Missing printer_name or content' });
     }
     
     console.log(`🖨️ Testing print to: ${printer_name}`);
+    
+    // Kiểm tra máy in có tồn tại không
+    try {
+      const checkCommand = `powershell "Get-Printer -Name '${printer_name}' -ErrorAction Stop"`;
+      await execAsync(checkCommand);
+      console.log(`✅ Printer ${printer_name} exists`);
+    } catch (checkError) {
+      console.error(`❌ Printer ${printer_name} not found:`, checkError.message);
+      return sendJSON(res, 404, { 
+        error: `Printer '${printer_name}' not found`,
+        details: checkError.message
+      });
+    }
     
     // Tạo file tạm
     const tempFile = path.join(__dirname, `test_print_${Date.now()}.txt`);
@@ -80,7 +95,8 @@ app.post('/printers/test', async (req, res) => {
   } catch (printError) {
     console.error(`❌ Test print failed: ${printError.message}`);
     sendJSON(res, 500, { 
-      error: `Print failed: ${printError.message}` 
+      error: `Print failed: ${printError.message}`,
+      details: printError.message
     });
   }
 });
