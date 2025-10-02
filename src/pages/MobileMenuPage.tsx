@@ -228,7 +228,7 @@ const MobileMenuPage: React.FC = () => {
             <CardContent sx={{ p: 1, height: '100%' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                  {serviceMode ? 'Dịch vụ' : 'Chọn Vé'}
+                  {serviceMode ? 'Dịch vụ' : 'Buffet'}
                 </Typography>
                 <Button
                   variant={serviceMode ? 'outlined' : 'contained'}
@@ -236,7 +236,7 @@ const MobileMenuPage: React.FC = () => {
                   onClick={() => setServiceMode(!serviceMode)}
                   sx={{ minWidth: 80, fontSize: '0.7rem' }}
                 >
-                  {serviceMode ? 'Vé' : 'Dịch vụ'}
+                  {serviceMode ? 'Buffet' : 'Dịch vụ'}
                 </Button>
               </Box>
               <List sx={{ p: 0 }}>
@@ -321,7 +321,7 @@ const MobileMenuPage: React.FC = () => {
                 </Typography>
               </Box>
               
-              {selectedPackage ? (
+              {(serviceMode || selectedPackage) ? (
                 <Box sx={{ 
                   height: 'calc(100% - 40px)', 
                   overflow: 'auto',
