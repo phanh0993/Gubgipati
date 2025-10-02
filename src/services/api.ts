@@ -1503,6 +1503,93 @@ export const buffetAPI = {
   },
 };
 
+// Printers API (Supabase)
+export const printersAPI = {
+  getAll: (): Promise<AxiosResponse<any[]>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('printers')
+          .select('*')
+          .order('id', { ascending: true })
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data || [], status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.get('/printers');
+  },
+  createManual: (payload: { name: string; ip?: string; port?: string; driver?: string }): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      const row: any = {
+        name: payload.name,
+        ip_address: payload.ip || null,
+        printer_type: 'manual',
+        location: null,
+        is_active: true,
+        driver: (payload as any).driver || null,
+        port: payload.port || null,
+      };
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('printers')
+          .insert(row)
+          .select('*')
+          .single()
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data, status: 201, statusText: 'Created', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.post('/printers', { name: payload.name, host: payload.ip, port: payload.port, protocol: 'manual', uri: payload.name });
+  },
+};
+
+// Food → Printer map
+export const foodPrinterMapAPI = {
+  getByPrinter: (printerName: string): Promise<AxiosResponse<number[]>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('food_printer_map')
+          .select('food_item_id')
+          .eq('printer_name', printerName)
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const ids = (res.data || []).map((r: any) => Number(r.food_item_id));
+            const axiosLike = { data: ids, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<number[]>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.get(`/food-printer-map?printer_name=${encodeURIComponent(printerName)}`);
+  },
+  saveForPrinter: (printerName: string, foodIds: number[]): Promise<AxiosResponse<{ count: number }>> => {
+    if (USE_SUPABASE) {
+      return new Promise(async (resolve, reject) => {
+        try {
+          await supabase.from('food_printer_map').delete().eq('printer_name', printerName);
+          if (foodIds.length === 0) {
+            const axiosLike = { data: { count: 0 }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<{ count: number }>;
+            resolve(axiosLike);
+            return;
+          }
+          const rows = foodIds.map((id) => ({ food_item_id: id, printer_name: printerName }));
+          const ins = await supabase.from('food_printer_map').insert(rows).select('id');
+          if (ins.error) { reject(ins.error); return; }
+          const axiosLike = { data: { count: (ins.data || []).length }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<{ count: number }>;
+          resolve(axiosLike);
+        } catch (e) { reject(e); }
+      });
+    }
+    return api.post('/food-printer-map/save', { printer_name: printerName, food_ids: foodIds });
+  },
+};
+
 // Table API
 export const tableAPI = {
   getTables: (): Promise<AxiosResponse<any[]>> => {

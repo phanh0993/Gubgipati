@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { printerService, DiscoveredPrinter } from '../services/printerService';
 import { supabase } from '../services/supabaseClient';
+import { printersAPI, buffetAPI, foodPrinterMapAPI } from '../services/api';
 
 type PrinterMapping = {
   id?: number;
@@ -29,6 +30,9 @@ const PrinterManagementPage: React.FC = () => {
     port: '',
     driver: ''
   });
+  const [pickerOpen, setPickerOpen] = useState<{ open: boolean; printer?: DiscoveredPrinter | null }>({ open: false, printer: null });
+  const [foodItems, setFoodItems] = useState<any[]>([]);
+  const [selectedFoodIds, setSelectedFoodIds] = useState<number[]>([]);
 
   const loadPrinters = async () => {
     setError('');
@@ -155,7 +159,14 @@ const PrinterManagementPage: React.FC = () => {
         status: 'manual'
       };
 
-      // Thêm vào danh sách máy in
+      // Lưu DB (printers)
+      try {
+        await printersAPI.createManual({ name: manualPrinter.name, ip: newPrinter.ip, port: newPrinter.port, driver: newPrinter.driver });
+      } catch (dbErr: any) {
+        console.warn('Could not persist manual printer, continue local only:', dbErr?.message || dbErr);
+      }
+
+      // Thêm vào danh sách máy in (UI)
       setPrinters(prev => [...prev, manualPrinter]);
       
       // Reset form
@@ -189,6 +200,35 @@ const PrinterManagementPage: React.FC = () => {
       });
       
       console.log('✅ Printer removed:', printerId);
+    }
+  };
+
+  const handleOpenPicker = async (printer: DiscoveredPrinter) => {
+    setPickerOpen({ open: true, printer });
+    try {
+      // Load món ăn
+      const res = await buffetAPI.getFoodItems();
+      setFoodItems(res.data || []);
+      // Load mapping hiện có
+      const mapped = await foodPrinterMapAPI.getByPrinter(printer.name);
+      setSelectedFoodIds(mapped.data || []);
+    } catch (e) {
+      console.warn('Load picker data failed:', e);
+    }
+  };
+
+  const toggleFoodPick = (id: number) => {
+    setSelectedFoodIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSavePicker = async () => {
+    if (!pickerOpen.printer) return;
+    try {
+      await foodPrinterMapAPI.saveForPrinter(pickerOpen.printer.name, selectedFoodIds);
+      alert('Đã lưu món in cho máy này');
+      setPickerOpen({ open: false, printer: null });
+    } catch (e: any) {
+      alert('Lỗi khi lưu: ' + (e?.message || e));
     }
   };
 
@@ -287,15 +327,32 @@ const PrinterManagementPage: React.FC = () => {
                   Driver: {p.driver || 'Unknown'} | Port: {p.port || 'Unknown'} | Status: {p.status || 'Unknown'}
                 </div>
               </div>
-              {p.status === 'manual' && (
+              <div className="flex items-center gap-2">
                 <button
-                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
-                  onClick={() => handleRemovePrinter(p.id)}
-                  title="Xóa máy in"
+                  className="px-2 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
+                  onClick={() => {
+                    const text = `\n=== TEST PRINT ===\nMáy: ${p.name}\nThời gian: ${new Date().toLocaleString('vi-VN')}\n==================\n`;
+                    printerService.printTextAsync(p.name, text, 'Test Print');
+                  }}
                 >
-                  ✕
+                  In test
                 </button>
-              )}
+                <button
+                  className="px-2 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-500"
+                  onClick={() => handleOpenPicker(p)}
+                >
+                  Chọn món
+                </button>
+                {p.status === 'manual' && (
+                  <button
+                    className="px-2 py-1 text-red-600 hover:bg-red-50 rounded"
+                    onClick={() => handleRemovePrinter(p.id)}
+                    title="Xóa máy in"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
             </div>
           ))}
           {printers.length === 0 && (
@@ -307,6 +364,41 @@ const PrinterManagementPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Modal chọn món cho máy in */}
+      {pickerOpen.open && pickerOpen.printer && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-2xl rounded-lg shadow-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Chọn món in cho: {pickerOpen.printer.name}</h3>
+              <button className="px-3 py-1 bg-gray-100 rounded" onClick={() => setPickerOpen({ open: false, printer: null })}>Đóng</button>
+            </div>
+            <div className="h-96 overflow-auto border rounded">
+              {foodItems.map((fi: any) => (
+                <div
+                  key={fi.id}
+                  className={`flex items-center justify-between px-3 py-2 border-b last:border-b-0 ${selectedFoodIds.includes(fi.id) ? 'bg-indigo-50' : ''}`}
+                >
+                  <div>
+                    <div className="font-medium">{fi.name}</div>
+                    <div className="text-sm text-gray-500">#{fi.id} • {fi.type || 'food'} • {Number(fi.price || 0).toLocaleString('vi-VN')}đ</div>
+                  </div>
+                  <button
+                    className={`px-3 py-1 rounded ${selectedFoodIds.includes(fi.id) ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}
+                    onClick={() => toggleFoodPick(Number(fi.id))}
+                  >
+                    {selectedFoodIds.includes(fi.id) ? 'Bỏ chọn' : 'Chọn'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-3">
+              <button className="px-4 py-2 bg-gray-200 rounded" onClick={() => setSelectedFoodIds([])}>Bỏ chọn hết</button>
+              <button className="px-4 py-2 bg-green-600 text-white rounded" onClick={handleSavePicker}>Lưu</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="font-medium mb-2">Gán máy in cho nhóm món</h2>
