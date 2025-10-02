@@ -1416,6 +1416,50 @@ export const buffetAPI = {
     return api.get(`/buffet-package-items?package_id=${packageId}`);
   },
   
+  // Add a food item to a buffet package
+  addPackageItem: (args: { package_id: number; food_item_id: number; is_unlimited: boolean; max_quantity?: number | null }): Promise<AxiosResponse<any>> => {
+    const { package_id, food_item_id, is_unlimited, max_quantity } = args;
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('buffet_package_items')
+          .insert({
+            package_id,
+            food_item_id,
+            is_unlimited,
+            max_quantity: typeof max_quantity === 'number' ? max_quantity : null
+          })
+          .select('*, food_item:food_items(*)')
+          .single()
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: res.data, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    // Fallback REST endpoint (if available on local server)
+    return api.post('/buffet-package-items', { package_id, food_item_id, is_unlimited, max_quantity: max_quantity ?? null });
+  },
+
+  // Remove a food item from a buffet package
+  removePackageItem: (id: number): Promise<AxiosResponse<any>> => {
+    if (USE_SUPABASE) {
+      return new Promise((resolve, reject) => {
+        supabase
+          .from('buffet_package_items')
+          .delete()
+          .eq('id', id)
+          .then((res: any) => {
+            if (res.error) { reject(res.error); return; }
+            const axiosLike = { data: { success: true }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
+            resolve(axiosLike);
+          }, reject);
+      });
+    }
+    return api.delete(`/buffet-package-items/${id}`);
+  },
+  
   getFoodItems: (): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {
       return new Promise((resolve, reject) => {

@@ -159,12 +159,31 @@ const BuffetFoodManagement: React.FC = () => {
 
   const handleSaveItem = async () => {
     if (!selectedPackage || newItem.food_item_id === 0) return;
-    
-    alert('Thêm món vào gói tạm vô hiệu trên bản Vercel (mock data).');
+    try {
+      const payload = {
+        package_id: selectedPackage.id,
+        food_item_id: Number(newItem.food_item_id),
+        is_unlimited: Boolean(newItem.is_unlimited),
+        max_quantity: newItem.max_quantity ? Number(newItem.max_quantity) : null
+      };
+      const res = await buffetAPI.addPackageItem(payload as any);
+      // refresh list
+      await fetchPackageItems(selectedPackage.id);
+      setShowAddItemDialog(false);
+    } catch (error) {
+      console.error('Error adding item to package:', error);
+      alert('Lỗi khi thêm món vào gói');
+    }
   };
 
-  const handleRemoveItem = async (_itemId: number) => {
-    alert('Xóa món khỏi gói tạm vô hiệu trên bản Vercel (mock data).');
+  const handleRemoveItem = async (itemId: number) => {
+    try {
+      await buffetAPI.removePackageItem(itemId);
+      if (selectedPackage) await fetchPackageItems(selectedPackage.id);
+    } catch (error) {
+      console.error('Error removing item:', error);
+      alert('Lỗi khi xóa món khỏi gói');
+    }
   };
 
   const handleSavePackageItems = async () => {
