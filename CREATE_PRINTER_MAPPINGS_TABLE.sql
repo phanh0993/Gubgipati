@@ -26,18 +26,19 @@ CREATE INDEX IF NOT EXISTS idx_printer_mappings_group_key ON public.printer_mapp
 -- Thêm RLS (Row Level Security) nếu cần
 ALTER TABLE public.printer_mappings ENABLE ROW LEVEL SECURITY;
 
--- Tạo policy cho RLS (cho phép tất cả operations)
-CREATE POLICY IF NOT EXISTS "Enable all operations for printer_mappings" ON public.printer_mappings
-    FOR ALL USING (true);
+-- Tạo policy cho RLS (cho phép tất cả operations) - không dùng IF NOT EXISTS
+DROP POLICY IF EXISTS "Enable all operations for printer_mappings" ON public.printer_mappings;
+CREATE POLICY "Enable all operations for printer_mappings"
+  ON public.printer_mappings
+  FOR ALL
+  TO anon, authenticated
+  USING (true)
+  WITH CHECK (true);
 
--- Insert dữ liệu mẫu (optional)
-INSERT INTO public.printer_mappings (group_key, printer_uri, printer_name) VALUES
-    ('bar', 'HP LaserJet Pro', 'HP LaserJet Pro'),
-    ('kitchen_grill', 'Canon PIXMA', 'Canon PIXMA'),
-    ('kitchen_fry', 'Epson L3150', 'Epson L3150'),
-    ('kitchen_other', 'Brother MFC', 'Brother MFC'),
-    ('invoice_main', 'HP LaserJet Pro', 'HP LaserJet Pro')
-ON CONFLICT (group_key) DO NOTHING;
+-- Cấp quyền REST cho PostgREST/Supabase
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.printer_mappings TO anon, authenticated;
+
+-- Bỏ seed để người dùng tự thêm thủ công
 
 -- Kiểm tra kết quả
 SELECT 
