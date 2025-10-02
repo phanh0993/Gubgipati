@@ -327,7 +327,7 @@ const SimpleRestaurantPOS: React.FC = () => {
         const newOrder = await response.json();
         
         // Gửi order đến máy in
-        await printOrder(newOrder);
+        // Print disabled
         
         // Cập nhật danh sách orders
         await fetchData();
@@ -366,26 +366,6 @@ const SimpleRestaurantPOS: React.FC = () => {
     }
   };
 
-  const printOrder = async (order: any) => {
-    try {
-      await fetch('http://localhost:8000/api/print-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          order_id: order.id,
-          printer_id: 1, // Default printer
-          order_number: order.order_number,
-          table_name: order.table_name,
-          items: order.items || [],
-          order_count: order.order_count || 1
-        }),
-      });
-    } catch (error) {
-      console.error('Print error:', error);
-    }
-  };
 
   const handlePayment = async () => {
     if (!selectedOrder) return;

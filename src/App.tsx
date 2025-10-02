@@ -31,7 +31,6 @@ import SimpleTableManagement from './pages/SimpleTableManagement';
 import InventoryManagementPage from './pages/InventoryManagementPage';
 import FoodManagementPage from './pages/FoodManagementPage';
 import POSLoginPage from './pages/POSLoginPage';
-import PrinterManagementPage from './pages/PrinterManagementPage';
 import BuffetTableSelection from './pages/BuffetTableSelection';
 import BuffetFoodManagement from './pages/BuffetFoodManagement';
 import SimpleBuffetPOS from './pages/SimpleBuffetPOS';
@@ -175,7 +174,6 @@ function App() {
                   <Route path="/inventory" element={<InventoryManagementPage />} />
                   <Route path="/food" element={<FoodManagementPage />} />
                   <Route path="/buffet-food" element={<BuffetFoodManagement />} />
-                  <Route path="/printers" element={<PrinterManagementPage />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>

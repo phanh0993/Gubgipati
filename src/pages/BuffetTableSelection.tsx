@@ -34,7 +34,6 @@ import {
   Refresh
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { printerService } from '../services/printerService';
 import { supabase } from '../services/supabaseClient';
 import { getTimeElapsed, formatVietnamDateTime } from '../utils/timeUtils';
 
@@ -375,7 +374,7 @@ const BuffetTableSelection: React.FC = () => {
     try {
       // Tắt hoàn toàn logic in hóa đơn để tránh lag
       console.log('🖨️ Invoice printing disabled to avoid lag');
-      alert('Chức năng in hóa đơn đã được tắt để tránh lag. Sử dụng printer-agent trực tiếp nếu cần.');
+      alert('Chức năng in hóa đơn đã được tắt.');
     } catch (error) {
       console.error('Error printing bill:', error);
       alert('Lỗi khi in hóa đơn');
