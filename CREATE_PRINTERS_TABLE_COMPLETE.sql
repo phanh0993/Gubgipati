@@ -16,6 +16,30 @@ CREATE TABLE IF NOT EXISTS public.printers (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Thêm cột driver nếu chưa có
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'printers' 
+        AND column_name = 'driver'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.printers ADD COLUMN driver TEXT;
+    END IF;
+    
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'printers' 
+        AND column_name = 'port'
+        AND table_schema = 'public'
+    ) THEN
+        ALTER TABLE public.printers ADD COLUMN port TEXT;
+    END IF;
+END $$;
+
 -- Thêm RLS
 ALTER TABLE public.printers ENABLE ROW LEVEL SECURITY;
 
