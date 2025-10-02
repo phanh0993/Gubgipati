@@ -258,8 +258,7 @@ const SimpleBuffetPOS: React.FC = () => {
 
     setSelectedPackage(pkg);
     setPackageQuantity(currentOrder ? 0 : 1);
-    // Auto switch to Service mode after selecting a package as requested
-    setServiceMode(true);
+    // Keep current mode; do not auto-switch to service mode
     
     console.log(`🎫 [PC SELECT PACKAGE] After set:`, {
       selectedPackage: pkg,
@@ -818,7 +817,7 @@ const SimpleBuffetPOS: React.FC = () => {
                           secondary={
                             <Box component="span">
                               <Typography variant="caption" component="span">
-                                0₫ × {item.quantity} = 0₫
+                                {item.food_item.price.toLocaleString('vi-VN')}₫ × {item.quantity} = {(item.food_item.price * item.quantity).toLocaleString('vi-VN')}₫
                               </Typography>
                             </Box>
                           }
