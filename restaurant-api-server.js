@@ -1672,7 +1672,7 @@ async function handlePrinters(req, res) {
         const result = await client.query(`
           UPDATE printers 
           SET name = $1, connection_type = $2, usb_port = $3, ip_address = $4, port_number = $5, 
-              driver_name = $6, location = $7, notes = $8, status = $9, updated_at = NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'UTC'
+              driver_name = $6, location = $7, notes = $8, status = $9, updated_at = NOW()
           WHERE id = $10
           RETURNING *
         `, [name, connection_type, usb_port, ip_address, port_number, driver_name, location, notes, status, id]);

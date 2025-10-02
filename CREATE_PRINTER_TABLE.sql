@@ -14,8 +14,8 @@ CREATE TABLE IF NOT EXISTS public.printers (
     status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'error')),
     location VARCHAR(255) NULL, -- Vị trí máy in (bếp, quầy bar, etc.)
     notes TEXT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'UTC',
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW() AT TIME ZONE 'Asia/Ho_Chi_Minh' AT TIME ZONE 'UTC'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Tạo index cho performance
