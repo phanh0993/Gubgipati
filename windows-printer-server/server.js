@@ -74,9 +74,12 @@ app.post('/printers/test', async (req, res) => {
       });
     }
     
-    // Tạo file tạm
-    const tempFile = path.join(__dirname, `test_print_${Date.now()}.txt`);
+    // Tạo file tạm trong thư mục temp của Windows
+    const tempDir = require('os').tmpdir();
+    const tempFile = path.join(tempDir, `test_print_${Date.now()}.txt`);
     fs.writeFileSync(tempFile, content, 'utf8');
+    
+    console.log(`📄 Created temp file: ${tempFile}`);
     
     // In file tạm
     const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
@@ -85,6 +88,7 @@ app.post('/printers/test', async (req, res) => {
     
     // Xóa file tạm
     fs.unlinkSync(tempFile);
+    console.log(`🗑️ Deleted temp file: ${tempFile}`);
     
     console.log(`✅ Test print successful to ${printer_name}`);
     sendJSON(res, 200, { 
@@ -134,7 +138,8 @@ app.post('/print/kitchen', async (req, res) => {
     content += `\n\n\n`; // Tách trang cho máy in nhiệt
     
     // Tạo file tạm và in
-    const tempFile = path.join(__dirname, `kitchen_order_${Date.now()}.txt`);
+    const tempDir = require('os').tmpdir();
+    const tempFile = path.join(tempDir, `kitchen_order_${Date.now()}.txt`);
     fs.writeFileSync(tempFile, content, 'utf8');
     
     const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
@@ -195,7 +200,8 @@ app.post('/print/invoice', async (req, res) => {
     content += `\n\n\n`;
     
     // Tạo file tạm và in
-    const tempFile = path.join(__dirname, `invoice_${Date.now()}.txt`);
+    const tempDir = require('os').tmpdir();
+    const tempFile = path.join(tempDir, `invoice_${Date.now()}.txt`);
     fs.writeFileSync(tempFile, content, 'utf8');
     
     const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
