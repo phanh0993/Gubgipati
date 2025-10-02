@@ -91,9 +91,9 @@ export const printerService = {
           throw new Error(`Print failed: ${res.status} ${errorText}`);
         }
         console.log('✅ Print command sent via agent');
-      } catch (agentError) {
+      } catch (agentError: any) {
         console.error('❌ Both restaurant API and agent failed:', agentError);
-        throw new Error(`Print failed: No printing method available. ${agentError.message}`);
+        throw new Error(`Print failed: No printing method available. ${agentError?.message || agentError}`);
       }
     } catch (error) {
       console.error('❌ Print error:', error);
