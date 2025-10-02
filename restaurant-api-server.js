@@ -1217,7 +1217,7 @@ async function sendPrintJobAsync(printerName, content, title) {
       console.log(`⚠️ Agent not available, trying direct Windows print...`);
     }
     
-    // Fallback: In trực tiếp tới Windows
+    // Fallback: In trực tiếp tới Windows hoặc network printer
     const { exec } = require('child_process');
     const { promisify } = require('util');
     const fs = require('fs');
@@ -1229,15 +1229,23 @@ async function sendPrintJobAsync(printerName, content, title) {
     const tempFile = path.join(__dirname, `temp_print_${Date.now()}.txt`);
     fs.writeFileSync(tempFile, content, 'utf8');
     
-    // In file tạm
-    const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printerName}'"`;
+    let printCommand;
+    
+    // Kiểm tra xem có phải network printer không (có IP:Port)
+    if (printerName.includes(':')) {
+      // Network printer - dùng PowerShell với IP:Port
+      printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printerName}'"`;
+    } else {
+      // Local printer
+      printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printerName}'"`;
+    }
     
     await execAsync(printCommand);
     
     // Xóa file tạm
     fs.unlinkSync(tempFile);
     
-    console.log(`✅ Print job sent directly to Windows printer: ${printerName}`);
+    console.log(`✅ Print job sent directly to printer: ${printerName}`);
     
   } catch (error) {
     console.error(`❌ Print job failed for ${printerName}:`, error.message);
