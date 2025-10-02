@@ -137,7 +137,26 @@ const PrinterManagementPage: React.FC = () => {
       setLoading(true);
       setOpenScanDialog(true);
       
-      // Gọi API để quét máy in từ Windows
+      // Thử kết nối với Windows Printer Server trước
+      const windowsServerUrl = 'http://localhost:9977';
+      
+      try {
+        const response = await fetch(`${windowsServerUrl}/printers/scan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setScannedPrinters(data.printers || []);
+          showSnackbar(`Tìm thấy ${data.printers?.length || 0} máy in từ Windows server`, 'success');
+          return;
+        }
+      } catch (windowsError) {
+        console.log('Windows Printer Server not available, trying Vercel API');
+      }
+
+      // Fallback: Gọi API Vercel
       const response = await fetch('/api/printers/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
@@ -146,7 +165,7 @@ const PrinterManagementPage: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         setScannedPrinters(data.printers || []);
-        showSnackbar(`Tìm thấy ${data.printers?.length || 0} máy in`, 'success');
+        showSnackbar(`Demo mode: ${data.printers?.length || 0} máy in mẫu`, 'success');
       } else {
         throw new Error('Failed to scan printers');
       }
@@ -240,6 +259,33 @@ const PrinterManagementPage: React.FC = () => {
     try {
       setLoading(true);
       
+      // Thử kết nối với Windows Printer Server trước
+      const windowsServerUrl = 'http://localhost:9977';
+      console.log('Trying to connect to Windows server:', windowsServerUrl);
+      
+      try {
+        const response = await fetch(`${windowsServerUrl}/printers/test`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printer_name: printer.name,
+            content: 'TEST IN - Máy in hoạt động bình thường\nThời gian: ' + new Date().toLocaleString('vi-VN')
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Windows server response:', data);
+          showSnackbar(`Đã in test thành công đến ${printer.name}`, 'success');
+          return;
+        } else {
+          console.log('Windows server response not ok:', response.status);
+        }
+      } catch (windowsError) {
+        console.log('Windows Printer Server not available, trying Vercel API', windowsError);
+      }
+
+      // Fallback: Gọi API Vercel
       const response = await fetch('/api/printers/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -250,7 +296,7 @@ const PrinterManagementPage: React.FC = () => {
       });
 
       if (response.ok) {
-        showSnackbar(`Đã gửi lệnh in test đến ${printer.name}`, 'success');
+        showSnackbar(`Demo mode: Test in ${printer.name}`, 'success');
       } else {
         throw new Error('Test print failed');
       }
