@@ -132,6 +132,31 @@ const SimpleBuffetPOS: React.FC = () => {
     }
   };
 
+  // Add a service item (type='service') to current local order list
+  const handleAddServiceItem = (serviceItem: any) => {
+    const existing = orderItems.find(i => i.food_item_id === serviceItem.id);
+    if (existing) {
+      setOrderItems(prev => prev.map(i => i.food_item_id === serviceItem.id ? { ...i, quantity: (i.quantity || 1) + 1 } : i));
+    } else {
+      const converted: OrderItemWithQuantity = {
+        // Fields required by OrderItemWithQuantity (inherit BuffetPackageItem shape)
+        id: 0 as any, // not used for local list
+        package_id: selectedPackage ? selectedPackage.id : 0,
+        food_item_id: serviceItem.id,
+        is_unlimited: false,
+        quantity: 1,
+        food_item: {
+          id: serviceItem.id,
+          name: serviceItem.name,
+          price: serviceItem.price,
+          description: serviceItem.description || '',
+          image_url: serviceItem.image_url || ''
+        }
+      } as any;
+      setOrderItems(prev => [...prev, converted]);
+    }
+  };
+
   useEffect(() => {
     const loadTableData = async () => {
       if (selectedTable) {
@@ -233,6 +258,8 @@ const SimpleBuffetPOS: React.FC = () => {
 
     setSelectedPackage(pkg);
     setPackageQuantity(currentOrder ? 0 : 1);
+    // Auto switch to Service mode after selecting a package as requested
+    setServiceMode(true);
     
     console.log(`🎫 [PC SELECT PACKAGE] After set:`, {
       selectedPackage: pkg,
@@ -628,6 +655,7 @@ const SimpleBuffetPOS: React.FC = () => {
                     <ListItem
                       key={item.id}
                       button
+                      onClick={() => handleAddServiceItem(item)}
                       sx={{ 
                         border: 1, 
                         borderColor: 'grey.300', 
