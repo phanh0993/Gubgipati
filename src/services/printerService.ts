@@ -14,14 +14,15 @@ const AGENT_BASE = ((): string => {
   
   // Fallback: tự động detect
   const host = (typeof window !== 'undefined' && window.location) ? window.location.hostname : 'localhost';
-  // Luôn dùng HTTP cho printer agent (tránh mixed-content)
-  return `http://${host}:9977`;
+  const protocol = (typeof window !== 'undefined' && window.location) ? window.location.protocol : 'http:';
+  // Dùng cùng protocol với web app để tránh mixed-content
+  return `${protocol}//${host}:9977`;
 })();
 
 export const printerService = {
   discover: async (): Promise<DiscoveredPrinter[]> => {
     try {
-      console.log('🔍 Discovering printers from restaurant API...');
+      console.log('🔍 Discovering printers...');
       
       // Thử dùng restaurant API trước (quét Windows trực tiếp)
       try {
@@ -37,11 +38,20 @@ export const printerService = {
       
       // Fallback: thử dùng agent
       console.log('🔍 Trying printer agent:', AGENT_BASE);
-      const res = await fetch(`${AGENT_BASE}/printers`);
-      if (!res.ok) throw new Error(`Discover printers failed: ${res.status}`);
-      const json = await res.json();
-      console.log('✅ Found printers from agent:', json.printers);
-      return json.printers || [];
+      try {
+        const res = await fetch(`${AGENT_BASE}/printers`);
+        if (res.ok) {
+          const json = await res.json();
+          console.log('✅ Found printers from agent:', json.printers);
+          return json.printers || [];
+        }
+      } catch (agentError) {
+        console.log('⚠️ Agent not available:', agentError);
+      }
+      
+      // Fallback cuối cùng: trả về mảng rỗng
+      console.log('⚠️ No printer discovery method available');
+      return [];
     } catch (error) {
       console.error('❌ Printer discovery error:', error);
       // Trả về mảng rỗng thay vì throw error

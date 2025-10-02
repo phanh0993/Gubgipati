@@ -36,19 +36,41 @@ const PrinterManagementPage: React.FC = () => {
   const loadMappings = async () => {
     try {
       console.log('🖨️ Loading printer mappings from database...');
+      
+      // Kiểm tra bảng có tồn tại không
       const { data, error } = await supabase
         .from('printer_mappings')
-        .select('*');
+        .select('*')
+        .limit(1);
       
       if (error) {
         console.error('❌ Error loading mappings:', error);
+        console.log('💡 Creating printer_mappings table...');
+        
+        // Tạo bảng nếu chưa tồn tại
+        const { error: createError } = await supabase.rpc('create_printer_mappings_table');
+        if (createError) {
+          console.log('⚠️ Cannot create table automatically, please run CREATE_PRINTER_MAPPINGS_TABLE.sql');
+        }
+        
+        setMappings({});
+        return;
+      }
+      
+      // Load tất cả mappings
+      const { data: allData, error: loadError } = await supabase
+        .from('printer_mappings')
+        .select('*');
+      
+      if (loadError) {
+        console.error('❌ Error loading all mappings:', loadError);
         setMappings({});
         return;
       }
       
       const mappingDict: Record<string, PrinterMapping | null> = {};
       GROUPS.forEach(group => {
-        const mapping = data?.find(m => m.group_key === group.key);
+        const mapping = allData?.find(m => m.group_key === group.key);
         mappingDict[group.key] = mapping || null;
       });
       
