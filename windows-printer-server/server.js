@@ -85,7 +85,7 @@ app.post('/printers/test', async (req, res) => {
     console.log(`📄 Created temp file: ${tempFile}`);
     
     // In file tạm với settings tối ưu cho POS-80C
-    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 32 | Out-Printer -Name '${printer_name}'"`;
     
     await execAsync(printCommand);
     
@@ -179,32 +179,41 @@ Mat hang          D.vi SL
       console.log('📄 Written with ASCII encoding');
     }
     
-    // Thử nhiều cách in khác nhau
+    // Thử nhiều cách in khác nhau để tìm cách tốt nhất cho POS-80C
     try {
-      // Cách 1: PowerShell với raw content
-      console.log('🖨️ Trying PowerShell method...');
-      const printCommand = `powershell "Get-Content '${tempFile}' -Raw -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+      // Cách 1: PowerShell với UTF-8 BOM và width settings
+      console.log('🖨️ Trying PowerShell method 1 (UTF-8, Width 32)...');
+      const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 32 | Out-Printer -Name '${printer_name}'"`;
       await execAsync(printCommand);
-      console.log('✅ PowerShell method successful');
+      console.log('✅ PowerShell method 1 successful');
     } catch (error) {
-      console.log('❌ PowerShell method failed:', error.message);
+      console.log('❌ PowerShell method 1 failed:', error.message);
       try {
-        // Cách 2: Copy file trực tiếp đến printer
-        console.log('🖨️ Trying copy method...');
-        const copyCommand = `copy "${tempFile}" "\\\\localhost\\${printer_name}"`;
-        await execAsync(copyCommand);
-        console.log('✅ Copy method successful');
-      } catch (copyError) {
-        console.log('❌ Copy method failed:', copyError.message);
+        // Cách 2: PowerShell với raw content
+        console.log('🖨️ Trying PowerShell method 2 (Raw)...');
+        const printCommand2 = `powershell "Get-Content '${tempFile}' -Raw -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+        await execAsync(printCommand2);
+        console.log('✅ PowerShell method 2 successful');
+      } catch (error2) {
+        console.log('❌ PowerShell method 2 failed:', error2.message);
         try {
-          // Cách 3: Sử dụng notepad để in
-          console.log('🖨️ Trying notepad method...');
-          const notepadCommand = `notepad /p "${tempFile}"`;
-          await execAsync(notepadCommand);
-          console.log('✅ Notepad method successful');
-        } catch (notepadError) {
-          console.log('❌ All methods failed:', notepadError.message);
-          throw notepadError;
+          // Cách 3: Copy file trực tiếp đến printer
+          console.log('🖨️ Trying copy method...');
+          const copyCommand = `copy "${tempFile}" "\\\\localhost\\${printer_name}"`;
+          await execAsync(copyCommand);
+          console.log('✅ Copy method successful');
+        } catch (copyError) {
+          console.log('❌ Copy method failed:', copyError.message);
+          try {
+            // Cách 4: Sử dụng notepad để in
+            console.log('🖨️ Trying notepad method...');
+            const notepadCommand = `notepad /p "${tempFile}"`;
+            await execAsync(notepadCommand);
+            console.log('✅ Notepad method successful');
+          } catch (notepadError) {
+            console.log('❌ All methods failed:', notepadError.message);
+            throw notepadError;
+          }
         }
       }
     }
@@ -272,7 +281,7 @@ app.post('/print/invoice', async (req, res) => {
     fs.writeFileSync(tempFile, BOM + content, 'utf8');
     
     // Sử dụng PowerShell với settings tối ưu cho POS-80C
-    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 32 | Out-Printer -Name '${printer_name}'"`;
     await execAsync(printCommand);
     
     // Xóa file tạm
