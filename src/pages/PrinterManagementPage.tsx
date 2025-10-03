@@ -36,7 +36,11 @@ import {
   Refresh as RefreshIcon,
   Settings as SettingsIcon,
   CheckCircle as CheckCircleIcon,
-  Error as ErrorIcon
+  Error as ErrorIcon,
+  Edit as EditIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { supabase } from '../services/supabaseClient';
 
@@ -53,6 +57,30 @@ interface Printer {
   notes?: string;
   created_at: string;
   updated_at: string;
+}
+
+interface FoodItem {
+  id: number;
+  name: string;
+  price: number;
+  type: 'buffet' | 'service';
+  category?: string;
+}
+
+interface PrinterMapping {
+  id: number;
+  printer_id: number;
+  food_item_id: number;
+  food_item?: FoodItem;
+}
+
+interface PrintTemplate {
+  id: number;
+  printer_id: number;
+  template_type: 'bill' | 'kitchen' | 'bar';
+  template_name: string;
+  template_content: string;
+  is_active: boolean;
 }
 
 interface TabPanelProps {
@@ -83,12 +111,23 @@ function TabPanel(props: TabPanelProps) {
 
 const PrinterManagementPage: React.FC = () => {
   const [printers, setPrinters] = useState<Printer[]>([]);
+  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [printerMappings, setPrinterMappings] = useState<PrinterMapping[]>([]);
+  const [printTemplates, setPrintTemplates] = useState<PrintTemplate[]>([]);
   const [loading, setLoading] = useState(false);
   const [tabValue, setTabValue] = useState(0);
   const [openAddDialog, setOpenAddDialog] = useState(false);
   const [openScanDialog, setOpenScanDialog] = useState(false);
   const [scannedPrinters, setScannedPrinters] = useState<any[]>([]);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
+  
+  // States for management tab
+  const [selectedPrinter, setSelectedPrinter] = useState<Printer | null>(null);
+  const [selectedFoodItems, setSelectedFoodItems] = useState<number[]>([]);
+  
+  // States for template tab
+  const [editingTemplate, setEditingTemplate] = useState<PrintTemplate | null>(null);
+  const [templateContent, setTemplateContent] = useState('');
 
   // Form data for adding printer
   const [formData, setFormData] = useState({
@@ -104,6 +143,9 @@ const PrinterManagementPage: React.FC = () => {
 
   useEffect(() => {
     loadPrinters();
+    loadFoodItems();
+    loadPrinterMappings();
+    loadPrintTemplates();
   }, []);
 
   const loadPrinters = async () => {
@@ -121,6 +163,53 @@ const PrinterManagementPage: React.FC = () => {
       showSnackbar('Lỗi khi tải danh sách máy in', 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadFoodItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('food_items')
+        .select('id, name, price, type, category')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setFoodItems(data || []);
+    } catch (error) {
+      console.error('Error loading food items:', error);
+      showSnackbar('Lỗi khi tải danh sách món ăn', 'error');
+    }
+  };
+
+  const loadPrinterMappings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('map_printer')
+        .select(`
+          *,
+          food_item:food_items(id, name, price, type)
+        `);
+
+      if (error) throw error;
+      setPrinterMappings(data || []);
+    } catch (error) {
+      console.error('Error loading printer mappings:', error);
+      showSnackbar('Lỗi khi tải mapping máy in', 'error');
+    }
+  };
+
+  const loadPrintTemplates = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('print_templates')
+        .select('*')
+        .order('printer_id', { ascending: true });
+
+      if (error) throw error;
+      setPrintTemplates(data || []);
+    } catch (error) {
+      console.error('Error loading print templates:', error);
+      showSnackbar('Lỗi khi tải mẫu in', 'error');
     }
   };
 
@@ -357,6 +446,184 @@ const PrinterManagementPage: React.FC = () => {
     }
   };
 
+  // Management tab functions
+  const handleSelectPrinter = (printer: Printer) => {
+    setSelectedPrinter(printer);
+    
+    // Load existing mappings for this printer
+    const existingMappings = printerMappings
+      .filter(mapping => mapping.printer_id === printer.id)
+      .map(mapping => mapping.food_item_id);
+    
+    setSelectedFoodItems(existingMappings);
+  };
+
+  const handleToggleFoodItem = (foodItemId: number) => {
+    setSelectedFoodItems(prev => 
+      prev.includes(foodItemId)
+        ? prev.filter(id => id !== foodItemId)
+        : [...prev, foodItemId]
+    );
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedPrinter(null);
+    setSelectedFoodItems([]);
+  };
+
+  const handleSavePrinterMapping = async () => {
+    if (!selectedPrinter) return;
+
+    try {
+      setLoading(true);
+
+      // Delete existing mappings for this printer
+      await supabase
+        .from('map_printer')
+        .delete()
+        .eq('printer_id', selectedPrinter.id);
+
+      // Insert new mappings
+      if (selectedFoodItems.length > 0) {
+        const mappings = selectedFoodItems.map(foodItemId => ({
+          printer_id: selectedPrinter.id,
+          food_item_id: foodItemId
+        }));
+
+        const { error } = await supabase
+          .from('map_printer')
+          .insert(mappings);
+
+        if (error) throw error;
+      }
+
+      // Reload mappings
+      await loadPrinterMappings();
+      
+      showSnackbar(`Đã lưu cấu hình cho máy in ${selectedPrinter.name}`, 'success');
+      handleCancelSelection();
+    } catch (error) {
+      console.error('Error saving printer mapping:', error);
+      showSnackbar('Lỗi khi lưu cấu hình', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Template tab functions
+  const handleEditTemplate = (printer: Printer) => {
+    const existingTemplate = printTemplates.find(
+      template => template.printer_id === printer.id && template.template_type === 'kitchen'
+    );
+
+    if (existingTemplate) {
+      setEditingTemplate(existingTemplate);
+      setTemplateContent(existingTemplate.template_content);
+    } else {
+      // Create new template
+      const newTemplate: PrintTemplate = {
+        id: 0,
+        printer_id: printer.id,
+        template_type: 'kitchen',
+        template_name: `Mẫu in ${printer.name}`,
+        template_content: getDefaultTemplate(printer.location || 'kitchen'),
+        is_active: true
+      };
+      setEditingTemplate(newTemplate);
+      setTemplateContent(newTemplate.template_content);
+    }
+  };
+
+  const getDefaultTemplate = (location: string) => {
+    if (location === 'POS') {
+      return `GUBGIPATI
+4-6 Đường số 4, Khu Cán Bộ Giảng Viên
+Cần Thơ, Phường Hưng Lợi, Quận Ninh Kiều
+SĐT: 0969709033
+
+HÓA ĐƠN TẠM TÍNH
+--------------------------------
+Tại bàn: {{table_name}}
+Giờ vào: {{checkin_time}}
+Giờ in: {{print_time}}
+Khách hàng: {{customer_name}}
+
+--------------------------------
+{{items_list}}
+
+--------------------------------
+TỔNG TẠM TÍNH: {{total_amount}}đ
+--------------------------------
+Cảm ơn quý khách!
+
+Wifi: Gubgipati
+Pass: chucngonmieng`;
+    } else {
+      return `Số thẻ: {{card_number}}
+{{print_time}} {{printer_location}}
+
+(Bàn) {{table_info}}
+Nhân viên: {{staff_name}}
+* G/chú: {{notes}}
+
+--------------------------------
+Mặt hàng          Đ.vị SL
+--------------------------------
+{{items_list}}
+
+--------------------------------`;
+    }
+  };
+
+  const handleCancelTemplateEdit = () => {
+    setEditingTemplate(null);
+    setTemplateContent('');
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!editingTemplate) return;
+
+    try {
+      setLoading(true);
+
+      const templateData = {
+        printer_id: editingTemplate.printer_id,
+        template_type: editingTemplate.template_type,
+        template_name: editingTemplate.template_name,
+        template_content: templateContent,
+        is_active: true
+      };
+
+      if (editingTemplate.id === 0) {
+        // Create new template
+        const { error } = await supabase
+          .from('print_templates')
+          .insert([templateData]);
+        
+        if (error) throw error;
+      } else {
+        // Update existing template
+        const { error } = await supabase
+          .from('print_templates')
+          .update(templateData)
+          .eq('id', editingTemplate.id);
+        
+        if (error) throw error;
+      }
+
+      // Reload templates
+      await loadPrintTemplates();
+      
+      showSnackbar('Đã lưu mẫu in thành công', 'success');
+      handleCancelTemplateEdit();
+    } catch (error) {
+      console.error('Error saving template:', error);
+      showSnackbar('Lỗi khi lưu mẫu in', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -367,6 +634,7 @@ const PrinterManagementPage: React.FC = () => {
         <Tabs value={tabValue} onChange={handleTabChange}>
           <Tab label="Danh sách" />
           <Tab label="Quản lý" />
+          <Tab label="Mẫu in" />
         </Tabs>
       </Box>
 
@@ -481,14 +749,197 @@ const PrinterManagementPage: React.FC = () => {
 
       {/* Tab Quản lý */}
       <TabPanel value={tabValue} index={1}>
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <SettingsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary">
-            Chức năng quản lý sẽ được phát triển sau
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Tập trung hoàn thiện kết nối máy in trước
-          </Typography>
+        <Typography variant="h6" gutterBottom>
+          Quản lý máy in
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+          {/* Danh sách máy in */}
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Chọn máy in
+            </Typography>
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tên máy in</TableCell>
+                    <TableCell>Vị trí</TableCell>
+                    <TableCell>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {printers.map((printer) => (
+                    <TableRow 
+                      key={printer.id}
+                      hover
+                      selected={selectedPrinter?.id === printer.id}
+                      onClick={() => handleSelectPrinter(printer)}
+                    >
+                      <TableCell>{printer.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={printer.location || 'Chưa đặt'}
+                          color={printer.location === 'POS' ? 'primary' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSelectPrinter(printer)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+
+          {/* Danh sách món ăn */}
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Chọn món ăn cho {selectedPrinter?.name || 'máy in'}
+            </Typography>
+            {selectedPrinter && (
+              <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+                <Table stickyHeader>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox">Chọn</TableCell>
+                      <TableCell>Tên món</TableCell>
+                      <TableCell>Loại</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {foodItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell padding="checkbox">
+                          <input
+                            type="checkbox"
+                            checked={selectedFoodItems.includes(item.id)}
+                            onChange={() => handleToggleFoodItem(item.id)}
+                          />
+                        </TableCell>
+                        <TableCell>{item.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={item.type}
+                            color={item.type === 'service' ? 'secondary' : 'primary'}
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Box>
+        </Box>
+
+        {selectedPrinter && (
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+            <Button
+              variant="outlined"
+              onClick={handleCancelSelection}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSavePrinterMapping}
+              disabled={selectedFoodItems.length === 0}
+            >
+              Lưu cấu hình
+            </Button>
+          </Box>
+        )}
+      </TabPanel>
+
+      {/* Tab Mẫu in */}
+      <TabPanel value={tabValue} index={2}>
+        <Typography variant="h6" gutterBottom>
+          Mẫu in
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 3, mb: 3 }}>
+          {/* Danh sách máy in */}
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="subtitle1" gutterBottom>
+              Chọn máy in
+            </Typography>
+            <TableContainer component={Paper} sx={{ maxHeight: 300 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Tên máy in</TableCell>
+                    <TableCell>Vị trí</TableCell>
+                    <TableCell>Thao tác</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {printers.map((printer) => (
+                    <TableRow key={printer.id}>
+                      <TableCell>{printer.name}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={printer.location || 'Chưa đặt'}
+                          color={printer.location === 'POS' ? 'primary' : 'default'}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditTemplate(printer)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+
+          {/* Editor template */}
+          <Box sx={{ flex: 2 }}>
+            {editingTemplate && (
+              <Box>
+                <Typography variant="subtitle1" gutterBottom>
+                  Chỉnh sửa mẫu in: {editingTemplate.template_name}
+                </Typography>
+                <TextField
+                  fullWidth
+                  multiline
+                  rows={15}
+                  value={templateContent}
+                  onChange={(e) => setTemplateContent(e.target.value)}
+                  placeholder="Nhập nội dung mẫu in..."
+                  sx={{ fontFamily: 'monospace' }}
+                />
+                <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                  <Button
+                    variant="outlined"
+                    onClick={handleCancelTemplateEdit}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={handleSaveTemplate}
+                  >
+                    Lưu mẫu
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
         </Box>
       </TabPanel>
 
