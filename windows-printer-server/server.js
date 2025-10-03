@@ -74,15 +74,18 @@ app.post('/printers/test', async (req, res) => {
       });
     }
     
-    // Tạo file tạm trong thư mục temp của Windows
+    // Tạo file tạm trong thư mục temp của Windows với UTF-8 BOM
     const tempDir = require('os').tmpdir();
     const tempFile = path.join(tempDir, `test_print_${Date.now()}.txt`);
-    fs.writeFileSync(tempFile, content, 'utf8');
+    
+    // Ghi file với UTF-8 BOM để đảm bảo encoding đúng
+    const BOM = '\uFEFF';
+    fs.writeFileSync(tempFile, BOM + content, 'utf8');
     
     console.log(`📄 Created temp file: ${tempFile}`);
     
-    // In file tạm
-    const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
+    // In file tạm với settings tối ưu cho POS-80C
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
     
     await execAsync(printCommand);
     
@@ -156,12 +159,16 @@ Mat hang          D.vi SL
     // Thêm dòng trống để sát lên trên
     content = `\n\n${content}\n\n\n`;
     
-    // Tạo file tạm và in
+    // Tạo file tạm và in với encoding UTF-8 và settings cho POS-80C
     const tempDir = require('os').tmpdir();
     const tempFile = path.join(tempDir, `kitchen_order_${Date.now()}.txt`);
-    fs.writeFileSync(tempFile, content, 'utf8');
     
-    const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
+    // Ghi file với UTF-8 BOM để đảm bảo encoding đúng
+    const BOM = '\uFEFF';
+    fs.writeFileSync(tempFile, BOM + content, 'utf8');
+    
+    // Sử dụng PowerShell với settings tối ưu cho POS-80C
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
     await execAsync(printCommand);
     
     // Xóa file tạm
@@ -218,12 +225,16 @@ app.post('/print/invoice', async (req, res) => {
     content += `    Cảm ơn quý khách!\n`;
     content += `\n\n\n`;
     
-    // Tạo file tạm và in
+    // Tạo file tạm và in với encoding UTF-8 và settings cho POS-80C
     const tempDir = require('os').tmpdir();
     const tempFile = path.join(tempDir, `invoice_${Date.now()}.txt`);
-    fs.writeFileSync(tempFile, content, 'utf8');
     
-    const printCommand = `powershell "Get-Content '${tempFile}' | Out-Printer -Name '${printer_name}'"`;
+    // Ghi file với UTF-8 BOM để đảm bảo encoding đúng
+    const BOM = '\uFEFF';
+    fs.writeFileSync(tempFile, BOM + content, 'utf8');
+    
+    // Sử dụng PowerShell với settings tối ưu cho POS-80C
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
     await execAsync(printCommand);
     
     // Xóa file tạm
