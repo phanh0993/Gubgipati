@@ -85,7 +85,7 @@ app.post('/printers/test', async (req, res) => {
     console.log(`📄 Created temp file: ${tempFile}`);
     
     // In file tạm với settings tối ưu cho POS-80C
-    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 32 | Out-Printer -Name '${printer_name}'"`;
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 80 | Out-Printer -Name '${printer_name}'"`;
     
     await execAsync(printCommand);
     
@@ -200,58 +200,47 @@ Mat hang          D.vi SL
       console.log('📄 Written with UTF-8 BOM only');
     }
     
-    // Thử nhiều cách để fix width cho POS-80C (từ 11 ký tự → 32 ký tự)
+    // Sử dụng Out-String -Width để fix width cho POS-80C
     try {
-      // Cách 1: PowerShell với Width 80 (cho 80mm máy in)
-      console.log('🖨️ Method 1: Width 80 (80mm)...');
-      const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 80 | Out-Printer -Name '${printer_name}'"`;
-      await execAsync(printCommand);
-      console.log('✅ Method 1 successful (Width 80)');
+      // Method 1: Out-String với Width 80 (đúng syntax PowerShell)
+      console.log('🖨️ Method 1: Out-String Width 80...');
+      const printCommand1 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 80 | Out-Printer -Name '${printer_name}'"`;
+      await execAsync(printCommand1);
+      console.log('✅ Method 1 successful (Out-String Width 80)');
     } catch (error) {
       console.log('❌ Method 1 failed:', error.message);
       try {
-        // Cách 2: PowerShell với Width 64 (kích thước lớn hơn)
-        console.log('🖨️ Method 2: Width 64 (larger)...');
-        const printCommand2 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 64 | Out-Printer -Name '${printer_name}'"`;
+        // Method 2: Out-String với Width 64  
+        console.log('🖨️ Method 2: Out-String Width 64...');
+        const printCommand2 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 64 | Out-Printer -Name '${printer_name}'"`;
         await execAsync(printCommand2);
-        console.log('✅ Method 2 successful (Width 64)');
+        console.log('✅ Method 2 successful (Out-String Width 64)');
       } catch (error2) {
         console.log('❌ Method 2 failed:', error2.message);
         try {
-          // Cách 3: PowerShell không có Width (let printer decide)
-          console.log('🖨️ Method 3: No width limit...');
-          const printCommand3 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+          // Method 3: Format-Wide để force width
+          console.log('🖨️ Method 3: Format-Wide...');
+          const printCommand3 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Format-Wide -Column 4 | Out-Printer -Name '${printer_name}'"`;
           await execAsync(printCommand3);
-          console.log('✅ Method 3 successful (No width)');
+          console.log('✅ Method 3 successful (Format-Wide)');
         } catch (error3) {
           console.log('❌ Method 3 failed:', error3.message);
           try {
-            // Cách 4: Set paper size trước khi in
-            console.log('🖨️ Method 4: Set printer paper size...');
-            // Set máy in về paper size 80mm trước
-            await execAsync(`powershell "Get-Printer -Name '${printer_name}' | Set-Printer -PrinterSettings 'PaperSize=Custom,Width=3200,Height=1000'"`);
+            // Method 4: Set máy in default width bằng registry
+            console.log('🖨️ Method 4: Set printer default width...');
+            await execAsync(`powershell "reg add 'HKEY_CURRENT_USER\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Windows' /v DeviceWidth /t REG_DWORD /d 80 /f"`);
             const printCommand4 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
             await execAsync(printCommand4);
-            console.log('✅ Method 4 successful (Paper size set)');
+            console.log('✅ Method 4 successful (Registry width set)');
           } catch (error4) {
             console.log('❌ Method 4 failed:', error4.message);
             try {
-              // Cách 5: Raw text printing - bypass tất cả formatting
-              console.log('🖨️ Method 5: Raw text printing...');
-              // Xóa tất cả formatting characters
-              const rawContent = content.replace(/[\x1b\[\]0-9;]+m/g, '');
-              
-              // Ghi lại file với raw content
-              const rawTempFile = path.join(tempDir, `raw_${Date.now()}.txt`);
-              fs.writeFileSync(rawTempFile, rawContent, 'utf8');
-              
-              // In với method đơn giản nhất
-              const printCommand5 = `powershell "type '${rawTempFile}' | Out-Printer -Name '${printer_name}'"`;
+              // Method 5: Thay đổi console buffer width
+              console.log('🖨️ Method 5: Console buffer width...');
+              await execAsync(`powershell "$Host.UI.RawUI.BufferSize = New-Object System.Management.Automation.Host.Size(120, 50)"`);
+              const printCommand5 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
               await execAsync(printCommand5);
-              
-              // Cleanup
-              fs.unlinkSync(rawTempFile);
-              console.log('✅ Method 5 successful (Raw text)');
+              console.log('✅ Method 5 successful (Console buffer)');
             } catch (error5) {
               console.log('❌ Method 5 failed:', error5.message);
               throw error5;
