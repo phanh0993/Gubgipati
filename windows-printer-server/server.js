@@ -119,6 +119,19 @@ app.post('/print/kitchen', async (req, res) => {
     
     console.log(`🍳 Printing kitchen order to: ${printer_name}`);
     
+    // Check máy in settings trước khi in
+    try {
+      console.log('🔍 Checking printer settings...');
+      const printerSettings = await execAsync(`powershell "Get-Printer -Name '${printer_name}' | Select-Object Name, DriverName, PrinterStatus | ConvertTo-Json"`);
+      console.log('📋 Current printer settings:', printerSettings.stdout);
+      
+      // Check paper settings
+      const paperSettings = await execAsync(`powershell "Get-WmiObject -Class Win32_Printer -Filter \"Name='${printer_name}'\" | Select-Object DefaultPaperSize"`);
+      console.log('📋 Current paper settings:', paperSettings.stdout);
+    } catch (checkError) {
+      console.log('⚠️ Could not check printer settings:', checkError.message);
+    }
+    
     // Sử dụng template nếu có, nếu không thì dùng template mặc định
     let content;
     if (template_content) {
@@ -167,52 +180,82 @@ Mat hang          D.vi SL
     const tempDir = require('os').tmpdir();
     const tempFile = path.join(tempDir, `kitchen_order_${Date.now()}.txt`);
     
-    // Thử ghi file với encoding khác nhau
+    // Thử các cách khác nhau để fix width và font size
     try {
-      // Cách 1: UTF-8 BOM
+      // Tăng font size bằng cách sử dụng text formatting
+      // Thêm ANSI escape codes để in đậm và tăng kích thước
+      const formattedContent = content
+        .replace(/\*\*(.*?)\*\*/g, '\x1b[1m$1\x1b[0m')  // Bold
+        .replace(/##(.*?)##/g, '\x1b[1m\x1b[3m$1\x1b[0m')  // Bold + Large
+        .replace(/\*(.*?)\*/g, '\x1b[3m$1\x1b[0m');   // Italic
+      
+      // UTF-8 BOM với formatted content
+      const BOM = '\uFEFF';
+      fs.writeFileSync(tempFile, BOM + formattedContent, 'utf8');
+      console.log('📄 Written with UTF-8 BOM + Formatting');
+    } catch (error) {
+      // Fallback: UTF-8 BOM thuần
       const BOM = '\uFEFF';
       fs.writeFileSync(tempFile, BOM + content, 'utf8');
-      console.log('📄 Written with UTF-8 BOM');
-    } catch (error) {
-      // Cách 2: ANSI encoding
-      fs.writeFileSync(tempFile, content, 'ascii');
-      console.log('📄 Written with ASCII encoding');
+      console.log('📄 Written with UTF-8 BOM only');
     }
     
-    // Thử nhiều cách in khác nhau để tìm cách tốt nhất cho POS-80C
+    // Thử nhiều cách để fix width cho POS-80C (từ 11 ký tự → 32 ký tự)
     try {
-      // Cách 1: PowerShell với UTF-8 BOM và width settings
-      console.log('🖨️ Trying PowerShell method 1 (UTF-8, Width 32)...');
-      const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 32 | Out-Printer -Name '${printer_name}'"`;
+      // Cách 1: PowerShell với Width 80 (cho 80mm máy in)
+      console.log('🖨️ Method 1: Width 80 (80mm)...');
+      const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 80 | Out-Printer -Name '${printer_name}'"`;
       await execAsync(printCommand);
-      console.log('✅ PowerShell method 1 successful');
+      console.log('✅ Method 1 successful (Width 80)');
     } catch (error) {
-      console.log('❌ PowerShell method 1 failed:', error.message);
+      console.log('❌ Method 1 failed:', error.message);
       try {
-        // Cách 2: PowerShell với raw content
-        console.log('🖨️ Trying PowerShell method 2 (Raw)...');
-        const printCommand2 = `powershell "Get-Content '${tempFile}' -Raw -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+        // Cách 2: PowerShell với Width 64 (kích thước lớn hơn)
+        console.log('🖨️ Method 2: Width 64 (larger)...');
+        const printCommand2 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 -Width 64 | Out-Printer -Name '${printer_name}'"`;
         await execAsync(printCommand2);
-        console.log('✅ PowerShell method 2 successful');
+        console.log('✅ Method 2 successful (Width 64)');
       } catch (error2) {
-        console.log('❌ PowerShell method 2 failed:', error2.message);
+        console.log('❌ Method 2 failed:', error2.message);
         try {
-          // Cách 3: Copy file trực tiếp đến printer
-          console.log('🖨️ Trying copy method...');
-          const copyCommand = `copy "${tempFile}" "\\\\localhost\\${printer_name}"`;
-          await execAsync(copyCommand);
-          console.log('✅ Copy method successful');
-        } catch (copyError) {
-          console.log('❌ Copy method failed:', copyError.message);
+          // Cách 3: PowerShell không có Width (let printer decide)
+          console.log('🖨️ Method 3: No width limit...');
+          const printCommand3 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+          await execAsync(printCommand3);
+          console.log('✅ Method 3 successful (No width)');
+        } catch (error3) {
+          console.log('❌ Method 3 failed:', error3.message);
           try {
-            // Cách 4: Sử dụng notepad để in
-            console.log('🖨️ Trying notepad method...');
-            const notepadCommand = `notepad /p "${tempFile}"`;
-            await execAsync(notepadCommand);
-            console.log('✅ Notepad method successful');
-          } catch (notepadError) {
-            console.log('❌ All methods failed:', notepadError.message);
-            throw notepadError;
+            // Cách 4: Set paper size trước khi in
+            console.log('🖨️ Method 4: Set printer paper size...');
+            // Set máy in về paper size 80mm trước
+            await execAsync(`powershell "Get-Printer -Name '${printer_name}' | Set-Printer -PrinterSettings 'PaperSize=Custom,Width=3200,Height=1000'"`);
+            const printCommand4 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+            await execAsync(printCommand4);
+            console.log('✅ Method 4 successful (Paper size set)');
+          } catch (error4) {
+            console.log('❌ Method 4 failed:', error4.message);
+            try {
+              // Cách 5: Raw text printing - bypass tất cả formatting
+              console.log('🖨️ Method 5: Raw text printing...');
+              // Xóa tất cả formatting characters
+              const rawContent = content.replace(/[\x1b\[\]0-9;]+m/g, '');
+              
+              // Ghi lại file với raw content
+              const rawTempFile = path.join(tempDir, `raw_${Date.now()}.txt`);
+              fs.writeFileSync(rawTempFile, rawContent, 'utf8');
+              
+              // In với method đơn giản nhất
+              const printCommand5 = `powershell "type '${rawTempFile}' | Out-Printer -Name '${printer_name}'"`;
+              await execAsync(printCommand5);
+              
+              // Cleanup
+              fs.unlinkSync(rawTempFile);
+              console.log('✅ Method 5 successful (Raw text)');
+            } catch (error5) {
+              console.log('❌ Method 5 failed:', error5.message);
+              throw error5;
+            }
           }
         }
       }
