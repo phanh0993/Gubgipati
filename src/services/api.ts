@@ -52,11 +52,16 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       
       for (const mapping of itemMappings) {
         const printerId = mapping.printer_id;
-        const printer = mapping.printers && mapping.printers.length > 0 ? mapping.printers[0] : null;
+        const printer = mapping.printers; // printers là object, không phải array
         
         // Kiểm tra printer có tồn tại không
-        if (!printer || !printer.name) {
-          console.warn(`⚠️ Printer not found for mapping:`, mapping);
+        if (!printer) {
+          console.warn(`⚠️ Printer object is null/undefined for mapping:`, mapping);
+          continue;
+        }
+        
+        if (!printer.name) {
+          console.warn(`⚠️ Printer name is missing for mapping:`, mapping, 'printer:', printer);
           continue;
         }
         
