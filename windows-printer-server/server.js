@@ -108,7 +108,7 @@ app.post('/printers/test', async (req, res) => {
 // In order cho bếp
 app.post('/print/kitchen', async (req, res) => {
   try {
-    const { order, items, printer_name } = req.body;
+    const { order, items, printer_name, template_content } = req.body;
     
     if (!printer_name || !order || !items) {
       return sendJSON(res, 400, { error: 'Missing required fields' });
@@ -116,26 +116,45 @@ app.post('/print/kitchen', async (req, res) => {
     
     console.log(`🍳 Printing kitchen order to: ${printer_name}`);
     
-    // Tạo nội dung in cho bếp
-    let content = `\n`;
-    content += `================================\n`;
-    content += `    BẾP - ĐƠN HÀNG\n`;
-    content += `================================\n`;
-    content += `Đơn: ${order.order_number || order.id}\n`;
-    content += `Bàn: ${order.table_name || order.table_id}\n`;
-    content += `Thời gian: ${new Date().toLocaleString('vi-VN')}\n`;
-    content += `--------------------------------\n`;
+    // Sử dụng template nếu có, nếu không thì dùng template mặc định
+    let content;
+    if (template_content) {
+      content = template_content;
+    } else {
+      // Template mặc định cho POS-80C (32 ký tự/đường)
+      content = `BEP - DON HANG
+================================
+So the: ${order.card_number || order.id}
+${new Date().toLocaleString('vi-VN')} - Bep
+
+(Ban) ${order.table_name || order.table_id}
+Nhan vien: ${order.staff_name || 'Nhan vien'}
+* Ghi chu: ${order.notes || ''}
+
+================================
+Mat hang          D.vi SL
+================================
+`;
+      
+      items.forEach(item => {
+        const itemName = item.name.length > 20 ? item.name.substring(0, 17) + '...' : item.name;
+        const quantity = `x${item.quantity}`.padStart(4);
+        const price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
+        const priceFormatted = price.padStart(8);
+        
+        content += `${itemName.padEnd(20)} ${quantity} ${priceFormatted}\n`;
+        
+        if (item.special_instructions) {
+          content += `  Ghi chu: ${item.special_instructions}\n`;
+        }
+        content += `\n`;
+      });
+      
+      content += `================================\n`;
+    }
     
-    items.forEach(item => {
-      content += `${item.name} x${item.quantity}\n`;
-      if (item.special_instructions) {
-        content += `  Ghi chú: ${item.special_instructions}\n`;
-      }
-      content += `\n`;
-    });
-    
-    content += `================================\n`;
-    content += `\n\n\n`; // Tách trang cho máy in nhiệt
+    // Thêm dòng trống để sát lên trên
+    content = `\n\n${content}\n\n\n`;
     
     // Tạo file tạm và in
     const tempDir = require('os').tmpdir();

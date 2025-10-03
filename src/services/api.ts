@@ -180,37 +180,48 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
   }
 };
 
+// Function để chuyển đổi tiếng Việt có dấu thành không dấu
+const removeVietnameseAccents = (str: string) => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+};
+
 // Function để render template với dữ liệu thực
 const renderTemplate = (template: string, order: any, items: any[], printer: any) => {
   let content = template;
   
-  // Replace placeholders
-  content = content.replace(/\{\{table_name\}\}/g, order.table_name || order.table_id || '');
-  content = content.replace(/\{\{checkin_time\}\}/g, order.checkin_time || new Date().toLocaleString('vi-VN'));
-  content = content.replace(/\{\{print_time\}\}/g, new Date().toLocaleString('vi-VN'));
-  content = content.replace(/\{\{customer_name\}\}/g, order.customer_name || '');
+  // Replace placeholders và chuyển đổi không dấu
+  content = content.replace(/\{\{table_name\}\}/g, removeVietnameseAccents(order.table_name || order.table_id || ''));
+  content = content.replace(/\{\{checkin_time\}\}/g, removeVietnameseAccents(order.checkin_time || new Date().toLocaleString('vi-VN')));
+  content = content.replace(/\{\{print_time\}\}/g, removeVietnameseAccents(new Date().toLocaleString('vi-VN')));
+  content = content.replace(/\{\{customer_name\}\}/g, removeVietnameseAccents(order.customer_name || ''));
   content = content.replace(/\{\{card_number\}\}/g, order.card_number || order.id || '');
-  content = content.replace(/\{\{printer_location\}\}/g, order.printer_location || printer.location || 'Bếp mặc định');
-  content = content.replace(/\{\{table_info\}\}/g, order.table_info || order.table_name || '');
-  content = content.replace(/\{\{staff_name\}\}/g, order.staff_name || '');
-  content = content.replace(/\{\{notes\}\}/g, order.notes || '');
+  content = content.replace(/\{\{printer_location\}\}/g, removeVietnameseAccents(order.printer_location || printer.location || 'Bep mac dinh'));
+  content = content.replace(/\{\{table_info\}\}/g, removeVietnameseAccents(order.table_info || order.table_name || ''));
+  content = content.replace(/\{\{staff_name\}\}/g, removeVietnameseAccents(order.staff_name || ''));
+  content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - format cho máy in 72mm (40 ký tự)
+  // Render items list - format cho máy in POS-80C (32 ký tự/đường)
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn (tối đa 25 ký tự)
-    let itemName = item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name;
-    // Số lượng (5 ký tự)
-    let quantity = `x${item.quantity}`.padStart(5);
-    // Giá (10 ký tự)
-    let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}đ` : '0đ';
-    price = price.padStart(10);
+    // Tên món ăn không dấu (tối đa 20 ký tự)
+    let itemName = removeVietnameseAccents(item.name);
+    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
+    // Số lượng (4 ký tự)
+    let quantity = `x${item.quantity}`.padStart(4);
+    // Giá (8 ký tự)
+    let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
+    price = price.padStart(8);
     
-    itemsList += `${itemName.padEnd(25)} ${quantity} ${price}\n`;
+    itemsList += `${itemName.padEnd(20)} ${quantity} ${price}\n`;
     
     if (item.special_instructions) {
-      itemsList += `  Ghi chú: ${item.special_instructions}\n`;
+      const note = removeVietnameseAccents(item.special_instructions);
+      itemsList += `  Ghi chu: ${note}\n`;
     }
     itemsList += `\n`;
   });

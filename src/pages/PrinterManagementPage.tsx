@@ -541,44 +541,44 @@ const PrinterManagementPage: React.FC = () => {
 
   const getDefaultTemplate = (location: string) => {
     if (location === 'POS') {
-      return `        GUBGIPATI
-  4-6 Đường số 4, Khu Cán Bộ Giảng Viên
-  Cần Thơ, Phường Hưng Lợi, Quận Ninh Kiều
-           SĐT: 0969709033
+      return `GUBGIPATI
+4-6 Duong so 4, Khu Can Bo Giang Vien
+Can Tho, Phuong Hung Loi, Quan Ninh Kieu
+SĐT: 0969709033
 
-        HÓA ĐƠN TẠM TÍNH
-========================================
-Tại bàn: {{table_name}}
-Giờ vào: {{checkin_time}}
-Giờ in: {{print_time}}
-Khách hàng: {{customer_name}}
+HOA DON TAM TINH
+================================
+Tai ban: {{table_name}}
+Gio vao: {{checkin_time}}
+Gio in: {{print_time}}
+Khach hang: {{customer_name}}
 
-========================================
+================================
 {{items_list}}
 
-========================================
-TỔNG TẠM TÍNH: {{total_amount}}đ
-========================================
-        Cảm ơn quý khách!
+================================
+TONG TAM TINH: {{total_amount}}d
+================================
+Cam on quy khach!
 
-    Wifi: Gubgipati
-    Pass: chucngonmieng`;
+Wifi: Gubgipati
+Pass: chucngonmieng`;
     } else {
-      return `        BẾP - ĐƠN HÀNG
-========================================
-Số thẻ: {{card_number}}
+      return `BEP - DON HANG
+================================
+So the: {{card_number}}
 {{print_time}} - {{printer_location}}
 
-(Bàn) {{table_info}}
-Nhân viên: {{staff_name}}
-* Ghi chú: {{notes}}
+(Ban) {{table_info}}
+Nhan vien: {{staff_name}}
+* Ghi chu: {{notes}}
 
-========================================
-Mặt hàng          Đ.vị SL
-========================================
+================================
+Mat hang          D.vi SL
+================================
 {{items_list}}
 
-========================================`;
+================================`;
     }
   };
 
@@ -940,16 +940,85 @@ Mặt hàng          Đ.vị SL
                 {/* Thông tin kích thước máy in */}
                 <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
-                    📏 <strong>Kích thước máy in:</strong> 72mm (40 ký tự/đường)
+                    📏 <strong>Kích thước máy in POS-80C:</strong> 72mm (32 ký tự/đường)
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    • Tên món ăn: tối đa 25 ký tự<br/>
-                    • Số lượng: 5 ký tự (x1, x2...)<br/>
-                    • Giá: 10 ký tự (1.000đ, 10.000đ...)<br/>
-                    • Tổng cộng: 40 ký tự/đường
+                    • Tên món ăn: tối đa 20 ký tự (không dấu)<br/>
+                    • Số lượng: 4 ký tự (x1, x2...)<br/>
+                    • Giá: 8 ký tự (1.000d, 10.000d...)<br/>
+                    • Tổng cộng: 32 ký tự/đường<br/>
+                    • <strong>Lưu ý:</strong> Tự động chuyển tiếng Việt thành không dấu
                   </Typography>
                 </Box>
                 
+                {/* Format options */}
+                <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const textarea = document.querySelector('textarea[placeholder="Nhập nội dung mẫu in..."]') as HTMLTextAreaElement;
+                      if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const selectedText = templateContent.substring(start, end);
+                        const newText = templateContent.substring(0, start) + `**${selectedText}**` + templateContent.substring(end);
+                        setTemplateContent(newText);
+                      }
+                    }}
+                  >
+                    <strong>B</strong> (Đậm)
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const textarea = document.querySelector('textarea[placeholder="Nhập nội dung mẫu in..."]') as HTMLTextAreaElement;
+                      if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const selectedText = templateContent.substring(start, end);
+                        const newText = templateContent.substring(0, start) + `*${selectedText}*` + templateContent.substring(end);
+                        setTemplateContent(newText);
+                      }
+                    }}
+                  >
+                    <em>I</em> (Nghiêng)
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const textarea = document.querySelector('textarea[placeholder="Nhập nội dung mẫu in..."]') as HTMLTextAreaElement;
+                      if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const selectedText = templateContent.substring(start, end);
+                        const newText = templateContent.substring(0, start) + `_${selectedText}_` + templateContent.substring(end);
+                        setTemplateContent(newText);
+                      }
+                    }}
+                  >
+                    <u>U</u> (Gạch chân)
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const textarea = document.querySelector('textarea[placeholder="Nhập nội dung mẫu in..."]') as HTMLTextAreaElement;
+                      if (textarea) {
+                        const start = textarea.selectionStart;
+                        const end = textarea.selectionEnd;
+                        const selectedText = templateContent.substring(start, end);
+                        const newText = templateContent.substring(0, start) + `##${selectedText}##` + templateContent.substring(end);
+                        setTemplateContent(newText);
+                      }
+                    }}
+                  >
+                    <strong>##</strong> (Size lớn)
+                  </Button>
+                </Box>
+
                 <TextField
                   fullWidth
                   multiline
