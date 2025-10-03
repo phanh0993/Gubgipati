@@ -68,7 +68,7 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     }
 
     // Gửi lệnh in cho từng máy in
-    for (const [printerId, group] of printerGroups) {
+    for (const [printerId, group] of printerGroups.entries()) {
       const { printer, items: printerItems, template } = group;
       
       console.log(`🖨️ Sending print job to ${printer.name} (${printer.location}):`, printerItems.length, 'items');
