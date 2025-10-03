@@ -132,6 +132,14 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
     template_content: renderedContent || template?.template_content
   };
 
+  // Log nội dung in để debug
+  console.log(`🖨️ Print content for ${printer.name} (${printer.location}):`);
+  console.log('📄 Print payload:', printPayload);
+  if (printPayload.template_content) {
+    console.log('📄 Rendered template:');
+    console.log(printPayload.template_content);
+  }
+
   // Thử gửi đến Windows server trước
   const windowsServerUrl = 'http://localhost:9977';
   
@@ -188,15 +196,21 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, order.notes || '');
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list
+  // Render items list - format cho máy in 72mm (40 ký tự)
   let itemsList = '';
   items.forEach(item => {
-    itemsList += `${item.name} x${item.quantity}\n`;
+    // Tên món ăn (tối đa 25 ký tự)
+    let itemName = item.name.length > 25 ? item.name.substring(0, 22) + '...' : item.name;
+    // Số lượng (5 ký tự)
+    let quantity = `x${item.quantity}`.padStart(5);
+    // Giá (10 ký tự)
+    let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}đ` : '0đ';
+    price = price.padStart(10);
+    
+    itemsList += `${itemName.padEnd(25)} ${quantity} ${price}\n`;
+    
     if (item.special_instructions) {
       itemsList += `  Ghi chú: ${item.special_instructions}\n`;
-    }
-    if (item.price && item.price > 0) {
-      itemsList += `  Giá: ${item.price.toLocaleString('vi-VN')}đ\n`;
     }
     itemsList += `\n`;
   });

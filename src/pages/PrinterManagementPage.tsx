@@ -541,42 +541,44 @@ const PrinterManagementPage: React.FC = () => {
 
   const getDefaultTemplate = (location: string) => {
     if (location === 'POS') {
-      return `GUBGIPATI
-4-6 Đường số 4, Khu Cán Bộ Giảng Viên
-Cần Thơ, Phường Hưng Lợi, Quận Ninh Kiều
-SĐT: 0969709033
+      return `        GUBGIPATI
+  4-6 Đường số 4, Khu Cán Bộ Giảng Viên
+  Cần Thơ, Phường Hưng Lợi, Quận Ninh Kiều
+           SĐT: 0969709033
 
-HÓA ĐƠN TẠM TÍNH
---------------------------------
+        HÓA ĐƠN TẠM TÍNH
+========================================
 Tại bàn: {{table_name}}
 Giờ vào: {{checkin_time}}
 Giờ in: {{print_time}}
 Khách hàng: {{customer_name}}
 
---------------------------------
+========================================
 {{items_list}}
 
---------------------------------
+========================================
 TỔNG TẠM TÍNH: {{total_amount}}đ
---------------------------------
-Cảm ơn quý khách!
+========================================
+        Cảm ơn quý khách!
 
-Wifi: Gubgipati
-Pass: chucngonmieng`;
+    Wifi: Gubgipati
+    Pass: chucngonmieng`;
     } else {
-      return `Số thẻ: {{card_number}}
-{{print_time}} {{printer_location}}
+      return `        BẾP - ĐƠN HÀNG
+========================================
+Số thẻ: {{card_number}}
+{{print_time}} - {{printer_location}}
 
 (Bàn) {{table_info}}
 Nhân viên: {{staff_name}}
-* G/chú: {{notes}}
+* Ghi chú: {{notes}}
 
---------------------------------
+========================================
 Mặt hàng          Đ.vị SL
---------------------------------
+========================================
 {{items_list}}
 
---------------------------------`;
+========================================`;
     }
   };
 
@@ -934,6 +936,20 @@ Mặt hàng          Đ.vị SL
                 <Typography variant="subtitle1" gutterBottom>
                   Chỉnh sửa mẫu in: {editingTemplate.template_name}
                 </Typography>
+                
+                {/* Thông tin kích thước máy in */}
+                <Box sx={{ mb: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    📏 <strong>Kích thước máy in:</strong> 72mm (40 ký tự/đường)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    • Tên món ăn: tối đa 25 ký tự<br/>
+                    • Số lượng: 5 ký tự (x1, x2...)<br/>
+                    • Giá: 10 ký tự (1.000đ, 10.000đ...)<br/>
+                    • Tổng cộng: 40 ký tự/đường
+                  </Typography>
+                </Box>
+                
                 <TextField
                   fullWidth
                   multiline
@@ -941,7 +957,13 @@ Mặt hàng          Đ.vị SL
                   value={templateContent}
                   onChange={(e) => setTemplateContent(e.target.value)}
                   placeholder="Nhập nội dung mẫu in..."
-                  sx={{ fontFamily: 'monospace' }}
+                  sx={{ 
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    '& .MuiInputBase-input': {
+                      lineHeight: 1.2
+                    }
+                  }}
                 />
                 <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
                   <Button
