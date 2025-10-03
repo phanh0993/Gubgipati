@@ -9,6 +9,145 @@ import {
 import { mockAPI } from './mockApi';
 import { supabase } from './supabaseClient';
 
+// Function để xử lý in cho từng máy in
+const processPrintJobs = async (orderId: number, items: any[], orderData: any) => {
+  try {
+    // Lấy thông tin mapping máy in
+    const { data: mappings, error: mappingError } = await supabase
+      .from('map_printer')
+      .select(`
+        printer_id,
+        food_item_id,
+        printers!inner(id, name, location, status)
+      `);
+
+    if (mappingError) {
+      console.error('Error loading printer mappings:', mappingError);
+      return;
+    }
+
+    if (!mappings || mappings.length === 0) {
+      console.log('No printer mappings found');
+      return;
+    }
+
+    // Lấy thông tin template in
+    const { data: templates, error: templateError } = await supabase
+      .from('print_templates')
+      .select('*')
+      .eq('is_active', true);
+
+    if (templateError) {
+      console.error('Error loading print templates:', templateError);
+    }
+
+    // Nhóm món ăn theo máy in
+    const printerGroups = new Map();
+    
+    for (const item of items) {
+      const itemMappings = mappings.filter(m => m.food_item_id === item.food_item_id);
+      
+      for (const mapping of itemMappings) {
+        const printerId = mapping.printer_id;
+        const printer = mapping.printers;
+        
+        if (!printerGroups.has(printerId)) {
+          printerGroups.set(printerId, {
+            printer: printer,
+            items: [],
+            template: templates?.find(t => t.printer_id === printerId)
+          });
+        }
+        
+        printerGroups.get(printerId).items.push({
+          ...item,
+          printer_name: printer.name,
+          printer_location: printer.location
+        });
+      }
+    }
+
+    // Gửi lệnh in cho từng máy in
+    for (const [printerId, group] of printerGroups) {
+      const { printer, items: printerItems, template } = group;
+      
+      console.log(`🖨️ Sending print job to ${printer.name} (${printer.location}):`, printerItems.length, 'items');
+      
+      try {
+        await sendPrintJob(printer, printerItems, orderData, template);
+      } catch (printError) {
+        console.error(`❌ Failed to print to ${printer.name}:`, printError);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in processPrintJobs:', error);
+  }
+};
+
+// Function để gửi lệnh in
+const sendPrintJob = async (printer: any, items: any[], orderData: any, template?: any) => {
+  const printPayload = {
+    order: {
+      id: orderData.id,
+      order_number: orderData.order_number,
+      table_name: orderData.table_name || `Bàn ${orderData.table_id}`,
+      table_id: orderData.table_id,
+      checkin_time: orderData.created_at,
+      customer_name: orderData.customer_name || '',
+      staff_name: orderData.staff_name || 'Nhân viên',
+      notes: orderData.notes || ''
+    },
+    items: items.map(item => ({
+      name: item.name || item.food_item_name,
+      quantity: item.quantity,
+      price: item.price || item.unit_price,
+      special_instructions: item.special_instructions || ''
+    })),
+    printer_name: printer.name,
+    template_content: template?.template_content
+  };
+
+  // Thử gửi đến Windows server trước
+  const windowsServerUrl = 'http://localhost:9977';
+  
+  try {
+    const endpoint = printer.location === 'POS' ? '/print/invoice' : '/print/kitchen';
+    
+    const response = await fetch(`${windowsServerUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(printPayload)
+    });
+
+    if (response.ok) {
+      console.log(`✅ Printed to ${printer.name} via Windows server`);
+      return;
+    }
+  } catch (windowsError) {
+    console.log(`Windows server not available for ${printer.name}, trying Vercel API`);
+  }
+
+  // Fallback: Gửi đến Vercel API (demo mode)
+  try {
+    const endpoint = printer.location === 'POS' ? '/api/print/invoice' : '/api/print/kitchen';
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(printPayload)
+    });
+
+    if (response.ok) {
+      console.log(`✅ Printed to ${printer.name} via Vercel API (demo mode)`);
+    } else {
+      console.error(`❌ Failed to print to ${printer.name} via Vercel API`);
+    }
+  } catch (vercelError) {
+    console.error(`❌ Failed to print to ${printer.name} via Vercel API:`, vercelError);
+  }
+};
+
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 const IS_PRODUCTION = process.env.NODE_ENV === 'production' && !process.env.REACT_APP_API_URL?.includes('localhost');
 const USE_SUPABASE = IS_PRODUCTION && !!process.env.REACT_APP_SUPABASE_URL && !!process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -1862,6 +2001,15 @@ export const orderAPI = {
                 await supabase.from('order_items').insert(insertPayload);
               }
             }
+          }
+
+          // 3. Gửi lệnh in cho từng máy in dựa trên mapping
+          try {
+            console.log('🖨️ Processing print jobs for order:', orderId);
+            await processPrintJobs(orderId, items, orderData);
+          } catch (printError) {
+            console.error('❌ Print jobs failed:', printError);
+            // Không reject order nếu in lỗi, chỉ log lỗi
           }
 
           const axiosLike = { data: orderData, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
