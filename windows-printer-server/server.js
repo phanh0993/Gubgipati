@@ -159,17 +159,55 @@ Mat hang          D.vi SL
     // Thêm dòng trống để sát lên trên
     content = `\n\n${content}\n\n\n`;
     
+    // Log nội dung để debug
+    console.log('📄 Kitchen print content:');
+    console.log(content);
+    
     // Tạo file tạm và in với encoding UTF-8 và settings cho POS-80C
     const tempDir = require('os').tmpdir();
     const tempFile = path.join(tempDir, `kitchen_order_${Date.now()}.txt`);
     
-    // Ghi file với UTF-8 BOM để đảm bảo encoding đúng
-    const BOM = '\uFEFF';
-    fs.writeFileSync(tempFile, BOM + content, 'utf8');
+    // Thử ghi file với encoding khác nhau
+    try {
+      // Cách 1: UTF-8 BOM
+      const BOM = '\uFEFF';
+      fs.writeFileSync(tempFile, BOM + content, 'utf8');
+      console.log('📄 Written with UTF-8 BOM');
+    } catch (error) {
+      // Cách 2: ANSI encoding
+      fs.writeFileSync(tempFile, content, 'ascii');
+      console.log('📄 Written with ASCII encoding');
+    }
     
-    // Sử dụng PowerShell với settings tối ưu cho POS-80C
-    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-Printer -Name '${printer_name}' -Width 32"`;
-    await execAsync(printCommand);
+    // Thử nhiều cách in khác nhau
+    try {
+      // Cách 1: PowerShell với raw content
+      console.log('🖨️ Trying PowerShell method...');
+      const printCommand = `powershell "Get-Content '${tempFile}' -Raw -Encoding UTF8 | Out-Printer -Name '${printer_name}'"`;
+      await execAsync(printCommand);
+      console.log('✅ PowerShell method successful');
+    } catch (error) {
+      console.log('❌ PowerShell method failed:', error.message);
+      try {
+        // Cách 2: Copy file trực tiếp đến printer
+        console.log('🖨️ Trying copy method...');
+        const copyCommand = `copy "${tempFile}" "\\\\localhost\\${printer_name}"`;
+        await execAsync(copyCommand);
+        console.log('✅ Copy method successful');
+      } catch (copyError) {
+        console.log('❌ Copy method failed:', copyError.message);
+        try {
+          // Cách 3: Sử dụng notepad để in
+          console.log('🖨️ Trying notepad method...');
+          const notepadCommand = `notepad /p "${tempFile}"`;
+          await execAsync(notepadCommand);
+          console.log('✅ Notepad method successful');
+        } catch (notepadError) {
+          console.log('❌ All methods failed:', notepadError.message);
+          throw notepadError;
+        }
+      }
+    }
     
     // Xóa file tạm
     fs.unlinkSync(tempFile);
