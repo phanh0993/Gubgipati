@@ -42,7 +42,7 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     }
 
     // Nhóm món ăn theo máy in
-    const printerGroups = new Map();
+    const printerGroups: { [key: number]: { printer: any, items: any[], template?: any } } = {};
     
     for (const item of items) {
       const itemMappings = mappings.filter(m => m.food_item_id === item.food_item_id);
@@ -51,15 +51,15 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
         const printerId = mapping.printer_id;
         const printer = mapping.printers[0]; // printers là array, lấy phần tử đầu
         
-        if (!printerGroups.has(printerId)) {
-          printerGroups.set(printerId, {
+        if (!printerGroups[printerId]) {
+          printerGroups[printerId] = {
             printer: printer,
             items: [],
             template: templates?.find(t => t.printer_id === printerId)
-          });
+          };
         }
         
-        printerGroups.get(printerId).items.push({
+        printerGroups[printerId].items.push({
           ...item,
           printer_name: printer.name,
           printer_location: printer.location
@@ -68,7 +68,8 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     }
 
     // Gửi lệnh in cho từng máy in
-    for (const [printerId, group] of printerGroups.entries()) {
+    for (const printerId in printerGroups) {
+      const group = printerGroups[printerId];
       const { printer, items: printerItems, template } = group;
       
       console.log(`🖨️ Sending print job to ${printer.name} (${printer.location}):`, printerItems.length, 'items');
