@@ -64,7 +64,7 @@ interface FoodItem {
   name: string;
   price: number;
   type: 'buffet' | 'service';
-  category?: string;
+  category_id?: number;
 }
 
 interface PrinterMapping {
@@ -172,7 +172,7 @@ const PrinterManagementPage: React.FC = () => {
       console.log('Loading food items...');
       const { data, error } = await supabase
         .from('food_items')
-        .select('id, name, price, type, category')
+        .select('id, name, price, type, category_id')
         .order('name', { ascending: true });
 
       if (error) throw error;
