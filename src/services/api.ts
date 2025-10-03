@@ -52,7 +52,7 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       
       for (const mapping of itemMappings) {
         const printerId = mapping.printer_id;
-        const printer = mapping.printers; // printers là object, không phải array
+        const printer = Array.isArray(mapping.printers) ? mapping.printers[0] : mapping.printers;
         
         // Kiểm tra printer có tồn tại không
         if (!printer) {
