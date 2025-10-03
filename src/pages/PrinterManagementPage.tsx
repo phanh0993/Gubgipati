@@ -142,6 +142,7 @@ const PrinterManagementPage: React.FC = () => {
   });
 
   useEffect(() => {
+    console.log('PrinterManagementPage: useEffect - loading data...');
     loadPrinters();
     loadFoodItems();
     loadPrinterMappings();
@@ -168,12 +169,14 @@ const PrinterManagementPage: React.FC = () => {
 
   const loadFoodItems = async () => {
     try {
+      console.log('Loading food items...');
       const { data, error } = await supabase
         .from('food_items')
         .select('id, name, price, type, category')
         .order('name', { ascending: true });
 
       if (error) throw error;
+      console.log('Food items loaded:', data?.length || 0, 'items');
       setFoodItems(data || []);
     } catch (error) {
       console.error('Error loading food items:', error);
@@ -448,6 +451,7 @@ const PrinterManagementPage: React.FC = () => {
 
   // Management tab functions
   const handleSelectPrinter = (printer: Printer) => {
+    console.log('Selecting printer:', printer);
     setSelectedPrinter(printer);
     
     // Load existing mappings for this printer
@@ -455,6 +459,7 @@ const PrinterManagementPage: React.FC = () => {
       .filter(mapping => mapping.printer_id === printer.id)
       .map(mapping => mapping.food_item_id);
     
+    console.log('Existing mappings for printer:', existingMappings);
     setSelectedFoodItems(existingMappings);
   };
 
@@ -815,25 +820,40 @@ Mặt hàng          Đ.vị SL
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {foodItems.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell padding="checkbox">
-                          <input
-                            type="checkbox"
-                            checked={selectedFoodItems.includes(item.id)}
-                            onChange={() => handleToggleFoodItem(item.id)}
-                          />
-                        </TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={item.type}
-                            color={item.type === 'service' ? 'secondary' : 'primary'}
-                            size="small"
-                          />
+                    {foodItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={3} sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {loading ? 'Đang tải...' : 'Không có món ăn nào'}
+                          </Typography>
+                          {!loading && (
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                              Debug: foodItems.length = {foodItems.length}
+                            </Typography>
+                          )}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      foodItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell padding="checkbox">
+                            <input
+                              type="checkbox"
+                              checked={selectedFoodItems.includes(item.id)}
+                              onChange={() => handleToggleFoodItem(item.id)}
+                            />
+                          </TableCell>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={item.type}
+                              color={item.type === 'service' ? 'secondary' : 'primary'}
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </TableContainer>
