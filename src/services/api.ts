@@ -181,7 +181,12 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
 };
 
 // Function để chuyển đổi tiếng Việt có dấu thành không dấu
-const removeVietnameseAccents = (str: string) => {
+const removeVietnameseAccents = (str: any) => {
+  // Kiểm tra str có phải string không
+  if (typeof str !== 'string' || str === null || str === undefined) {
+    return '';
+  }
+  
   return str
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -194,6 +199,20 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   let content = template;
   
   // Replace placeholders và chuyển đổi không dấu
+  console.log('🔍 Debug order data:', {
+    table_name: order.table_name,
+    table_id: order.table_id,
+    checkin_time: order.checkin_time,
+    customer_name: order.customer_name,
+    card_number: order.card_number,
+    printer_location: order.printer_location,
+    printer_location_value: printer.location,
+    table_info: order.table_info,
+    staff_name: order.staff_name,
+    notes: order.notes,
+    total_amount: order.total_amount
+  });
+  
   content = content.replace(/\{\{table_name\}\}/g, removeVietnameseAccents(order.table_name || order.table_id || ''));
   content = content.replace(/\{\{checkin_time\}\}/g, removeVietnameseAccents(order.checkin_time || new Date().toLocaleString('vi-VN')));
   content = content.replace(/\{\{print_time\}\}/g, removeVietnameseAccents(new Date().toLocaleString('vi-VN')));
