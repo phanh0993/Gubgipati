@@ -49,7 +49,7 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       
       for (const mapping of itemMappings) {
         const printerId = mapping.printer_id;
-        const printer = mapping.printers;
+        const printer = mapping.printers[0]; // printers là array, lấy phần tử đầu
         
         if (!printerGroups.has(printerId)) {
           printerGroups.set(printerId, {
@@ -87,6 +87,12 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
 
 // Function để gửi lệnh in
 const sendPrintJob = async (printer: any, items: any[], orderData: any, template?: any) => {
+  // Render template với dữ liệu thực
+  let renderedContent = '';
+  if (template?.template_content) {
+    renderedContent = renderTemplate(template.template_content, orderData, items, printer);
+  }
+
   const printPayload = {
     order: {
       id: orderData.id,
@@ -96,7 +102,10 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
       checkin_time: orderData.created_at,
       customer_name: orderData.customer_name || '',
       staff_name: orderData.staff_name || 'Nhân viên',
-      notes: orderData.notes || ''
+      notes: orderData.notes || '',
+      card_number: orderData.id,
+      table_info: orderData.table_name || `Bàn ${orderData.table_id}`,
+      printer_location: printer.location || 'Bếp mặc định'
     },
     items: items.map(item => ({
       name: item.name || item.food_item_name,
@@ -105,7 +114,7 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
       special_instructions: item.special_instructions || ''
     })),
     printer_name: printer.name,
-    template_content: template?.template_content
+    template_content: renderedContent || template?.template_content
   };
 
   // Thử gửi đến Windows server trước
@@ -146,6 +155,40 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
   } catch (vercelError) {
     console.error(`❌ Failed to print to ${printer.name} via Vercel API:`, vercelError);
   }
+};
+
+// Function để render template với dữ liệu thực
+const renderTemplate = (template: string, order: any, items: any[], printer: any) => {
+  let content = template;
+  
+  // Replace placeholders
+  content = content.replace(/\{\{table_name\}\}/g, order.table_name || order.table_id || '');
+  content = content.replace(/\{\{checkin_time\}\}/g, order.checkin_time || new Date().toLocaleString('vi-VN'));
+  content = content.replace(/\{\{print_time\}\}/g, new Date().toLocaleString('vi-VN'));
+  content = content.replace(/\{\{customer_name\}\}/g, order.customer_name || '');
+  content = content.replace(/\{\{card_number\}\}/g, order.card_number || order.id || '');
+  content = content.replace(/\{\{printer_location\}\}/g, order.printer_location || printer.location || 'Bếp mặc định');
+  content = content.replace(/\{\{table_info\}\}/g, order.table_info || order.table_name || '');
+  content = content.replace(/\{\{staff_name\}\}/g, order.staff_name || '');
+  content = content.replace(/\{\{notes\}\}/g, order.notes || '');
+  content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
+  
+  // Render items list
+  let itemsList = '';
+  items.forEach(item => {
+    itemsList += `${item.name} x${item.quantity}\n`;
+    if (item.special_instructions) {
+      itemsList += `  Ghi chú: ${item.special_instructions}\n`;
+    }
+    if (item.price && item.price > 0) {
+      itemsList += `  Giá: ${item.price.toLocaleString('vi-VN')}đ\n`;
+    }
+    itemsList += `\n`;
+  });
+  
+  content = content.replace(/\{\{items_list\}\}/g, itemsList);
+  
+  return content;
 };
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
