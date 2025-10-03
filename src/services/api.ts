@@ -31,6 +31,9 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       return;
     }
 
+    console.log('📋 Printer mappings found:', mappings.length);
+    console.log('📋 Sample mapping:', mappings[0]);
+
     // Lấy thông tin template in
     const { data: templates, error: templateError } = await supabase
       .from('print_templates')
@@ -49,7 +52,13 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       
       for (const mapping of itemMappings) {
         const printerId = mapping.printer_id;
-        const printer = mapping.printers[0]; // printers là array, lấy phần tử đầu
+        const printer = mapping.printers; // printers đã là object, không phải array
+        
+        // Kiểm tra printer có tồn tại không
+        if (!printer || !printer.name) {
+          console.warn(`⚠️ Printer not found for mapping:`, mapping);
+          continue;
+        }
         
         if (!printerGroups[printerId]) {
           printerGroups[printerId] = {
