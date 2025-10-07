@@ -12,64 +12,33 @@ import { supabase } from './supabaseClient';
 // Function để xử lý in cho từng máy in
 const processPrintJobs = async (orderId: number, items: any[], orderData: any) => {
   try {
-    // Lấy thông tin đầy đủ của order từ database - LẤY RIÊNG BIỆT
+    // Lấy thông tin đầy đủ của order từ database - SỬ DỤNG CÁCH NHƯ CHI TIẾT HÓA ĐƠN
     try {
-      // Lấy thông tin bàn - thử các tên bảng khác nhau
-      let tableData = null;
-      try {
-        const { data } = await supabase
-          .from('tables')
-          .select('name, zone_name')
-          .eq('id', orderData.table_id)
-          .single();
-        tableData = data;
-      } catch (e1) {
-        try {
-          const { data } = await supabase
-            .from('restaurant_tables')
-            .select('name, zone_name')
-            .eq('id', orderData.table_id)
-            .single();
-          tableData = data;
-        } catch (e2) {
-          console.log('❌ Cannot find table data, using fallback');
-        }
-      }
+      const { data: fullOrderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          employee:employees(fullname)
+        `)
+        .eq('id', orderId)
+        .single();
 
-      // Lấy thông tin nhân viên - thử các tên bảng khác nhau
-      let employeeData = null;
-      try {
-        const { data } = await supabase
-          .from('employees')
-          .select('name')
-          .eq('id', orderData.employee_id)
-          .single();
-        employeeData = data;
-      } catch (e1) {
-        try {
-          const { data } = await supabase
-            .from('staff')
-            .select('name')
-            .eq('id', orderData.employee_id)
-            .single();
-          employeeData = data;
-        } catch (e2) {
-          console.log('❌ Cannot find employee data, using fallback');
-        }
+      if (orderError) {
+        console.error('❌ Error fetching order data:', orderError);
+      } else {
+        // Cập nhật orderData với thông tin đầy đủ (như chi tiết hóa đơn)
+        orderData.table_name = `Bàn ${orderData.table_id}`;
+        orderData.zone_name = 'Khu A'; // Mặc định hoặc lấy từ config
+        orderData.staff_name = fullOrderData.employee?.fullname || 'Chưa xác định';
+        orderData.checkin_time = orderData.created_at;
+        console.log('📋 Updated order data (like invoice):', orderData);
       }
-
-      // Cập nhật orderData với thông tin đầy đủ
-      orderData.table_name = tableData?.name || `Bàn ${orderData.table_id}`;
-      orderData.zone_name = tableData?.zone_name || 'N/A';
-      orderData.staff_name = employeeData?.name || 'N/A';
-      orderData.checkin_time = orderData.created_at;
-      console.log('📋 Updated order data:', orderData);
     } catch (error) {
       console.error('❌ Error fetching order data:', error);
       // Fallback values
       orderData.table_name = `Bàn ${orderData.table_id}`;
-      orderData.zone_name = 'N/A';
-      orderData.staff_name = 'N/A';
+      orderData.zone_name = 'Khu A';
+      orderData.staff_name = 'Chưa xác định';
     }
 
     // Lấy thông tin mapping máy in
@@ -177,9 +146,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - TỐI ĐA HÓA CHIỀU RỘNG
+  // Font settings - TĂNG SIZE LÊN GẤP 3 LẦN
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 18px "Courier New", monospace'; // Giảm font để hiển thị nhiều ký tự hơn
+  ctx.font = 'bold 54px "Courier New", monospace'; // 18px * 3 = 54px
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -191,7 +160,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN, DẠT HẾT VỀ TRÁI
   let y = 0; // Bỏ viền trên hoàn toàn
-  const lineHeight = 22; // Line height cho font 18px
+  const lineHeight = 66; // Line height cho font 54px (22 * 3)
   
   lines.forEach(line => {
     if (line.trim()) {
