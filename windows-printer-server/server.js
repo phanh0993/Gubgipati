@@ -333,6 +333,94 @@ app.post('/print/invoice', async (req, res) => {
   }
 });
 
+// In ảnh (PNG/JPG) để tránh bị can thiệp định dạng
+app.post('/print/image', async (req, res) => {
+  try {
+    const { printer_name, image_base64, filename } = req.body || {};
+    if (!printer_name || !image_base64) {
+      return sendJSON(res, 400, { error: 'Missing printer_name or image_base64' });
+    }
+
+    // Lưu ảnh tạm
+    const tempDir = require('os').tmpdir();
+    const safeName = (filename && String(filename).replace(/[^\w\.-]/g, '')) || `image_${Date.now()}.png`;
+    const tempFile = path.join(tempDir, safeName.endsWith('.png') || safeName.endsWith('.jpg') || safeName.endsWith('.jpeg') ? safeName : `${safeName}.png`);
+
+    // image_base64 có thể ở dạng data URL, tách header nếu có
+    const base64Data = String(image_base64).includes(',') ? image_base64.split(',')[1] : image_base64;
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(tempFile, buffer);
+
+    console.log(`🖼️ Saved image for printing: ${tempFile}`);
+
+    // In bằng MSPaint (ổn định, hỗ trợ PNG/JPG). Tham số /pt: print to printer
+    // Lưu ý: nếu hệ thống không có mspaint trong PATH, gọi full path: %WINDIR%\System32\mspaint.exe
+    const mspaint = process.env.WINDIR ? path.join(process.env.WINDIR, 'System32', 'mspaint.exe') : 'mspaint';
+
+    // Cách 1: mspaint /pt "file" "printer"
+    try {
+      console.log('🖨️ Printing image via mspaint /pt ...');
+      await execAsync(`"${mspaint}" /pt "${tempFile}" "${printer_name}"`);
+      console.log('✅ Image printed via mspaint');
+    } catch (e1) {
+      console.log('❌ mspaint method failed, trying PowerShell PrintTo...', e1.message);
+      // Cách 2: PowerShell Start-Process -Verb PrintTo
+      const psCmd = `powershell "Start-Process -FilePath '${tempFile.replace(/'/g, "''")}' -Verb PrintTo -ArgumentList '${printer_name.replace(/'/g, "''")}' -PassThru | Wait-Process -Timeout 20"`;
+      await execAsync(psCmd);
+      console.log('✅ Image printed via PowerShell PrintTo');
+    }
+
+    // Xóa file tạm
+    try { fs.unlinkSync(tempFile); } catch {}
+    return sendJSON(res, 200, { success: true, message: 'Image sent to printer' });
+  } catch (error) {
+    console.error('❌ Print image failed:', error.message);
+    return sendJSON(res, 500, { error: 'Print image failed', details: error.message });
+  }
+});
+
+// In PDF để tránh bị can thiệp định dạng
+app.post('/print/pdf', async (req, res) => {
+  try {
+    const { printer_name, pdf_base64, filename } = req.body || {};
+    if (!printer_name || !pdf_base64) {
+      return sendJSON(res, 400, { error: 'Missing printer_name or pdf_base64' });
+    }
+
+    // Lưu PDF tạm
+    const tempDir = require('os').tmpdir();
+    const safeName = (filename && String(filename).replace(/[^\w\.-]/g, '')) || `doc_${Date.now()}.pdf`;
+    const tempFile = path.join(tempDir, safeName.endsWith('.pdf') ? safeName : `${safeName}.pdf`);
+
+    const base64Data = String(pdf_base64).includes(',') ? pdf_base64.split(',')[1] : pdf_base64;
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(tempFile, buffer);
+    console.log(`📄 Saved PDF for printing: ${tempFile}`);
+
+    // In PDF:
+    // Ưu tiên: PowerShell Start-Process -Verb PrintTo (dùng app mặc định của hệ thống cho PDF)
+    try {
+      console.log('🖨️ Printing PDF via PowerShell PrintTo ...');
+      const psCmd = `powershell "Start-Process -FilePath '${tempFile.replace(/'/g, "''")}' -Verb PrintTo -ArgumentList '${printer_name.replace(/'/g, "''")}' -PassThru | Wait-Process -Timeout 30"`;
+      await execAsync(psCmd);
+      console.log('✅ PDF printed via PowerShell PrintTo');
+    } catch (e1) {
+      console.log('❌ PowerShell PrintTo failed, trying rundll32...', e1.message);
+      // Fallback: sử dụng PrintTo verb qua rundll32 (ít ổn định hơn)
+      // Lưu ý: rundll32 cần app liên kết .pdf (Acrobat/Edge) hỗ trợ implicit PrintTo
+      const rundll = `rundll32.exe SHELL32.DLL,ShellExec_RunDLL "${tempFile}" /p /h`;
+      await execAsync(rundll);
+      console.log('✅ PDF printed via rundll32');
+    }
+
+    try { fs.unlinkSync(tempFile); } catch {}
+    return sendJSON(res, 200, { success: true, message: 'PDF sent to printer' });
+  } catch (error) {
+    console.error('❌ Print PDF failed:', error.message);
+    return sendJSON(res, 500, { error: 'Print PDF failed', details: error.message });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   sendJSON(res, 200, { 
