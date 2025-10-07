@@ -129,13 +129,13 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng - CÓ VIỀN NHƯ CŨ
-  let y = 20; // Viền trên
+  // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN
+  let y = 0; // Bỏ viền trên
   const lineHeight = 42; // Line height cho font 36px
   
   lines.forEach(line => {
     if (line.trim()) {
-      ctx.fillText(line, 10, y); // Viền trái
+      ctx.fillText(line, 0, y); // Bỏ viền trái
     }
     y += lineHeight;
   });
@@ -150,12 +150,14 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
   if (template?.template_content) {
     renderedContent = renderTemplate(template.template_content, orderData, items, printer);
   } else {
-    // Template mặc định nếu không có
+    // Template mặc định nếu không có - HIỂN THỊ ĐẦY ĐỦ THÔNG TIN
     renderedContent = `DON HANG - ${printer.location || 'BEP'}
 ================================
 So the: ${orderData.id}
 Thoi gian: ${new Date().toLocaleString('vi-VN')}
-Ban: ${orderData.table_name || orderData.table_id}
+Ban: ${orderData.table_name || orderData.table_id || 'N/A'}
+Khu: ${orderData.zone_name || 'N/A'}
+Nhan vien: ${orderData.staff_name || 'N/A'}
 ================================
 ${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
 ================================`;
@@ -267,14 +269,15 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
     total_amount: order.total_amount
   });
   
-  content = content.replace(/\{\{table_name\}\}/g, removeVietnameseAccents(order.table_name || order.table_id || ''));
+  content = content.replace(/\{\{table_name\}\}/g, removeVietnameseAccents(order.table_name || order.table_id || 'N/A'));
   content = content.replace(/\{\{checkin_time\}\}/g, removeVietnameseAccents(order.checkin_time || new Date().toLocaleString('vi-VN')));
   content = content.replace(/\{\{print_time\}\}/g, removeVietnameseAccents(new Date().toLocaleString('vi-VN')));
-  content = content.replace(/\{\{customer_name\}\}/g, removeVietnameseAccents(order.customer_name || ''));
-  content = content.replace(/\{\{card_number\}\}/g, order.card_number || order.id || '');
+  content = content.replace(/\{\{customer_name\}\}/g, removeVietnameseAccents(order.customer_name || 'N/A'));
+  content = content.replace(/\{\{card_number\}\}/g, order.card_number || order.id || 'N/A');
   content = content.replace(/\{\{printer_location\}\}/g, removeVietnameseAccents(order.printer_location || printer.location || 'Bep mac dinh'));
-  content = content.replace(/\{\{table_info\}\}/g, removeVietnameseAccents(order.table_info || order.table_name || ''));
-  content = content.replace(/\{\{staff_name\}\}/g, removeVietnameseAccents(order.staff_name || ''));
+  content = content.replace(/\{\{table_info\}\}/g, removeVietnameseAccents(order.table_info || order.table_name || 'N/A'));
+  content = content.replace(/\{\{staff_name\}\}/g, removeVietnameseAccents(order.staff_name || 'N/A'));
+  content = content.replace(/\{\{zone_name\}\}/g, removeVietnameseAccents(order.zone_name || 'N/A'));
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   

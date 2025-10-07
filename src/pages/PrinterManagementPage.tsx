@@ -446,12 +446,12 @@ const PrinterManagementPage: React.FC = () => {
       'Cảm ơn bạn đã test!'
     ];
     
-    // CÓ VIỀN NHƯ CŨ
-    let y = 20; // Viền trên như cũ
+    // BỎ VIỀN TRÊN VÀ 2 BÊN
+    let y = 0; // Bỏ viền trên
     const lineHeight = 48; // Line height cho font 42px
     
     lines.forEach(line => {
-      ctx.fillText(line, 10, y); // Viền trái như cũ
+      ctx.fillText(line, 0, y); // Bỏ viền trái
       y += lineHeight;
     });
     
