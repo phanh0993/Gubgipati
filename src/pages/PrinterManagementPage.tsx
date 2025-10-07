@@ -40,7 +40,8 @@ import {
   Edit as EditIcon,
   Save as SaveIcon,
   Cancel as CancelIcon,
-  Visibility as VisibilityIcon
+  Visibility as VisibilityIcon,
+  Image as ImageIcon
 } from '@mui/icons-material';
 import { supabase } from '../services/supabaseClient';
 
@@ -400,6 +401,110 @@ const PrinterManagementPage: React.FC = () => {
     }
   };
 
+  // Tạo ảnh test để in
+  const createTestImage = (printerName: string): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+    
+    // Kích thước cho máy in 80mm (576px ở 203 DPI)
+    const width = 576;
+    const height = 400;
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Background trắng
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Font settings
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    
+    // Vẽ nội dung test
+    const lines = [
+      'TEST PRINT - POS-80C',
+      '========================',
+      '',
+      'Thời gian: ' + new Date().toLocaleString('vi-VN'),
+      'Máy in: ' + printerName,
+      '',
+      'Kích thước: 80mm (576px)',
+      'Font: Courier New 28px',
+      'Width: 32 ký tự/đường',
+      '',
+      'Nếu bạn thấy đầy đủ 32 ký tự',
+      'trên mỗi dòng và không bị',
+      'thụt lề trên/2 bên thì',
+      'phương pháp in ảnh đã',
+      'hoạt động thành công!',
+      '',
+      '========================',
+      'Cảm ơn bạn đã test!'
+    ];
+    
+    let y = 20;
+    const lineHeight = 32;
+    
+    lines.forEach(line => {
+      ctx.fillText(line, 10, y);
+      y += lineHeight;
+    });
+    
+    return canvas.toDataURL('image/png');
+  };
+
+  const handleTestPrintImage = async (printer: Printer) => {
+    try {
+      setLoading(true);
+      
+      // Tạo ảnh test
+      const imageBase64 = createTestImage(printer.name);
+      if (!imageBase64) {
+        throw new Error('Không thể tạo ảnh test');
+      }
+      
+      console.log('Created test image, sending to printer:', printer.name);
+      
+      // Thử kết nối với Windows Printer Server trước
+      const windowsServerUrl = 'http://localhost:9977';
+      
+      try {
+        const response = await fetch(`${windowsServerUrl}/print/image`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printer_name: printer.name,
+            image_base64: imageBase64,
+            filename: 'test_print.png'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Windows server image print response:', data);
+          showSnackbar(`Test in ảnh thành công: ${data.message}`, 'success');
+          return;
+        } else {
+          const errorData = await response.json();
+          console.log('Windows server image print failed:', response.status, errorData);
+          throw new Error(errorData.error || 'Image print failed');
+        }
+      } catch (windowsError) {
+        console.log('Windows server not available for image print:', windowsError);
+        throw new Error('Windows Printer Server không khả dụng');
+      }
+    } catch (error) {
+      console.error('Error testing image print:', error);
+      showSnackbar(`Lỗi khi test in ảnh: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDeletePrinter = async (id: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa máy in này?')) return;
 
@@ -724,9 +829,17 @@ Mat hang          D.vi SL
                       onClick={() => handleTestPrint(printer)}
                       disabled={loading}
                       color="primary"
-                      title="Test in"
+                      title="Test in text"
                     >
                       <PrintIcon />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => handleTestPrintImage(printer)}
+                      disabled={loading}
+                      color="secondary"
+                      title="Test in ảnh"
+                    >
+                      <ImageIcon />
                     </IconButton>
                     <IconButton
                       onClick={() => handleDeletePrinter(printer.id)}
