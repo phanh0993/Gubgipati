@@ -12,26 +12,34 @@ import { supabase } from './supabaseClient';
 // Function để xử lý in cho từng máy in
 const processPrintJobs = async (orderId: number, items: any[], orderData: any) => {
   try {
-    // Lấy thông tin đầy đủ của order từ database
-    const { data: fullOrderData, error: orderError } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        table:table_id(name, zone_name),
-        employee:employee_id(name)
-      `)
-      .eq('id', orderId)
-      .single();
+    // Lấy thông tin đầy đủ của order từ database - LẤY RIÊNG BIỆT
+    try {
+      // Lấy thông tin bàn
+      const { data: tableData } = await supabase
+        .from('tables')
+        .select('name, zone_name')
+        .eq('id', orderData.table_id)
+        .single();
 
-    if (orderError) {
-      console.error('❌ Error fetching order data:', orderError);
-    } else {
+      // Lấy thông tin nhân viên
+      const { data: employeeData } = await supabase
+        .from('employees')
+        .select('name')
+        .eq('id', orderData.employee_id)
+        .single();
+
       // Cập nhật orderData với thông tin đầy đủ
-      orderData.table_name = fullOrderData.table?.name || `Bàn ${orderData.table_id}`;
-      orderData.zone_name = fullOrderData.table?.zone_name || 'N/A';
-      orderData.staff_name = fullOrderData.employee?.name || 'N/A';
-      orderData.checkin_time = fullOrderData.created_at;
+      orderData.table_name = tableData?.name || `Bàn ${orderData.table_id}`;
+      orderData.zone_name = tableData?.zone_name || 'N/A';
+      orderData.staff_name = employeeData?.name || 'N/A';
+      orderData.checkin_time = orderData.created_at;
       console.log('📋 Updated order data:', orderData);
+    } catch (error) {
+      console.error('❌ Error fetching order data:', error);
+      // Fallback values
+      orderData.table_name = `Bàn ${orderData.table_id}`;
+      orderData.zone_name = 'N/A';
+      orderData.staff_name = 'N/A';
     }
 
     // Lấy thông tin mapping máy in
