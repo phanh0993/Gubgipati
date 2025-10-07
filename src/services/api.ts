@@ -14,19 +14,49 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
   try {
     // Lấy thông tin đầy đủ của order từ database - LẤY RIÊNG BIỆT
     try {
-      // Lấy thông tin bàn
-      const { data: tableData } = await supabase
-        .from('tables')
-        .select('name, zone_name')
-        .eq('id', orderData.table_id)
-        .single();
+      // Lấy thông tin bàn - thử các tên bảng khác nhau
+      let tableData = null;
+      try {
+        const { data } = await supabase
+          .from('tables')
+          .select('name, zone_name')
+          .eq('id', orderData.table_id)
+          .single();
+        tableData = data;
+      } catch (e1) {
+        try {
+          const { data } = await supabase
+            .from('restaurant_tables')
+            .select('name, zone_name')
+            .eq('id', orderData.table_id)
+            .single();
+          tableData = data;
+        } catch (e2) {
+          console.log('❌ Cannot find table data, using fallback');
+        }
+      }
 
-      // Lấy thông tin nhân viên
-      const { data: employeeData } = await supabase
-        .from('employees')
-        .select('name')
-        .eq('id', orderData.employee_id)
-        .single();
+      // Lấy thông tin nhân viên - thử các tên bảng khác nhau
+      let employeeData = null;
+      try {
+        const { data } = await supabase
+          .from('employees')
+          .select('name')
+          .eq('id', orderData.employee_id)
+          .single();
+        employeeData = data;
+      } catch (e1) {
+        try {
+          const { data } = await supabase
+            .from('staff')
+            .select('name')
+            .eq('id', orderData.employee_id)
+            .single();
+          employeeData = data;
+        } catch (e2) {
+          console.log('❌ Cannot find employee data, using fallback');
+        }
+      }
 
       // Cập nhật orderData với thông tin đầy đủ
       orderData.table_name = tableData?.name || `Bàn ${orderData.table_id}`;
@@ -137,9 +167,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   if (!ctx) return '';
   
-  // Kích thước cho máy in 80mm (576px ở 203 DPI) - TĂNG WIDTH ĐỂ HIỂN THỊ FULL
-  const width = 720; // Tăng từ 576px lên 720px để hiển thị full 35-36 ký tự
-  const height = 800; // Tăng chiều cao cho nội dung dài
+  // Kích thước cho máy in 80mm - TỐI ĐA HÓA CHIỀU RỘNG
+  const width = 800; // Tăng lên 800px để đảm bảo hiển thị full
+  const height = 1000; // Tăng chiều cao cho nội dung dài
   canvas.width = width;
   canvas.height = height;
   
@@ -147,9 +177,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - TĂNG SIZE LÊN 1.75 LẦN
+  // Font settings - TỐI ĐA HÓA CHIỀU RỘNG
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 35px "Courier New", monospace'; // 20px * 1.75 = 35px
+  ctx.font = 'bold 18px "Courier New", monospace'; // Giảm font để hiển thị nhiều ký tự hơn
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -159,9 +189,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN
-  let y = 0; // Bỏ viền trên
-  const lineHeight = 42; // Line height cho font 35px (24 * 1.75)
+  // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN, DẠT HẾT VỀ TRÁI
+  let y = 0; // Bỏ viền trên hoàn toàn
+  const lineHeight = 22; // Line height cho font 18px
   
   lines.forEach(line => {
     if (line.trim()) {
@@ -309,22 +339,22 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - format cho máy in POS-80C (35-36 ký tự/đường) - SỬ DỤNG TOÀN BỘ CHIỀU RỘNG
+  // Render items list - TỐI ĐA HÓA CHIỀU RỘNG (40+ ký tự/đường)
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 28 ký tự để sử dụng toàn bộ chiều rộng)
+    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 32 ký tự)
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    itemName = itemName.length > 28 ? itemName.substring(0, 25) + '...' : itemName;
+    itemName = itemName.length > 32 ? itemName.substring(0, 29) + '...' : itemName;
     // Số lượng (4 ký tự)
     let quantity = `x${item.quantity}`.padStart(4);
-    // Giá (4 ký tự) - rút gọn để tiết kiệm không gian
+    // Giá (6 ký tự) - tăng để hiển thị đầy đủ
     let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
-    price = price.length > 4 ? price.substring(0, 4) : price.padStart(4);
+    price = price.length > 6 ? price.substring(0, 6) : price.padStart(6);
     
-    // Sử dụng toàn bộ 35-36 ký tự/đường
-    itemsList += `${itemName.padEnd(28)} ${quantity} ${price}\n`;
+    // Sử dụng toàn bộ chiều rộng (40+ ký tự/đường)
+    itemsList += `${itemName.padEnd(32)} ${quantity} ${price}\n`;
     
     if (item.special_instructions) {
       const note = removeVietnameseAccents(item.special_instructions);
