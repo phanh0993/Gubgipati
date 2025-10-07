@@ -178,19 +178,27 @@ ${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
   const windowsServerUrl = 'http://localhost:9977';
   
   try {
-    const response = await fetch(`${windowsServerUrl}/print/image`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        printer_name: printer.name,
-        image_base64: imageBase64,
-        filename: `${printer.location || 'print'}_${Date.now()}.png`
-      })
+    // Kiểm tra Windows server có sẵn không trước khi gọi
+    const healthCheck = await fetch(`${windowsServerUrl}/health`, { 
+      method: 'GET',
+      timeout: 2000 // 2 giây timeout
     });
+    
+    if (healthCheck.ok) {
+      const response = await fetch(`${windowsServerUrl}/print/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          printer_name: printer.name,
+          image_base64: imageBase64,
+          filename: `${printer.location || 'print'}_${Date.now()}.png`
+        })
+      });
 
-    if (response.ok) {
-      console.log(`✅ Printed to ${printer.name} via Windows server (image method)`);
-      return;
+      if (response.ok) {
+        console.log(`✅ Printed to ${printer.name} via Windows server (image method)`);
+        return;
+      }
     }
   } catch (windowsError) {
     console.log(`Windows server not available for ${printer.name}, trying Vercel API`);
