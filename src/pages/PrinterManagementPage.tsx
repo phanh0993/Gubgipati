@@ -499,7 +499,8 @@ const PrinterManagementPage: React.FC = () => {
       }
     } catch (error) {
       console.error('Error testing image print:', error);
-      showSnackbar(`Lỗi khi test in ảnh: ${error.message}`, 'error');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      showSnackbar(`Lỗi khi test in ảnh: ${errorMessage}`, 'error');
     } finally {
       setLoading(false);
     }
