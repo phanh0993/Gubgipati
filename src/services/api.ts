@@ -17,8 +17,8 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       .from('orders')
       .select(`
         *,
-        tables!inner(name, zone_name),
-        employees!inner(name)
+        table:table_id(name, zone_name),
+        employee:employee_id(name)
       `)
       .eq('id', orderId)
       .single();
@@ -27,9 +27,9 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
       console.error('❌ Error fetching order data:', orderError);
     } else {
       // Cập nhật orderData với thông tin đầy đủ
-      orderData.table_name = fullOrderData.tables?.name || `Bàn ${orderData.table_id}`;
-      orderData.zone_name = fullOrderData.tables?.zone_name || 'N/A';
-      orderData.staff_name = fullOrderData.employees?.name || 'N/A';
+      orderData.table_name = fullOrderData.table?.name || `Bàn ${orderData.table_id}`;
+      orderData.zone_name = fullOrderData.table?.zone_name || 'N/A';
+      orderData.staff_name = fullOrderData.employee?.name || 'N/A';
       orderData.checkin_time = fullOrderData.created_at;
       console.log('📋 Updated order data:', orderData);
     }
@@ -139,9 +139,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - TĂNG SIZE ĐỂ HIỂN THỊ FULL 35-36 KÝ TỰ
+  // Font settings - TĂNG SIZE LÊN 1.75 LẦN
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 20px "Courier New", monospace'; // Giảm font size để hiển thị nhiều ký tự hơn
+  ctx.font = 'bold 35px "Courier New", monospace'; // 20px * 1.75 = 35px
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -153,7 +153,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN
   let y = 0; // Bỏ viền trên
-  const lineHeight = 24; // Line height cho font 20px
+  const lineHeight = 42; // Line height cho font 35px (24 * 1.75)
   
   lines.forEach(line => {
     if (line.trim()) {

@@ -84,8 +84,8 @@ app.post('/printers/test', async (req, res) => {
     
     console.log(`📄 Created temp file: ${tempFile}`);
     
-    // In file tạm với settings tối ưu cho POS-80C (32 ký tự/đường cho 72mm)
-    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 32 | Out-Printer -Name '${printer_name}'"`;
+    // In file tạm với settings tối ưu cho POS-80C (loại bỏ margin hoàn toàn)
+    const printCommand = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 0 | Out-Printer -Name '${printer_name}'"`;
     
     await execAsync(printCommand);
     
@@ -200,21 +200,21 @@ Mat hang          D.vi SL
       console.log('📄 Written with UTF-8 BOM only');
     }
     
-    // Sử dụng Out-String -Width để fix width cho POS-80C (32 ký tự/đường cho 72mm)
+    // Sử dụng Out-String -Width để fix width cho POS-80C (loại bỏ margin hoàn toàn)
     try {
-      // Method 1: Out-String với Width 32 (đúng cho máy in 72mm)
-      console.log('🖨️ Method 1: Out-String Width 32...');
-      const printCommand1 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 32 | Out-Printer -Name '${printer_name}'"`;
+      // Method 1: Out-String với Width 0 (loại bỏ margin hoàn toàn)
+      console.log('🖨️ Method 1: Out-String Width 0...');
+      const printCommand1 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 0 | Out-Printer -Name '${printer_name}'"`;
       await execAsync(printCommand1);
-      console.log('✅ Method 1 successful (Out-String Width 32)');
+      console.log('✅ Method 1 successful (Out-String Width 0)');
     } catch (error) {
       console.log('❌ Method 1 failed:', error.message);
       try {
-        // Method 2: Out-String với Width 40 (fallback)
-        console.log('🖨️ Method 2: Out-String Width 40...');
-        const printCommand2 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 40 | Out-Printer -Name '${printer_name}'"`;
+        // Method 2: Out-String với Width 1 (fallback)
+        console.log('🖨️ Method 2: Out-String Width 1...');
+        const printCommand2 = `powershell "Get-Content '${tempFile}' -Encoding UTF8 | Out-String -Width 1 | Out-Printer -Name '${printer_name}'"`;
         await execAsync(printCommand2);
-        console.log('✅ Method 2 successful (Out-String Width 40)');
+        console.log('✅ Method 2 successful (Out-String Width 1)');
       } catch (error2) {
         console.log('❌ Method 2 failed:', error2.message);
         try {
