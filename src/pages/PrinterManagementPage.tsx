@@ -401,7 +401,7 @@ const PrinterManagementPage: React.FC = () => {
     }
   };
 
-  // Tạo ảnh test để in
+  // Tạo ảnh test để in - tối ưu cho POS-80C
   const createTestImage = (printerName: string): string => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -410,7 +410,7 @@ const PrinterManagementPage: React.FC = () => {
     
     // Kích thước cho máy in 80mm (576px ở 203 DPI)
     const width = 576;
-    const height = 400;
+    const height = 500; // Tăng chiều cao để chứa chữ to hơn
     canvas.width = width;
     canvas.height = height;
     
@@ -418,13 +418,13 @@ const PrinterManagementPage: React.FC = () => {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, height);
     
-    // Font settings
+    // Font settings - TĂNG GẤP 3 LẦN KÍCH THƯỚC
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 28px "Courier New", monospace';
+    ctx.font = 'bold 84px "Courier New", monospace'; // 28px → 84px (gấp 3)
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     
-    // Vẽ nội dung test
+    // Vẽ nội dung test - LOẠI BỎ VIỀN TRÊN VÀ 2 BÊN
     const lines = [
       'TEST PRINT - POS-80C',
       '========================',
@@ -433,7 +433,7 @@ const PrinterManagementPage: React.FC = () => {
       'Máy in: ' + printerName,
       '',
       'Kích thước: 80mm (576px)',
-      'Font: Courier New 28px',
+      'Font: Courier New 84px',
       'Width: 32 ký tự/đường',
       '',
       'Nếu bạn thấy đầy đủ 32 ký tự',
@@ -446,11 +446,12 @@ const PrinterManagementPage: React.FC = () => {
       'Cảm ơn bạn đã test!'
     ];
     
-    let y = 20;
-    const lineHeight = 32;
+    // BẮT ĐẦU TỪ GÓC TRÊN TRÁI (x=0, y=0) - KHÔNG CÓ VIỀN
+    let y = 0; // Bỏ viền trên (từ 20 → 0)
+    const lineHeight = 96; // Tăng line height cho font 84px (32 → 96)
     
     lines.forEach(line => {
-      ctx.fillText(line, 10, y);
+      ctx.fillText(line, 0, y); // Bỏ viền trái (từ 10 → 0)
       y += lineHeight;
     });
     

@@ -440,6 +440,8 @@ app.get('/', (req, res) => {
       'POST /printers/test': 'Test in máy in',
       'POST /print/kitchen': 'In order cho bếp',
       'POST /print/invoice': 'In hóa đơn',
+      'POST /print/image': 'In ảnh (MỚI)',
+      'POST /print/pdf': 'In PDF (MỚI)',
       'GET /health': 'Health check'
     }
   });
@@ -466,6 +468,8 @@ app.listen(PORT, () => {
   console.log('  POST /printers/test - Test in máy in');
   console.log('  POST /print/kitchen - In order cho bếp');
   console.log('  POST /print/invoice - In hóa đơn');
+  console.log('  POST /print/image - In ảnh (MỚI)');
+  console.log('  POST /print/pdf - In PDF (MỚI)');
   console.log('  GET /health - Health check');
   console.log('');
   console.log('Press Ctrl+C to stop the server');

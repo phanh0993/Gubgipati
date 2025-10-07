@@ -100,60 +100,96 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
   }
 };
 
-// Function để gửi lệnh in
+// Function để tạo ảnh từ template text
+const createImageFromTemplate = (template: string, orderData: any, items: any[], printer: any): string => {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) return '';
+  
+  // Kích thước cho máy in 80mm (576px ở 203 DPI)
+  const width = 576;
+  const height = 800; // Tăng chiều cao cho nội dung dài
+  canvas.width = width;
+  canvas.height = height;
+  
+  // Background trắng
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0, 0, width, height);
+  
+  // Font settings - CHỮ TO HƠN
+  ctx.fillStyle = '#000000';
+  ctx.font = 'bold 72px "Courier New", monospace'; // Font to cho dễ đọc
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  
+  // Render template với dữ liệu thực
+  let renderedContent = renderTemplate(template, orderData, items, printer);
+  
+  // Chia nội dung thành các dòng
+  const lines = renderedContent.split('\n');
+  
+  // Vẽ từng dòng - KHÔNG CÓ VIỀN
+  let y = 0;
+  const lineHeight = 84; // Line height cho font 72px
+  
+  lines.forEach(line => {
+    if (line.trim()) {
+      ctx.fillText(line, 0, y); // Bắt đầu từ x=0 (không có viền trái)
+    }
+    y += lineHeight;
+  });
+  
+  return canvas.toDataURL('image/png');
+};
+
+// Function để gửi lệnh in - SỬ DỤNG PHƯƠNG PHÁP IN ẢNH
 const sendPrintJob = async (printer: any, items: any[], orderData: any, template?: any) => {
   // Render template với dữ liệu thực
   let renderedContent = '';
   if (template?.template_content) {
     renderedContent = renderTemplate(template.template_content, orderData, items, printer);
+  } else {
+    // Template mặc định nếu không có
+    renderedContent = `DON HANG - ${printer.location || 'BEP'}
+================================
+So the: ${orderData.id}
+Thoi gian: ${new Date().toLocaleString('vi-VN')}
+Ban: ${orderData.table_name || orderData.table_id}
+================================
+${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
+================================`;
   }
 
-  const printPayload = {
-    order: {
-      id: orderData.id,
-      order_number: orderData.order_number,
-      table_name: orderData.table_name || `Bàn ${orderData.table_id}`,
-      table_id: orderData.table_id,
-      checkin_time: orderData.created_at,
-      customer_name: orderData.customer_name || '',
-      staff_name: orderData.staff_name || 'Nhân viên',
-      notes: orderData.notes || '',
-      card_number: orderData.id,
-      table_info: orderData.table_name || `Bàn ${orderData.table_id}`,
-      printer_location: printer.location || 'Bếp mặc định'
-    },
-    items: items.map(item => ({
-      name: item.name || item.food_item_name,
-      quantity: item.quantity,
-      price: item.price || item.unit_price,
-      special_instructions: item.special_instructions || ''
-    })),
-    printer_name: printer.name,
-    template_content: renderedContent || template?.template_content
-  };
+  // Tạo ảnh từ template
+  const imageBase64 = createImageFromTemplate(renderedContent, orderData, items, printer);
+  
+  if (!imageBase64) {
+    console.error('❌ Failed to create image from template');
+    return;
+  }
 
   // Log nội dung in để debug
   console.log(`🖨️ Print content for ${printer.name} (${printer.location}):`);
-  console.log('📄 Print payload:', printPayload);
-  if (printPayload.template_content) {
-    console.log('📄 Rendered template:');
-    console.log(printPayload.template_content);
-  }
+  console.log('📄 Template content:', renderedContent);
+  console.log('🖼️ Created image for printing');
 
-  // Thử gửi đến Windows server trước
+  // Thử gửi đến Windows server trước - SỬ DỤNG /print/image
   const windowsServerUrl = 'http://localhost:9977';
   
   try {
-    const endpoint = printer.location === 'POS' ? '/print/invoice' : '/print/kitchen';
-    
-    const response = await fetch(`${windowsServerUrl}${endpoint}`, {
+    const response = await fetch(`${windowsServerUrl}/print/image`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(printPayload)
+      body: JSON.stringify({
+        printer_name: printer.name,
+        image_base64: imageBase64,
+        filename: `${printer.location || 'print'}_${Date.now()}.png`
+      })
     });
 
     if (response.ok) {
-      console.log(`✅ Printed to ${printer.name} via Windows server`);
+      console.log(`✅ Printed to ${printer.name} via Windows server (image method)`);
       return;
     }
   } catch (windowsError) {
@@ -167,7 +203,12 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(printPayload)
+      body: JSON.stringify({
+        order: orderData,
+        items: items,
+        printer_name: printer.name,
+        template_content: renderedContent
+      })
     });
 
     if (response.ok) {
@@ -227,12 +268,14 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   // Render items list - format cho máy in POS-80C (32 ký tự/đường)
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn không dấu (tối đa 20 ký tự)
+    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 20 ký tự)
     let itemName = removeVietnameseAccents(item.name);
+    // Loại bỏ ký tự đặc biệt có thể gây lỗi
+    itemName = itemName.replace(/[^\w\s\-\.]/g, '');
     itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
     // Số lượng (4 ký tự)
     let quantity = `x${item.quantity}`.padStart(4);
-    // Giá (8 ký tự)
+    // Giá (8 ký tự) - chỉ dùng số và dấu chấm
     let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
     price = price.padStart(8);
     
@@ -240,7 +283,9 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
     
     if (item.special_instructions) {
       const note = removeVietnameseAccents(item.special_instructions);
-      itemsList += `  Ghi chu: ${note}\n`;
+      // Loại bỏ ký tự đặc biệt
+      const cleanNote = note.replace(/[^\w\s\-\.]/g, '');
+      itemsList += `  Ghi chu: ${cleanNote}\n`;
     }
     itemsList += `\n`;
   });
