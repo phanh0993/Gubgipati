@@ -12,6 +12,28 @@ import { supabase } from './supabaseClient';
 // Function để xử lý in cho từng máy in
 const processPrintJobs = async (orderId: number, items: any[], orderData: any) => {
   try {
+    // Lấy thông tin đầy đủ của order từ database
+    const { data: fullOrderData, error: orderError } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        tables!inner(name, zone_name),
+        employees!inner(name)
+      `)
+      .eq('id', orderId)
+      .single();
+
+    if (orderError) {
+      console.error('❌ Error fetching order data:', orderError);
+    } else {
+      // Cập nhật orderData với thông tin đầy đủ
+      orderData.table_name = fullOrderData.tables?.name || `Bàn ${orderData.table_id}`;
+      orderData.zone_name = fullOrderData.tables?.zone_name || 'N/A';
+      orderData.staff_name = fullOrderData.employees?.name || 'N/A';
+      orderData.checkin_time = fullOrderData.created_at;
+      console.log('📋 Updated order data:', orderData);
+    }
+
     // Lấy thông tin mapping máy in
     const { data: mappings, error: mappingError } = await supabase
       .from('map_printer')
@@ -107,8 +129,8 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   if (!ctx) return '';
   
-  // Kích thước cho máy in 80mm (576px ở 203 DPI)
-  const width = 576;
+  // Kích thước cho máy in 80mm (576px ở 203 DPI) - TĂNG WIDTH ĐỂ HIỂN THỊ FULL
+  const width = 720; // Tăng từ 576px lên 720px để hiển thị full 35-36 ký tự
   const height = 800; // Tăng chiều cao cho nội dung dài
   canvas.width = width;
   canvas.height = height;
@@ -117,9 +139,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - CHỮ VỪA PHẢI (1.5 LẦN)
+  // Font settings - TĂNG SIZE ĐỂ HIỂN THỊ FULL 35-36 KÝ TỰ
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 36px "Courier New", monospace'; // Font vừa phải
+  ctx.font = 'bold 20px "Courier New", monospace'; // Giảm font size để hiển thị nhiều ký tự hơn
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -131,7 +153,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN
   let y = 0; // Bỏ viền trên
-  const lineHeight = 42; // Line height cho font 36px
+  const lineHeight = 24; // Line height cho font 20px
   
   lines.forEach(line => {
     if (line.trim()) {
@@ -279,22 +301,22 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - format cho máy in POS-80C (32 ký tự/đường) - SỬ DỤNG TOÀN BỘ CHIỀU RỘNG
+  // Render items list - format cho máy in POS-80C (35-36 ký tự/đường) - SỬ DỤNG TOÀN BỘ CHIỀU RỘNG
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 24 ký tự để sử dụng toàn bộ chiều rộng)
+    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 28 ký tự để sử dụng toàn bộ chiều rộng)
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    itemName = itemName.length > 24 ? itemName.substring(0, 21) + '...' : itemName;
+    itemName = itemName.length > 28 ? itemName.substring(0, 25) + '...' : itemName;
     // Số lượng (4 ký tự)
     let quantity = `x${item.quantity}`.padStart(4);
     // Giá (4 ký tự) - rút gọn để tiết kiệm không gian
     let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
     price = price.length > 4 ? price.substring(0, 4) : price.padStart(4);
     
-    // Sử dụng toàn bộ 32 ký tự/đường
-    itemsList += `${itemName.padEnd(24)} ${quantity} ${price}\n`;
+    // Sử dụng toàn bộ 35-36 ký tự/đường
+    itemsList += `${itemName.padEnd(28)} ${quantity} ${price}\n`;
     
     if (item.special_instructions) {
       const note = removeVietnameseAccents(item.special_instructions);
