@@ -339,22 +339,18 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - TỐI ĐA HÓA CHIỀU RỘNG (40+ ký tự/đường)
+  // Render items list - FORMAT RÚT GỌN
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 32 ký tự)
+    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    itemName = itemName.length > 32 ? itemName.substring(0, 29) + '...' : itemName;
-    // Số lượng (4 ký tự)
-    let quantity = `x${item.quantity}`.padStart(4);
-    // Giá (6 ký tự) - tăng để hiển thị đầy đủ
-    let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
-    price = price.length > 6 ? price.substring(0, 6) : price.padStart(6);
+    // Rút gọn tên món nếu quá dài
+    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
     
-    // Sử dụng toàn bộ chiều rộng (40+ ký tự/đường)
-    itemsList += `${itemName.padEnd(32)} ${quantity} ${price}\n`;
+    // Format rút gọn: "Tên món - x1"
+    itemsList += `${itemName} - x${item.quantity}\n`;
     
     if (item.special_instructions) {
       const note = removeVietnameseAccents(item.special_instructions);
