@@ -676,8 +676,7 @@ Pass: chucngonmieng`;
 So the: {{card_number}}
 {{print_time}} - {{printer_location}}
 
-(Ban) {{table_info}}
-Nhan vien: {{staff_name}}
+{{table_name}} - {{zone_name}} - {{staff_name}}
 * Ghi chu: {{notes}}
 
 ================================

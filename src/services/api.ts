@@ -155,9 +155,7 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
 ================================
 So the: ${orderData.id}
 Thoi gian: ${new Date().toLocaleString('vi-VN')}
-Ban: ${orderData.table_name || orderData.table_id || 'N/A'}
-Khu: ${orderData.zone_name || 'N/A'}
-Nhan vien: ${orderData.staff_name || 'N/A'}
+${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'} - ${orderData.staff_name || 'N/A'}
 ================================
 ${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
 ================================`;
