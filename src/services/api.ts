@@ -117,9 +117,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - CHỮ TO HƠN
+  // Font settings - CHỮ VỪA PHẢI (1.5 LẦN)
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 72px "Courier New", monospace'; // Font to cho dễ đọc
+  ctx.font = 'bold 36px "Courier New", monospace'; // Font vừa phải
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -129,13 +129,13 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng - KHÔNG CÓ VIỀN
-  let y = 0;
-  const lineHeight = 84; // Line height cho font 72px
+  // Vẽ từng dòng - CÓ VIỀN NHƯ CŨ
+  let y = 20; // Viền trên
+  const lineHeight = 42; // Line height cho font 36px
   
   lines.forEach(line => {
     if (line.trim()) {
-      ctx.fillText(line, 0, y); // Bắt đầu từ x=0 (không có viền trái)
+      ctx.fillText(line, 10, y); // Viền trái
     }
     y += lineHeight;
   });
@@ -179,10 +179,15 @@ ${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
   
   try {
     // Kiểm tra Windows server có sẵn không trước khi gọi
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 giây timeout
+    
     const healthCheck = await fetch(`${windowsServerUrl}/health`, { 
       method: 'GET',
-      timeout: 2000 // 2 giây timeout
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (healthCheck.ok) {
       const response = await fetch(`${windowsServerUrl}/print/image`, {

@@ -418,13 +418,13 @@ const PrinterManagementPage: React.FC = () => {
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, width, height);
     
-    // Font settings - TĂNG GẤP 3 LẦN KÍCH THƯỚC
+    // Font settings - TĂNG 1.5 LẦN KÍCH THƯỚC
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 84px "Courier New", monospace'; // 28px → 84px (gấp 3)
+    ctx.font = 'bold 42px "Courier New", monospace'; // 28px → 42px (gấp 1.5)
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     
-    // Vẽ nội dung test - LOẠI BỎ VIỀN TRÊN VÀ 2 BÊN
+    // Vẽ nội dung test - CÓ VIỀN NHƯ CŨ
     const lines = [
       'TEST PRINT - POS-80C',
       '========================',
@@ -433,7 +433,7 @@ const PrinterManagementPage: React.FC = () => {
       'Máy in: ' + printerName,
       '',
       'Kích thước: 80mm (576px)',
-      'Font: Courier New 84px',
+      'Font: Courier New 42px',
       'Width: 32 ký tự/đường',
       '',
       'Nếu bạn thấy đầy đủ 32 ký tự',
@@ -446,12 +446,12 @@ const PrinterManagementPage: React.FC = () => {
       'Cảm ơn bạn đã test!'
     ];
     
-    // BẮT ĐẦU TỪ GÓC TRÊN TRÁI (x=0, y=0) - KHÔNG CÓ VIỀN
-    let y = 0; // Bỏ viền trên (từ 20 → 0)
-    const lineHeight = 96; // Tăng line height cho font 84px (32 → 96)
+    // CÓ VIỀN NHƯ CŨ
+    let y = 20; // Viền trên như cũ
+    const lineHeight = 48; // Line height cho font 42px
     
     lines.forEach(line => {
-      ctx.fillText(line, 0, y); // Bỏ viền trái (từ 10 → 0)
+      ctx.fillText(line, 10, y); // Viền trái như cũ
       y += lineHeight;
     });
     
