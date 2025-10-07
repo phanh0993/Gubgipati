@@ -11,7 +11,7 @@ const PORT = 9977;
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Tăng limit lên 10MB
 
 // Utility functions
 const sendJSON = (res, status, data) => {

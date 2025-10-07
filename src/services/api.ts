@@ -136,9 +136,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   if (!ctx) return '';
   
-  // Kích thước cho máy in 80mm - TỐI ĐA HÓA CHIỀU RỘNG
-  const width = 800; // Tăng lên 800px để đảm bảo hiển thị full
-  const height = 1000; // Tăng chiều cao cho nội dung dài
+  // Kích thước tối ưu cho máy in 80mm (72mm thực tế) - GIẢM PAYLOAD
+  const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
+  const height = 600; // Giảm chiều cao để giảm payload
   canvas.width = width;
   canvas.height = height;
   
@@ -146,9 +146,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - TĂNG SIZE LÊN GẤP 3 LẦN
+  // Font settings - TỐI ĐA HÓA CHO 72MM VỚI CHỮ LỚN NHẤT
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 54px "Courier New", monospace'; // 18px * 3 = 54px
+  ctx.font = 'bold 24px "Courier New", monospace'; // Font size tối ưu cho 72mm
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -160,7 +160,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN, DẠT HẾT VỀ TRÁI
   let y = 0; // Bỏ viền trên hoàn toàn
-  const lineHeight = 66; // Line height cho font 54px (22 * 3)
+  const lineHeight = 28; // Line height cho font 24px
   
   lines.forEach(line => {
     if (line.trim()) {
@@ -308,17 +308,17 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - FORMAT RÚT GỌN
+  // Render items list - FORMAT TỐI ƯU CHO 72MM
   let itemsList = '';
   items.forEach(item => {
     // Tên món ăn không dấu và loại bỏ ký tự đặc biệt
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    // Rút gọn tên món nếu quá dài
-    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
+    // Rút gọn tên món cho 72mm (khoảng 24 ký tự max)
+    itemName = itemName.length > 24 ? itemName.substring(0, 21) + '...' : itemName;
     
-    // Format rút gọn: "Tên món - x1"
+    // Format tối ưu cho 72mm: "Tên món - x1"
     itemsList += `${itemName} - x${item.quantity}\n`;
     
     if (item.special_instructions) {
