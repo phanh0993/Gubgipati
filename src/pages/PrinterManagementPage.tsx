@@ -671,19 +671,13 @@ Cam on quy khach!
 Wifi: Gubgipati
 Pass: chucngonmieng`;
     } else {
-      return `BEP - DON HANG
+      return `DON HANG - BEP
 ================================
 So the: {{card_number}}
-{{print_time}} - {{printer_location}}
-
+Thoi gian: {{print_time}}
 {{table_name}} - {{zone_name}} - {{staff_name}}
-* Ghi chu: {{notes}}
-
-================================
-Mat hang          D.vi SL
 ================================
 {{items_list}}
-
 ================================`;
     }
   };

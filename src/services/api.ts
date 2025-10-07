@@ -279,21 +279,22 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - format cho máy in POS-80C (32 ký tự/đường)
+  // Render items list - format cho máy in POS-80C (32 ký tự/đường) - SỬ DỤNG TOÀN BỘ CHIỀU RỘNG
   let itemsList = '';
   items.forEach(item => {
-    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 20 ký tự)
+    // Tên món ăn không dấu và loại bỏ ký tự đặc biệt (tối đa 24 ký tự để sử dụng toàn bộ chiều rộng)
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
+    itemName = itemName.length > 24 ? itemName.substring(0, 21) + '...' : itemName;
     // Số lượng (4 ký tự)
     let quantity = `x${item.quantity}`.padStart(4);
-    // Giá (8 ký tự) - chỉ dùng số và dấu chấm
+    // Giá (4 ký tự) - rút gọn để tiết kiệm không gian
     let price = item.price && item.price > 0 ? `${item.price.toLocaleString('vi-VN')}d` : '0d';
-    price = price.padStart(8);
+    price = price.length > 4 ? price.substring(0, 4) : price.padStart(4);
     
-    itemsList += `${itemName.padEnd(20)} ${quantity} ${price}\n`;
+    // Sử dụng toàn bộ 32 ký tự/đường
+    itemsList += `${itemName.padEnd(24)} ${quantity} ${price}\n`;
     
     if (item.special_instructions) {
       const note = removeVietnameseAccents(item.special_instructions);
