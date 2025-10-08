@@ -189,8 +189,8 @@ const MobileOrderDetailsPage: React.FC = () => {
         notes: ''
       };
 
-      // Lấy items từ order
-      const items = order.order_items?.map(item => ({
+      // Lấy items từ order details
+      const items = orderDetails?.order_items?.map((item: any) => ({
         id: item.food_item_id,
         name: item.food_item?.name || 'Món không xác định',
         quantity: item.quantity,
@@ -344,7 +344,7 @@ const MobileOrderDetailsPage: React.FC = () => {
               notes: ''
             };
 
-            const items = order.order_items?.map(item => ({
+            const items = orderDetails?.order_items?.map((item: any) => ({
               id: item.food_item_id,
               name: item.food_item?.name || 'Món không xác định',
               quantity: item.quantity,
