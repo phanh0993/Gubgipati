@@ -9,6 +9,169 @@ import {
 import { mockAPI } from './mockApi';
 import { supabase } from './supabaseClient';
 
+// Function để xử lý in hóa đơn (POS) - thanh toán và in bill
+const processInvoicePrint = async (orderData: any, items: any[], isPayment: boolean = false) => {
+  try {
+    // Lấy thông tin đầy đủ của order từ database
+    try {
+      const { data: fullOrderData, error: orderError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          employee:employees(fullname)
+        `)
+        .eq('id', orderData.id)
+        .single();
+
+      if (orderError) {
+        console.error('❌ Error fetching order data:', orderError);
+      } else {
+        // Cập nhật orderData với thông tin đầy đủ
+        orderData.table_name = `Bàn ${orderData.table_id}`;
+        orderData.zone_name = 'Khu A';
+        orderData.staff_name = fullOrderData.employee?.fullname || 'Chưa xác định';
+        orderData.checkin_time = orderData.created_at;
+        console.log('📋 Updated invoice order data:', orderData);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching order data:', error);
+      orderData.table_name = `Bàn ${orderData.table_id}`;
+      orderData.zone_name = 'Khu A';
+      orderData.staff_name = 'Chưa xác định';
+    }
+
+    // Lọc items dựa trên loại in
+    let filteredItems = items;
+    if (isPayment) {
+      // Thanh toán: chỉ hiện món có tiền > 0 (vé buffet và món dịch vụ)
+      filteredItems = items.filter(item => item.price > 0);
+      console.log('💰 Payment mode: showing only paid items:', filteredItems.length);
+    } else {
+      // In bill: hiện tất cả món
+      console.log('📄 Print bill mode: showing all items:', filteredItems.length);
+    }
+
+    // Lấy máy in POS
+    const { data: posPrinters, error: printerError } = await supabase
+      .from('printers')
+      .select('*')
+      .eq('location', 'POS')
+      .eq('status', 'active');
+
+    if (printerError) {
+      console.error('❌ Error loading POS printers:', printerError);
+      return;
+    }
+
+    if (!posPrinters || posPrinters.length === 0) {
+      console.log('⚠️ No POS printer found');
+      return;
+    }
+
+    // In cho từng máy POS
+    for (const printer of posPrinters) {
+      try {
+        console.log(`🖨️ Sending invoice to ${printer.name} (${isPayment ? 'Payment' : 'Print Bill'}): ${filteredItems.length} items`);
+        
+        // Tạo template hóa đơn
+        const invoiceTemplate = createInvoiceTemplate(orderData, filteredItems, isPayment);
+        
+        // Tạo ảnh từ template
+        const imageBase64 = createImageFromTemplate(invoiceTemplate, orderData, filteredItems, printer);
+        
+        if (!imageBase64) {
+          console.error('❌ Failed to create invoice image');
+          continue;
+        }
+
+        // Gửi đến Windows server
+        const windowsServerUrl = 'http://localhost:9977';
+        
+        try {
+          const response = await fetch(`${windowsServerUrl}/print/image`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              printer_name: printer.name,
+              image_base64: imageBase64,
+              filename: `${isPayment ? 'payment' : 'invoice'}_${Date.now()}.png`
+            })
+          });
+
+          if (response.ok) {
+            console.log(`✅ Invoice printed to ${printer.name} via Windows server`);
+          } else {
+            console.error(`❌ Failed to print invoice to ${printer.name}`);
+          }
+        } catch (windowsError) {
+          console.log(`Windows server not available for ${printer.name}, trying Vercel API`);
+          
+          // Fallback: Gửi đến Vercel API
+          try {
+            const response = await fetch('/api/print/invoice', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                order: orderData,
+                items: filteredItems,
+                printer_name: printer.name,
+                template_content: invoiceTemplate,
+                is_payment: isPayment
+              })
+            });
+
+            if (response.ok) {
+              console.log(`✅ Invoice printed to ${printer.name} via Vercel API`);
+            }
+          } catch (vercelError) {
+            console.error(`❌ Failed to print invoice to ${printer.name}:`, vercelError);
+          }
+        }
+      } catch (printError) {
+        console.error(`❌ Failed to print invoice to ${printer.name}:`, printError);
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in processInvoicePrint:', error);
+  }
+};
+
+// Function để tạo template hóa đơn
+const createInvoiceTemplate = (orderData: any, items: any[], isPayment: boolean): string => {
+  const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  let template = `GUBGIPATI
+4-6 Duong so 4, Khu Can Bo Giang Vien
+Can Tho, Phuong Hung Loi, Quan Ninh Kieu
+SĐT: 0969709033
+
+HOA DON ${isPayment ? 'THANH TOAN' : 'TAM TINH'}
+================================
+Thoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+${orderData.table_name} - ${orderData.zone_name}
+${orderData.staff_name}
+================================
+`;
+
+  // Thêm items
+  items.forEach(item => {
+    let itemName = item.name;
+    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
+    template += `${itemName} - x${item.quantity} - ${item.price.toLocaleString('vi-VN')}d\n`;
+  });
+
+  template += `================================
+TONG ${isPayment ? 'THANH TOAN' : 'TAM TINH'}: ${totalAmount.toLocaleString('vi-VN')}d
+================================
+Cam on quy khach!
+
+Wifi: Gubgipati
+Pass: chucngonmieng`;
+
+  return template;
+};
+
 // Function để xử lý in cho từng máy in
 const processPrintJobs = async (orderId: number, items: any[], orderData: any) => {
   try {
@@ -1709,6 +1872,12 @@ export const payrollAPI = {
 };
 
 // Buffet API
+// Export function in hóa đơn
+export const invoicePrintAPI = {
+  processInvoicePrint,
+  createInvoiceTemplate
+};
+
 export const buffetAPI = {
   getPackages: (): Promise<AxiosResponse<any[]>> => {
     if (USE_SUPABASE) {

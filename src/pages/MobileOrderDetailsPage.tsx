@@ -175,11 +175,39 @@ const MobileOrderDetailsPage: React.FC = () => {
     navigate('/mobile-invoices');
   };
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     try {
+      if (!order) return;
+      
+      // Lấy thông tin đầy đủ của order
+      const orderData = {
+        id: order.id,
+        table_id: order.table_id,
+        created_at: order.created_at,
+        total_amount: order.total_amount,
+        customer_name: order.customer_name || 'Khách lẻ',
+        notes: order.notes || ''
+      };
+
+      // Lấy items từ order
+      const items = order.order_items?.map(item => ({
+        id: item.food_item_id,
+        name: item.food_item?.name || 'Món không xác định',
+        quantity: item.quantity,
+        price: item.price || 0,
+        special_instructions: item.special_instructions || ''
+      })) || [];
+
+      // In full bill (tất cả món)
+      const { invoicePrintAPI } = await import('../services/api');
+      await invoicePrintAPI.processInvoicePrint(orderData, items, false);
+      console.log('✅ Full bill printed');
+      
+      // Fallback: in trình duyệt nếu máy in lỗi
       window.print();
     } catch (e) {
-      console.warn('Print skipped:', e);
+      console.warn('Print failed, using browser print:', e);
+      window.print();
     }
   };
 
@@ -305,8 +333,31 @@ const MobileOrderDetailsPage: React.FC = () => {
         }
 
         if (response.status === 200) {
-          // 3. In bill
-          await handlePrint();
+          // 3. In hóa đơn thanh toán (chỉ món có tiền > 0)
+          try {
+            const orderData = {
+              id: order.id,
+              table_id: order.table_id,
+              created_at: order.created_at,
+              total_amount: order.total_amount,
+              customer_name: order.customer_name || 'Khách lẻ',
+              notes: order.notes || ''
+            };
+
+            const items = order.order_items?.map(item => ({
+              id: item.food_item_id,
+              name: item.food_item?.name || 'Món không xác định',
+              quantity: item.quantity,
+              price: item.price || 0,
+              special_instructions: item.special_instructions || ''
+            })) || [];
+
+            const { invoicePrintAPI } = await import('../services/api');
+            await invoicePrintAPI.processInvoicePrint(orderData, items, true);
+            console.log('✅ Payment invoice printed');
+          } catch (printError) {
+            console.error('❌ Payment invoice print failed:', printError);
+          }
           
           alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
           navigate('/mobile-invoices');

@@ -572,8 +572,17 @@ const SimpleBuffetPOS: React.FC = () => {
         }))
       };
 
-      const { orderAPI } = await import('../services/api');
+      const { orderAPI, invoicePrintAPI } = await import('../services/api');
       const { data: newOrder } = await orderAPI.createOrder(orderData);
+      
+      // In hóa đơn thanh toán (chỉ món có tiền > 0)
+      try {
+        await invoicePrintAPI.processInvoicePrint(newOrder, orderData.items, true);
+        console.log('✅ Payment invoice printed');
+      } catch (printError) {
+        console.error('❌ Payment invoice print failed:', printError);
+      }
+      
       // Đánh dấu paid để server tự tạo invoice
       await orderAPI.updateOrder(newOrder.id, { status: 'paid' });
       alert('Thanh toán thành công!');
@@ -897,6 +906,16 @@ const SimpleBuffetPOS: React.FC = () => {
                   sx={{ fontWeight: 'bold' }}
                 >
                   Thanh Toán
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="info"
+                  fullWidth
+                  onClick={handlePrintBill}
+                  disabled={!selectedPackage || (packageQuantity < 1 && orderItems.length === 0)}
+                  sx={{ fontWeight: 'bold' }}
+                >
+                  In Bill
                 </Button>
               </Box>
             </CardContent>
