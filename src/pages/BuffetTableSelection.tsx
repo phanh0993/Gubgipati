@@ -361,7 +361,7 @@ const BuffetTableSelection: React.FC = () => {
             notes: ''
           };
 
-          const items = orderDetails.order_items?.map(item => ({
+          const items = orderDetails.order_items?.map((item: any) => ({
             id: item.food_item_id,
             name: item.food_item?.name || 'Món không xác định',
             quantity: item.quantity,
@@ -405,7 +405,7 @@ const BuffetTableSelection: React.FC = () => {
       };
 
       // Lấy items từ order details
-      const items = orderDetails.order_items?.map(item => ({
+      const items = orderDetails.order_items?.map((item: any) => ({
         id: item.food_item_id,
         name: item.food_item?.name || 'Món không xác định',
         quantity: item.quantity,
