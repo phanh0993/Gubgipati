@@ -2581,8 +2581,16 @@ export const orderAPI = {
               console.log('⚠️ No food items to update or items is not an array');
             }
             
-            // Tắt hoàn toàn logic in bếp để tránh lag khi thanh toán
-            console.log('🖨️ Kitchen printing disabled to avoid lag during payment');
+            // In phiếu bếp cho các món mới được thêm vào (nếu có items)
+            if (items && items.length > 0) {
+              try {
+                console.log('🖨️ Processing print jobs for updated order:', id);
+                await processPrintJobs(id, items, updatedRow);
+              } catch (printError) {
+                console.error('❌ Print jobs failed for updated order:', printError);
+                // Không reject order nếu in lỗi, chỉ log lỗi
+              }
+            }
             
             const axiosLike = { data: { ...updatedRow }, status: 200, statusText: 'OK', headers: {}, config: {} as any } as AxiosResponse<any>;
             resolve(axiosLike);
