@@ -18,20 +18,19 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
         .from('orders')
         .select(`
           *,
-          order_items(
+          order_items (
             id,
-            quantity,
-            price,
-            special_instructions,
             food_item_id,
-            food_items(
-              id,
+            quantity,
+            unit_price,
+            total_price,
+            special_instructions,
+            food_items (
               name,
               price,
               type
             )
-          ),
-          employee:employees(fullname)
+          )
         `)
         .eq('id', orderData.id)
         .single();
@@ -39,22 +38,45 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
       if (orderError) {
         console.error('❌ Error fetching order data:', orderError);
       } else {
+        // Lấy thông tin bàn, gói buffet, nhân viên như getOrderById
+        const [tableRes, pkgRes, empRes] = await Promise.all([
+          fullOrderData.table_id ? supabase.from('tables').select('table_name, area, table_number').eq('id', fullOrderData.table_id).single() : Promise.resolve({ data: null }),
+          fullOrderData.buffet_package_id ? supabase.from('buffet_packages').select('name, price').eq('id', fullOrderData.buffet_package_id).single() : Promise.resolve({ data: null }),
+          fullOrderData.employee_id ? supabase.from('employees').select('fullname').eq('id', fullOrderData.employee_id).single() : Promise.resolve({ data: null })
+        ]);
+
         // Cập nhật orderData với thông tin đầy đủ
-        orderData.table_name = `Bàn ${orderData.table_id}`;
-        orderData.zone_name = 'Khu A';
-        orderData.staff_name = fullOrderData.employee?.fullname || 'Chưa xác định';
+        orderData.table_name = tableRes.data?.table_name || `Bàn ${orderData.table_id}`;
+        orderData.zone_name = tableRes.data?.area || 'Khu A';
+        orderData.staff_name = empRes.data?.fullname || 'Chưa xác định';
         orderData.checkin_time = orderData.created_at;
         
-        // Cập nhật items với thông tin đầy đủ từ database
+        // Cập nhật items với thông tin đầy đủ từ database như getOrderById
         if (fullOrderData.order_items && fullOrderData.order_items.length > 0) {
-          items = fullOrderData.order_items.map((item: any) => ({
-            id: item.food_item_id,
-            name: item.food_items?.name || 'Món không xác định',
-            quantity: item.quantity,
-            price: item.price || 0,
-            special_instructions: item.special_instructions || '',
-            type: item.food_items?.type || 'buffet'
-          }));
+          items = fullOrderData.order_items.map((it: any) => {
+            const foodItemId = it.food_item_id;
+            const looksLikeTicketByNote = String(it.special_instructions || '').toLowerCase().includes('vé buffet');
+            const looksLikeTicketByPkg = !!fullOrderData.buffet_package_id && Number(fullOrderData.buffet_package_id) === Number(foodItemId);
+            const looksLikeTicketByMissingName = !it.food_items?.name && Number(it.unit_price || 0) > 0 && !!fullOrderData.buffet_package_id;
+            const isTicket = looksLikeTicketByNote || looksLikeTicketByPkg || looksLikeTicketByMissingName;
+
+            let itemName = 'Unknown Item';
+            if (isTicket) {
+              const ticketPrice = Number(fullOrderData.buffet_package_price || 0);
+              itemName = (fullOrderData.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
+            } else {
+              itemName = it.food_items?.name || 'Món không xác định';
+            }
+
+            return {
+              id: it.food_item_id,
+              name: itemName,
+              quantity: it.quantity,
+              price: it.unit_price || it.total_price || 0,
+              special_instructions: it.special_instructions || '',
+              type: it.food_items?.type || 'buffet'
+            };
+          });
         }
         
         console.log('📋 Updated invoice order data:', orderData);
@@ -366,8 +388,8 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
     if (line.trim()) {
       // Kiểm tra nếu là dòng chứa bàn, khu, nhân viên hoặc items
       if (line.includes(' - ') && (line.includes('Bàn') || line.includes('Khu') || line.includes('x'))) {
-        // Font size 45px cho bàn, khu, items
-        ctx.font = 'bold 45px "Courier New", monospace';
+        // Font size 32px cho items_list
+        ctx.font = 'bold 32px "Courier New", monospace';
         ctx.fillText(line, 10, y); // Viền trái 10px
         ctx.font = 'bold 36px "Courier New", monospace'; // Reset về font chung
       } else if (line.includes('GUBGIPATI') || line.includes('HOA DON') || line.includes('TONG') || line.includes('Cam on') || line.includes('Wifi') || line.includes('SĐT') || line.includes('Can Tho') || line.includes('Pass:')) {
