@@ -357,8 +357,8 @@ const BuffetTableSelection: React.FC = () => {
             table_id: selectedOrder.table_id,
             created_at: selectedOrder.created_at,
             total_amount: selectedOrder.total_amount,
-            customer_name: selectedOrder.customer_name || 'Khách lẻ',
-            notes: selectedOrder.notes || ''
+            customer_name: 'Khách lẻ',
+            notes: ''
           };
 
           const items = orderDetails.order_items?.map(item => ({
@@ -400,8 +400,8 @@ const BuffetTableSelection: React.FC = () => {
         table_id: selectedOrder.table_id,
         created_at: selectedOrder.created_at,
         total_amount: selectedOrder.total_amount,
-        customer_name: selectedOrder.customer_name || 'Khách lẻ',
-        notes: selectedOrder.notes || ''
+        customer_name: 'Khách lẻ',
+        notes: ''
       };
 
       // Lấy items từ order details
