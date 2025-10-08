@@ -45,6 +45,9 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
           fullOrderData.employee_id ? supabase.from('employees').select('fullname').eq('id', fullOrderData.employee_id).single() : Promise.resolve({ data: null })
         ]);
 
+        console.log('🔍 [INVOICE PRINT] Package data:', pkgRes.data);
+        console.log('🔍 [INVOICE PRINT] Full order data:', fullOrderData);
+
         // Cập nhật orderData với thông tin đầy đủ
         orderData.table_name = tableRes.data?.table_name || `Bàn ${orderData.table_id}`;
         orderData.zone_name = tableRes.data?.area || 'Khu A';
@@ -63,13 +66,18 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
               .eq('order_id', fullOrderData.id);
             
             if (!buffetError && buffetTickets && buffetTickets.length > 0) {
-              const ticketPrice = Number(fullOrderData.buffet_package_price || 0);
+              // Lấy giá từ pkgRes.data.price thay vì fullOrderData.buffet_package_price
+              const ticketPrice = Number(pkgRes.data?.price || fullOrderData.buffet_package_price || 0);
               const totalTicketQty = buffetTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
-              console.log(`🎫 [INVOICE PRINT] Order ${fullOrderData.id}: Found ${buffetTickets.length} ticket rows, total quantity: ${totalTicketQty}`);
+              console.log(`🎫 [INVOICE PRINT] Order ${fullOrderData.id}: Found ${buffetTickets.length} ticket rows, total quantity: ${totalTicketQty}, price: ${ticketPrice}`);
+              console.log(`🎫 [INVOICE PRINT] Package price from pkgRes: ${pkgRes.data?.price}, from fullOrderData: ${fullOrderData.buffet_package_price}`);
+              
+              // Lấy tên gói buffet từ pkgRes đã query trước đó
+              const packageName = pkgRes.data?.name || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
               
               items.push({
                 id: -1,
-                name: (fullOrderData.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet'),
+                name: packageName,
                 quantity: totalTicketQty,
                 price: ticketPrice,
                 special_instructions: 'Vé buffet',
