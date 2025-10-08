@@ -138,7 +138,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Kích thước tối ưu cho máy in 80mm (72mm thực tế) - GIẢM PAYLOAD
   const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
-  const height = 600; // Giảm chiều cao để giảm payload
+  const height = 500; // Giảm chiều cao để kiểm tra viền
   canvas.width = width;
   canvas.height = height;
   
@@ -146,9 +146,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - TỐI ĐA HÓA CHO 72MM VỚI CHỮ LỚN NHẤT
+  // Font settings - FONT CHUNG 36PX
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 24px "Courier New", monospace'; // Font size tối ưu cho 72mm
+  ctx.font = 'bold 36px "Courier New", monospace'; // Font size chung 36px
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -158,13 +158,22 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng - BỎ VIỀN TRÊN VÀ 2 BÊN, DẠT HẾT VỀ TRÁI
+  // Vẽ từng dòng với font size khác nhau - BỎ VIỀN TRÊN VÀ 2 BÊN
   let y = 0; // Bỏ viền trên hoàn toàn
-  const lineHeight = 28; // Line height cho font 24px
+  const lineHeight = 42; // Line height cho font 36px
   
   lines.forEach(line => {
     if (line.trim()) {
-      ctx.fillText(line, 0, y); // Bỏ viền trái
+      // Kiểm tra nếu là dòng chứa bàn, khu, nhân viên hoặc items
+      if (line.includes(' - ') && (line.includes('Bàn') || line.includes('Khu') || line.includes('x'))) {
+        // Font size 45px cho bàn, khu, items
+        ctx.font = 'bold 45px "Courier New", monospace';
+        ctx.fillText(line, 0, y);
+        ctx.font = 'bold 36px "Courier New", monospace'; // Reset về font chung
+      } else {
+        // Font size 36px cho các dòng khác
+        ctx.fillText(line, 0, y);
+      }
     }
     y += lineHeight;
   });
@@ -308,17 +317,17 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   content = content.replace(/\{\{notes\}\}/g, removeVietnameseAccents(order.notes || ''));
   content = content.replace(/\{\{total_amount\}\}/g, order.total_amount || '0');
   
-  // Render items list - FORMAT TỐI ƯU CHO 72MM
+  // Render items list - FONT SIZE 45PX CHO ITEMS
   let itemsList = '';
   items.forEach(item => {
     // Tên món ăn không dấu và loại bỏ ký tự đặc biệt
     let itemName = removeVietnameseAccents(item.name);
     // Loại bỏ ký tự đặc biệt có thể gây lỗi
     itemName = itemName.replace(/[^\w\s\-\.]/g, '');
-    // Rút gọn tên món cho 72mm (khoảng 24 ký tự max)
-    itemName = itemName.length > 24 ? itemName.substring(0, 21) + '...' : itemName;
+    // Rút gọn tên món cho 72mm (khoảng 20 ký tự max cho font 45px)
+    itemName = itemName.length > 20 ? itemName.substring(0, 17) + '...' : itemName;
     
-    // Format tối ưu cho 72mm: "Tên món - x1"
+    // Format với font size 45px: "Tên món - x1"
     itemsList += `${itemName} - x${item.quantity}\n`;
     
     if (item.special_instructions) {
