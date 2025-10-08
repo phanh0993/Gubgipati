@@ -169,6 +169,12 @@ Cam on quy khach!
 Wifi: Gubgipati
 Pass: chucngonmieng`;
 
+  // Chỉ hiển thị nội dung in trong console
+  console.log('🖨️ [INVOICE TEMPLATE] Content to print:');
+  console.log(template);
+  console.log('🖨️ [INVOICE TEMPLATE] Items count:', items.length);
+  console.log('🖨️ [INVOICE TEMPLATE] Total amount:', totalAmount);
+
   return template;
 };
 

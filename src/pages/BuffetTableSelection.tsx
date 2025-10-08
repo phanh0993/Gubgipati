@@ -361,13 +361,37 @@ const BuffetTableSelection: React.FC = () => {
             notes: ''
           };
 
-          const items = orderDetails.order_items?.map((item: any) => ({
-            id: item.food_item_id,
-            name: item.food_item?.name || 'Món không xác định',
-            quantity: item.quantity,
-            price: item.price || 0,
-            special_instructions: item.special_instructions || ''
-          })) || [];
+          // Tạo danh sách items chỉ có món có tiền > 0
+          const items = [];
+          
+          // 1. Thêm vé buffet nếu có (vé buffet luôn có tiền)
+          if (orderDetails.buffet_package_id && orderDetails.buffet_quantity > 0) {
+            items.push({
+              id: 'buffet_package',
+              name: orderDetails.buffet_package_name || 'Vé Buffet',
+              quantity: orderDetails.buffet_quantity,
+              price: orderDetails.buffet_package_price || 0,
+              special_instructions: 'Vé buffet'
+            });
+          }
+          
+          // 2. Thêm món dịch vụ (chỉ món có tiền > 0)
+          if (orderDetails.order_items && orderDetails.order_items.length > 0) {
+            orderDetails.order_items.forEach((item: any) => {
+              if (item.price > 0) { // Chỉ thêm món có tiền > 0
+                items.push({
+                  id: item.food_item_id,
+                  name: item.food_item?.name || 'Món không xác định',
+                  quantity: item.quantity,
+                  price: item.price || 0,
+                  special_instructions: item.special_instructions || ''
+                });
+              }
+            });
+          }
+
+          console.log('💰 [PAYMENT] Items to print:', items);
+          console.log('💰 [PAYMENT] Order data:', orderData);
 
           const { invoicePrintAPI } = await import('../services/api');
           await invoicePrintAPI.processInvoicePrint(orderData, items, true);
@@ -404,14 +428,35 @@ const BuffetTableSelection: React.FC = () => {
         notes: ''
       };
 
-      // Lấy items từ order details
-      const items = orderDetails.order_items?.map((item: any) => ({
-        id: item.food_item_id,
-        name: item.food_item?.name || 'Món không xác định',
-        quantity: item.quantity,
-        price: item.price || 0,
-        special_instructions: item.special_instructions || ''
-      })) || [];
+      // Tạo danh sách items đầy đủ (vé buffet + món ăn)
+      const items = [];
+      
+      // 1. Thêm vé buffet nếu có
+      if (orderDetails.buffet_package_id && orderDetails.buffet_quantity > 0) {
+        items.push({
+          id: 'buffet_package',
+          name: orderDetails.buffet_package_name || 'Vé Buffet',
+          quantity: orderDetails.buffet_quantity,
+          price: orderDetails.buffet_package_price || 0,
+          special_instructions: 'Vé buffet'
+        });
+      }
+      
+      // 2. Thêm món ăn từ order_items
+      if (orderDetails.order_items && orderDetails.order_items.length > 0) {
+        orderDetails.order_items.forEach((item: any) => {
+          items.push({
+            id: item.food_item_id,
+            name: item.food_item?.name || 'Món không xác định',
+            quantity: item.quantity,
+            price: item.price || 0,
+            special_instructions: item.special_instructions || ''
+          });
+        });
+      }
+
+      console.log('🖨️ [PRINT BILL] Items to print:', items);
+      console.log('🖨️ [PRINT BILL] Order data:', orderData);
 
       // In full bill (tất cả món)
       const { invoicePrintAPI } = await import('../services/api');
