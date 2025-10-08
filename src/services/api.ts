@@ -138,7 +138,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Kích thước tối ưu cho máy in 80mm (72mm thực tế) - GIẢM PAYLOAD
   const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
-  const height = 500; // Giảm chiều cao để kiểm tra viền
+  const height = 350; // Giảm chiều cao xuống 350px
   canvas.width = width;
   canvas.height = height;
   
@@ -158,8 +158,8 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng với font size khác nhau - BỎ VIỀN TRÊN VÀ 2 BÊN
-  let y = 0; // Bỏ viền trên hoàn toàn
+  // Vẽ từng dòng với font size khác nhau - CÓ VIỀN 10PX
+  let y = 10; // Viền trên 10px
   const lineHeight = 42; // Line height cho font 36px
   
   lines.forEach(line => {
@@ -168,11 +168,11 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
       if (line.includes(' - ') && (line.includes('Bàn') || line.includes('Khu') || line.includes('x'))) {
         // Font size 45px cho bàn, khu, items
         ctx.font = 'bold 45px "Courier New", monospace';
-        ctx.fillText(line, 0, y);
+        ctx.fillText(line, 10, y); // Viền trái 10px
         ctx.font = 'bold 36px "Courier New", monospace'; // Reset về font chung
       } else {
         // Font size 36px cho các dòng khác
-        ctx.fillText(line, 0, y);
+        ctx.fillText(line, 10, y); // Viền trái 10px
       }
     }
     y += lineHeight;
@@ -192,10 +192,11 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
     renderedContent = `DON HANG - ${printer.location || 'BEP'}
 ================================
 So the: ${orderData.id}
-Thoi gian: ${new Date().toLocaleString('vi-VN')}
-${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'} - ${orderData.staff_name || 'N/A'}
+Thoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'}
+${orderData.staff_name || 'N/A'}
 ================================
-${items.map(item => `${item.name} x${item.quantity}`).join('\n')}
+${items.map(item => `${item.name} - x${item.quantity}`).join('\n')}
 ================================`;
   }
 
@@ -306,8 +307,8 @@ const renderTemplate = (template: string, order: any, items: any[], printer: any
   });
   
   content = content.replace(/\{\{table_name\}\}/g, removeVietnameseAccents(order.table_name || order.table_id || 'N/A'));
-  content = content.replace(/\{\{checkin_time\}\}/g, removeVietnameseAccents(order.checkin_time || new Date().toLocaleString('vi-VN')));
-  content = content.replace(/\{\{print_time\}\}/g, removeVietnameseAccents(new Date().toLocaleString('vi-VN')));
+  content = content.replace(/\{\{checkin_time\}\}/g, removeVietnameseAccents(order.checkin_time ? new Date(order.checkin_time).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })));
+  content = content.replace(/\{\{print_time\}\}/g, removeVietnameseAccents(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })));
   content = content.replace(/\{\{customer_name\}\}/g, removeVietnameseAccents(order.customer_name || 'N/A'));
   content = content.replace(/\{\{card_number\}\}/g, order.card_number || order.id || 'N/A');
   content = content.replace(/\{\{printer_location\}\}/g, removeVietnameseAccents(order.printer_location || printer.location || 'Bep mac dinh'));

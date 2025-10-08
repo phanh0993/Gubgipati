@@ -675,7 +675,8 @@ Pass: chucngonmieng`;
 ================================
 So the: {{card_number}}
 Thoi gian: {{print_time}}
-{{table_name}} - {{zone_name}} - {{staff_name}}
+{{table_name}} - {{zone_name}}
+{{staff_name}}
 ================================
 {{items_list}}
 ================================`;
