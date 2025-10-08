@@ -138,7 +138,7 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Kích thước tối ưu cho máy in 80mm (72mm thực tế) - GIẢM PAYLOAD
   const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
-  const height = 350; // Giảm chiều cao xuống 350px
+  const height = 500; // Giữ nguyên canvas height 500px
   canvas.width = width;
   canvas.height = height;
   
@@ -191,7 +191,6 @@ const sendPrintJob = async (printer: any, items: any[], orderData: any, template
     // Template mặc định nếu không có - HIỂN THỊ ĐẦY ĐỦ THÔNG TIN
     renderedContent = `DON HANG - ${printer.location || 'BEP'}
 ================================
-So the: ${orderData.id}
 Thoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
 ${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'}
 ${orderData.staff_name || 'N/A'}

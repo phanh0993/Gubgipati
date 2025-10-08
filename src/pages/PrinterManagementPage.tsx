@@ -673,7 +673,6 @@ Pass: chucngonmieng`;
     } else {
       return `DON HANG - BEP
 ================================
-So the: {{card_number}}
 Thoi gian: {{print_time}}
 {{table_name}} - {{zone_name}}
 {{staff_name}}
