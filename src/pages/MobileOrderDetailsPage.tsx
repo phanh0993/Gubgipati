@@ -189,14 +189,14 @@ const MobileOrderDetailsPage: React.FC = () => {
         notes: ''
       };
 
-      // Lấy items từ order details
-      const items = orderDetails?.order_items?.map((item: any) => ({
-        id: item.food_item_id,
-        name: item.food_item?.name || 'Món không xác định',
-        quantity: item.quantity,
+      // Lấy items từ order
+      const items = (order.food_items || []).map((item: any) => ({
+        id: item.food_item_id || item.id,
+        name: item.name || item.food_item?.name || 'Món không xác định',
+        quantity: item.quantity || 1,
         price: item.price || 0,
         special_instructions: item.special_instructions || ''
-      })) || [];
+      }));
 
       // In full bill (tất cả món)
       const { invoicePrintAPI } = await import('../services/api');
@@ -344,13 +344,13 @@ const MobileOrderDetailsPage: React.FC = () => {
               notes: ''
             };
 
-            const items = orderDetails?.order_items?.map((item: any) => ({
-              id: item.food_item_id,
-              name: item.food_item?.name || 'Món không xác định',
-              quantity: item.quantity,
+            const items = (order.food_items || []).map((item: any) => ({
+              id: item.food_item_id || item.id,
+              name: item.name || item.food_item?.name || 'Món không xác định',
+              quantity: item.quantity || 1,
               price: item.price || 0,
               special_instructions: item.special_instructions || ''
-            })) || [];
+            }));
 
             const { invoicePrintAPI } = await import('../services/api');
             await invoicePrintAPI.processInvoicePrint(orderData, items, true);
