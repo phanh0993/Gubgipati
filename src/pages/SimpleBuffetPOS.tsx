@@ -593,6 +593,43 @@ const SimpleBuffetPOS: React.FC = () => {
     }
   };
 
+  const handlePrintBill = async () => {
+    try {
+      if (!selectedTable || !selectedPackage) {
+        alert('Vui lòng chọn bàn và gói buffet');
+        return;
+      }
+
+      const orderData = {
+        table_id: selectedTable.id,
+        buffet_package_id: selectedPackage.id,
+        package_quantity: packageQuantity,
+        items: orderItems.map(item => ({
+          food_item_id: item.food_item.id,
+          quantity: item.quantity,
+          price: item.food_item.price,
+          special_instructions: item.note || 'Gọi thoải mái',
+          printer_id: null
+        }))
+      };
+
+      const { invoicePrintAPI } = await import('../services/api');
+      
+      // In full bill (tất cả món)
+      try {
+        await invoicePrintAPI.processInvoicePrint(orderData, orderData.items, false);
+        console.log('✅ Full bill printed');
+        alert('In bill thành công!');
+      } catch (printError) {
+        console.error('❌ Print bill failed:', printError);
+        alert('Lỗi khi in bill');
+      }
+    } catch (error) {
+      console.error('Error printing bill:', error);
+      alert('Lỗi khi in bill');
+    }
+  };
+
   if (!selectedTable) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
