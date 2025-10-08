@@ -350,9 +350,31 @@ const BuffetTableSelection: React.FC = () => {
           console.warn('Update order status timeout/failed, continue:', e);
         }
         
-        // 3. Tự động in bill sau khi thanh toán
-        // Thực hiện in không chặn UI
-        handlePrintBill().catch((e) => console.warn('Print skipped/error:', e));
+        // 3. In hóa đơn thanh toán (chỉ món có tiền > 0)
+        try {
+          const orderData = {
+            id: selectedOrder.id,
+            table_id: selectedOrder.table_id,
+            created_at: selectedOrder.created_at,
+            total_amount: selectedOrder.total_amount,
+            customer_name: selectedOrder.customer_name || 'Khách lẻ',
+            notes: selectedOrder.notes || ''
+          };
+
+          const items = orderDetails.order_items?.map(item => ({
+            id: item.food_item_id,
+            name: item.food_item?.name || 'Món không xác định',
+            quantity: item.quantity,
+            price: item.price || 0,
+            special_instructions: item.special_instructions || ''
+          })) || [];
+
+          const { invoicePrintAPI } = await import('../services/api');
+          await invoicePrintAPI.processInvoicePrint(orderData, items, true);
+          console.log('✅ Payment invoice printed');
+        } catch (printError) {
+          console.error('❌ Payment invoice print failed:', printError);
+        }
         
         alert('Thanh toán thành công! Hóa đơn đã được ghi nhận vào doanh thu và in bill.');
         setShowOrderDialog(false);
@@ -372,9 +394,30 @@ const BuffetTableSelection: React.FC = () => {
     if (!selectedOrder || !orderDetails) return;
     
     try {
-      // Tắt hoàn toàn logic in hóa đơn để tránh lag
-      console.log('🖨️ Invoice printing disabled to avoid lag');
-      alert('Chức năng in hóa đơn đã được tắt.');
+      // Lấy thông tin đầy đủ của order
+      const orderData = {
+        id: selectedOrder.id,
+        table_id: selectedOrder.table_id,
+        created_at: selectedOrder.created_at,
+        total_amount: selectedOrder.total_amount,
+        customer_name: selectedOrder.customer_name || 'Khách lẻ',
+        notes: selectedOrder.notes || ''
+      };
+
+      // Lấy items từ order details
+      const items = orderDetails.order_items?.map(item => ({
+        id: item.food_item_id,
+        name: item.food_item?.name || 'Món không xác định',
+        quantity: item.quantity,
+        price: item.price || 0,
+        special_instructions: item.special_instructions || ''
+      })) || [];
+
+      // In full bill (tất cả món)
+      const { invoicePrintAPI } = await import('../services/api');
+      await invoicePrintAPI.processInvoicePrint(orderData, items, false);
+      console.log('✅ Full bill printed');
+      alert('In bill thành công!');
     } catch (error) {
       console.error('Error printing bill:', error);
       alert('Lỗi khi in hóa đơn');
