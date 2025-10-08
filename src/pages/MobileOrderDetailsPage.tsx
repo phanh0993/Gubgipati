@@ -185,8 +185,8 @@ const MobileOrderDetailsPage: React.FC = () => {
         table_id: order.table_id,
         created_at: order.created_at,
         total_amount: order.total_amount,
-        customer_name: order.customer_name || 'Khách lẻ',
-        notes: order.notes || ''
+        customer_name: 'Khách lẻ',
+        notes: ''
       };
 
       // Lấy items từ order
@@ -340,8 +340,8 @@ const MobileOrderDetailsPage: React.FC = () => {
               table_id: order.table_id,
               created_at: order.created_at,
               total_amount: order.total_amount,
-              customer_name: order.customer_name || 'Khách lẻ',
-              notes: order.notes || ''
+              customer_name: 'Khách lẻ',
+              notes: ''
             };
 
             const items = order.order_items?.map(item => ({
