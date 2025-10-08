@@ -12,12 +12,25 @@ import { supabase } from './supabaseClient';
 // Function để xử lý in hóa đơn (POS) - thanh toán và in bill
 const processInvoicePrint = async (orderData: any, items: any[], isPayment: boolean = false) => {
   try {
-    // Lấy thông tin đầy đủ của order từ database
+    // Lấy thông tin đầy đủ của order từ database như chi tiết hóa đơn
     try {
       const { data: fullOrderData, error: orderError } = await supabase
         .from('orders')
         .select(`
           *,
+          order_items(
+            id,
+            quantity,
+            price,
+            special_instructions,
+            food_item_id,
+            food_items(
+              id,
+              name,
+              price,
+              type
+            )
+          ),
           employee:employees(fullname)
         `)
         .eq('id', orderData.id)
@@ -31,7 +44,21 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
         orderData.zone_name = 'Khu A';
         orderData.staff_name = fullOrderData.employee?.fullname || 'Chưa xác định';
         orderData.checkin_time = orderData.created_at;
+        
+        // Cập nhật items với thông tin đầy đủ từ database
+        if (fullOrderData.order_items && fullOrderData.order_items.length > 0) {
+          items = fullOrderData.order_items.map((item: any) => ({
+            id: item.food_item_id,
+            name: item.food_items?.name || 'Món không xác định',
+            quantity: item.quantity,
+            price: item.price || 0,
+            special_instructions: item.special_instructions || '',
+            type: item.food_items?.type || 'buffet'
+          }));
+        }
+        
         console.log('📋 Updated invoice order data:', orderData);
+        console.log('📋 Updated items from database:', items);
       }
     } catch (error) {
       console.error('❌ Error fetching order data:', error);
@@ -46,9 +73,11 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
       // Thanh toán: chỉ hiện món có tiền > 0 (vé buffet và món dịch vụ)
       filteredItems = items.filter(item => item.price > 0);
       console.log('💰 Payment mode: showing only paid items:', filteredItems.length);
+      console.log('💰 Payment mode: filtered items:', filteredItems);
     } else {
       // In bill: hiện tất cả món
       console.log('📄 Print bill mode: showing all items:', filteredItems.length);
+      console.log('📄 Print bill mode: all items:', filteredItems);
     }
 
     // Lấy máy in POS
@@ -305,9 +334,11 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   if (!ctx) return '';
   
-  // Kích thước tối ưu cho máy in 80mm (72mm thực tế) - GIẢM PAYLOAD
+  // Kích thước canvas động dựa trên số lượng món ăn
   const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
-  const height = 500; // Giữ nguyên canvas height 500px
+  const baseHeight = 1000; // Chiều cao cơ bản 1000px
+  const itemHeight = 10; // Thêm 10px cho mỗi món ăn
+  const height = baseHeight + (items.length * itemHeight);
   canvas.width = width;
   canvas.height = height;
   
@@ -339,6 +370,12 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
         ctx.font = 'bold 45px "Courier New", monospace';
         ctx.fillText(line, 10, y); // Viền trái 10px
         ctx.font = 'bold 36px "Courier New", monospace'; // Reset về font chung
+      } else if (line.includes('GUBGIPATI') || line.includes('HOA DON') || line.includes('TONG') || line.includes('Cam on') || line.includes('Wifi') || line.includes('SĐT') || line.includes('Can Tho') || line.includes('Pass:')) {
+        // Căn giữa cho header và footer
+        ctx.font = 'bold 36px "Courier New", monospace';
+        const textWidth = ctx.measureText(line).width;
+        const x = (width - textWidth) / 2;
+        ctx.fillText(line, x, y);
       } else {
         // Font size 36px cho các dòng khác
         ctx.fillText(line, 10, y); // Viền trái 10px
