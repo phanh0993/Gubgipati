@@ -52,31 +52,50 @@ const processInvoicePrint = async (orderData: any, items: any[], isPayment: bool
         orderData.checkin_time = orderData.created_at;
         
         // Cập nhật items với thông tin đầy đủ từ database như getOrderById
-        if (fullOrderData.order_items && fullOrderData.order_items.length > 0) {
-          items = fullOrderData.order_items.map((it: any) => {
-            const foodItemId = it.food_item_id;
-            const looksLikeTicketByNote = String(it.special_instructions || '').toLowerCase().includes('vé buffet');
-            const looksLikeTicketByPkg = !!fullOrderData.buffet_package_id && Number(fullOrderData.buffet_package_id) === Number(foodItemId);
-            const looksLikeTicketByMissingName = !it.food_items?.name && Number(it.unit_price || 0) > 0 && !!fullOrderData.buffet_package_id;
-            const isTicket = looksLikeTicketByNote || looksLikeTicketByPkg || looksLikeTicketByMissingName;
-
-            let itemName = 'Unknown Item';
-            if (isTicket) {
+        items = [];
+        
+        // 1. Thêm vé buffet từ bảng order_buffet
+        if (Number(fullOrderData.buffet_package_id)) {
+          try {
+            const { data: buffetTickets, error: buffetError } = await supabase
+              .from('order_buffet')
+              .select('quantity')
+              .eq('order_id', fullOrderData.id);
+            
+            if (!buffetError && buffetTickets && buffetTickets.length > 0) {
               const ticketPrice = Number(fullOrderData.buffet_package_price || 0);
-              itemName = (fullOrderData.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet');
+              const totalTicketQty = buffetTickets.reduce((sum, ticket) => sum + (ticket.quantity || 0), 0);
+              console.log(`🎫 [INVOICE PRINT] Order ${fullOrderData.id}: Found ${buffetTickets.length} ticket rows, total quantity: ${totalTicketQty}`);
+              
+              items.push({
+                id: -1,
+                name: (fullOrderData.buffet_package_name) || (ticketPrice > 0 ? `VÉ ${Math.round(ticketPrice / 1000)}K` : 'Vé buffet'),
+                quantity: totalTicketQty,
+                price: ticketPrice,
+                special_instructions: 'Vé buffet',
+                type: 'buffet'
+              });
             } else {
-              itemName = it.food_items?.name || 'Món không xác định';
+              console.log(`🎫 [INVOICE PRINT] Order ${fullOrderData.id}: No tickets found in order_buffet`);
             }
-
+          } catch (e) {
+            console.warn(`🎫 [INVOICE PRINT] Failed to read order_buffet for order ${fullOrderData.id}:`, e);
+          }
+        }
+        
+        // 2. Thêm món ăn từ order_items
+        if (fullOrderData.order_items && fullOrderData.order_items.length > 0) {
+          const foodItems = fullOrderData.order_items.map((it: any) => {
             return {
               id: it.food_item_id,
-              name: itemName,
+              name: it.food_items?.name || 'Món không xác định',
               quantity: it.quantity,
               price: it.unit_price || it.total_price || 0,
               special_instructions: it.special_instructions || '',
               type: it.food_items?.type || 'buffet'
             };
           });
+          items.push(...foodItems);
         }
         
         console.log('📋 Updated invoice order data:', orderData);
