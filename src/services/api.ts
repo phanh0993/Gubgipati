@@ -263,92 +263,82 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     try {
       const { data: fullOrderData, error: orderError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          employee:employees(fullname)
-        `)
+        .select('*')
         .eq('id', orderId)
         .single();
-
-      if (orderError) {
-        console.error('❌ Error fetching order data:', orderError);
-      } else {
-        // Cập nhật orderData với thông tin đầy đủ (như chi tiết hóa đơn)
-        orderData.table_name = `Bàn ${orderData.table_id}`;
-        orderData.zone_name = 'Khu A'; // Mặc định hoặc lấy từ config
-        orderData.staff_name = fullOrderData.employee?.fullname || 'Chưa xác định';
-        orderData.checkin_time = orderData.created_at;
-        console.log('📋 Updated order data (like invoice):', orderData);
+      if (!orderError && fullOrderData) {
+        console.log('📋 Updated order data (like invoice):', fullOrderData);
+        orderData = fullOrderData;
       }
-    } catch (error) {
-      console.error('❌ Error fetching order data:', error);
-      // Fallback values
-      orderData.table_name = `Bàn ${orderData.table_id}`;
-      orderData.zone_name = 'Khu A';
-      orderData.staff_name = 'Chưa xác định';
-    }
+    } catch {}
 
-    // Lấy thông tin mapping máy in
-    const { data: mappings, error: mappingError } = await supabase
+    // Lấy mappings
+    const { data: mappings, error: mapError } = await supabase
       .from('map_printer')
-      .select(`
-        printer_id,
-        food_item_id,
-        printers!inner(id, name, location, status)
-      `);
+      .select('printer_id, food_item_id, printers(*)');
 
-    if (mappingError) {
-      console.error('Error loading printer mappings:', mappingError);
+    if (mapError) {
+      console.error('Error loading printer mappings:', mapError);
       return;
     }
 
     if (!mappings || mappings.length === 0) {
       console.log('No printer mappings found');
+      // Fallback: in tất cả món tới mọi máy in không phải POS
+      try {
+        const { data: kitchenPrinters, error: pErr } = await supabase
+          .from('printers')
+          .select('*')
+          .eq('status', 'active');
+        if (pErr) {
+          console.error('Error loading printers for fallback:', pErr);
+          return;
+        }
+        const targets = (kitchenPrinters || []).filter((p: any) => String(p.location || '').toUpperCase() !== 'POS');
+        if (targets.length === 0) {
+          console.warn('⚠️ No non-POS printers for fallback');
+          return;
+        }
+        for (const printer of targets) {
+          try {
+            // Chuẩn bị template mặc định bếp
+            const template = `DON HANG - ${printer.location || 'BEP'}\n================================\nThoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}\n${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'}\n${orderData.staff_name || 'N/A'}\n================================\n${items.map((it:any)=>`${it.name || it.food_item_name || 'Item'} - x${it.quantity || 1}`).join('\n')}\n================================`;
+            const imageBase64 = createImageFromTemplate(template, orderData, items, printer);
+            if (!imageBase64) continue;
+            console.log(`🛠️ Fallback printing to ${printer.name} (${printer.location}) with ${items.length} items`);
+            console.log('📄 Fallback template:', template);
+            await sendPrintJob(printer, items, orderData, { template_content: template });
+          } catch (e) {
+            console.error(`❌ Fallback print failed for ${printer?.name}:`, e);
+          }
+        }
+      } catch (e) {
+        console.error('❌ Fallback kitchen printing error:', e);
+      }
       return;
     }
 
     console.log('📋 Printer mappings found:', mappings.length);
     console.log('📋 Sample mapping:', mappings[0]);
 
-    // Lấy thông tin template in
-    const { data: templates, error: templateError } = await supabase
-      .from('print_templates')
-      .select('*')
-      .eq('is_active', true);
-
-    if (templateError) {
-      console.error('Error loading print templates:', templateError);
-    }
-
     // Nhóm món ăn theo máy in
     const printerGroups: { [key: number]: { printer: any, items: any[], template?: any } } = {};
     
     for (const item of items) {
-      const itemMappings = mappings.filter(m => m.food_item_id === item.food_item_id);
+      const itemMappings = mappings.filter((m:any) => m.food_item_id === (item.food_item_id || item.id));
       
+      if (itemMappings.length === 0) continue;
       for (const mapping of itemMappings) {
         const printerId = mapping.printer_id;
         const printer = Array.isArray(mapping.printers) ? mapping.printers[0] : mapping.printers;
-        
-        // Kiểm tra printer có tồn tại không
-        if (!printer) {
-          console.warn(`⚠️ Printer object is null/undefined for mapping:`, mapping);
-          continue;
-        }
-        
-        if (!printer.name) {
-          console.warn(`⚠️ Printer name is missing for mapping:`, mapping, 'printer:', printer);
-          continue;
-        }
-        
+        if (!printer || !printer.name) continue;
         if (!printerGroups[printerId]) {
           printerGroups[printerId] = {
             printer: printer,
             items: [],
-            template: templates?.find(t => t.printer_id === printerId)
+            template: undefined
           };
         }
-        
         printerGroups[printerId].items.push({
           ...item,
           printer_name: printer.name,
@@ -361,9 +351,8 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     for (const printerId in printerGroups) {
       const group = printerGroups[printerId];
       const { printer, items: printerItems, template } = group;
-      
       console.log(`🖨️ Sending print job to ${printer.name} (${printer.location}):`, printerItems.length, 'items');
-      
+      console.log('📄 Kitchen bill content:', printerItems.map((it:any)=>`${it.name || it.food_item_name} x${it.quantity || 1}`).join(', '));
       try {
         await sendPrintJob(printer, printerItems, orderData, template);
       } catch (printError) {
