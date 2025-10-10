@@ -284,7 +284,7 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
 
     if (!mappings || mappings.length === 0) {
       console.log('No printer mappings found');
-      // Fallback: in tất cả món tới mọi máy in không phải POS
+      // Fallback: in từng món tới mọi máy in không phải POS
       try {
         const { data: kitchenPrinters, error: pErr } = await supabase
           .from('printers')
@@ -299,17 +299,15 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
           console.warn('⚠️ No non-POS printers for fallback');
           return;
         }
-        for (const printer of targets) {
-          try {
-            // Chuẩn bị template mặc định bếp
-            const template = `DON HANG - ${printer.location || 'BEP'}\n================================\nThoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}\n${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'}\n${orderData.staff_name || 'N/A'}\n================================\n${items.map((it:any)=>`${it.name || it.food_item_name || 'Item'} - x${it.quantity || 1}`).join('\n')}\n================================`;
-            const imageBase64 = createImageFromTemplate(template, orderData, items, printer);
-            if (!imageBase64) continue;
-            console.log(`🛠️ Fallback printing to ${printer.name} (${printer.location}) with ${items.length} items`);
-            console.log('📄 Fallback template:', template);
-            await sendPrintJob(printer, items, orderData, { template_content: template });
-          } catch (e) {
-            console.error(`❌ Fallback print failed for ${printer?.name}:`, e);
+        for (const item of items) {
+          for (const printer of targets) {
+            try {
+              const template = `DON HANG - ${printer.location || 'BEP'}\n================================\nThoi gian: ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}\n${orderData.table_name || orderData.table_id || 'N/A'} - ${orderData.zone_name || 'N/A'}\n${orderData.staff_name || 'N/A'}\n================================\n${(item.name || item.food_item_name || 'Item')} - x${item.quantity || 1}\n================================`;
+              console.log(`🛠️ Fallback printing single item to ${printer.name}:`, (item.name || item.food_item_name), 'x', (item.quantity || 1));
+              await sendPrintJob(printer, [item], orderData, { template_content: template });
+            } catch (e) {
+              console.error(`❌ Fallback print failed for ${printer?.name}:`, e);
+            }
           }
         }
       } catch (e) {
@@ -321,42 +319,19 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
     console.log('📋 Printer mappings found:', mappings.length);
     console.log('📋 Sample mapping:', mappings[0]);
 
-    // Nhóm món ăn theo máy in
-    const printerGroups: { [key: number]: { printer: any, items: any[], template?: any } } = {};
-    
+    // In per-item theo mapping
     for (const item of items) {
       const itemMappings = mappings.filter((m:any) => m.food_item_id === (item.food_item_id || item.id));
-      
       if (itemMappings.length === 0) continue;
       for (const mapping of itemMappings) {
-        const printerId = mapping.printer_id;
         const printer = Array.isArray(mapping.printers) ? mapping.printers[0] : mapping.printers;
         if (!printer || !printer.name) continue;
-        if (!printerGroups[printerId]) {
-          printerGroups[printerId] = {
-            printer: printer,
-            items: [],
-            template: undefined
-          };
+        try {
+          console.log(`🖨️ Sending single-item ticket to ${printer.name} (${printer.location}):`, (item.name || item.food_item_name), 'x', (item.quantity || 1));
+          await sendPrintJob(printer, [item], orderData, undefined);
+        } catch (printError) {
+          console.error(`❌ Failed to print to ${printer.name}:`, printError);
         }
-        printerGroups[printerId].items.push({
-          ...item,
-          printer_name: printer.name,
-          printer_location: printer.location
-        });
-      }
-    }
-
-    // Gửi lệnh in cho từng máy in
-    for (const printerId in printerGroups) {
-      const group = printerGroups[printerId];
-      const { printer, items: printerItems, template } = group;
-      console.log(`🖨️ Sending print job to ${printer.name} (${printer.location}):`, printerItems.length, 'items');
-      console.log('📄 Kitchen bill content:', printerItems.map((it:any)=>`${it.name || it.food_item_name} x${it.quantity || 1}`).join(', '));
-      try {
-        await sendPrintJob(printer, printerItems, orderData, template);
-      } catch (printError) {
-        console.error(`❌ Failed to print to ${printer.name}:`, printError);
       }
     }
 
@@ -379,68 +354,57 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   if (!ctx) return '';
   
-  // Kích thước canvas động dựa trên số lượng món ăn
-  const width = 576; // 72mm * 8 DPI = 576px (tối ưu cho 72mm)
-  const baseHeight = 1000; // Chiều cao cơ bản 1000px
-  const itemHeight = 10; // Thêm 10px cho mỗi món ăn
+  // Kích thước canvas động dựa trên số lượng món ăn (không thêm lề ở client)
+  const width = 576; // 72mm * 8 DPI = 576px
+  const baseHeight = 1000;
+  const itemHeight = 10;
   const height = baseHeight + (items.length * itemHeight);
   canvas.width = width;
   canvas.height = height;
   
-  // Background trắng
+  // Nền trắng
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - tăng ~20%
+  // Font
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 43px "Courier New", monospace'; // Font size chung ~20% lớn hơn 36px
+  ctx.font = 'bold 43px "Courier New", monospace';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
-  // Render template với dữ liệu thực
   let renderedContent = renderTemplate(template, orderData, items, printer);
-  
-  // Chia nội dung thành các dòng
   const lines = renderedContent.split('\n');
   
-  // Vẽ từng dòng với font size khác nhau - CÓ VIỀN 10PX
-  let y = 10; // Viền trên 10px
-  const lineHeight = 50; // Line height ~20% lớn hơn 42
+  // Không đặt lề ở client; vẽ từ (0, y)
+  let y = 0;
+  const lineHeight = 50;
   
   lines.forEach(line => {
     if (line.trim()) {
-      // Header nhà hàng: đậm hơn, to hơn và căn giữa
       if (line.toUpperCase().includes('GUBGIPATI') || line.toUpperCase().includes('GUBGIPATI -')) {
         ctx.font = 'bold 50px "Courier New", monospace';
         const textWidth = ctx.measureText(line).width;
-        const availableWidth = width - 20; // lề 10px hai bên
-        const x = 10 + (availableWidth - textWidth) / 2;
+        const x = (width - textWidth) / 2; // canh giữa theo full width
         drawBoldText(ctx as any, line, x, y);
         ctx.font = 'bold 43px "Courier New", monospace';
-      // Tổng tiền: đậm hơn, to hơn và căn giữa
       } else if (line.startsWith('TONG ') || line.startsWith('TỔNG') || line.startsWith('TONG TAM') || line.startsWith('TONG THANH')) {
         ctx.font = 'bold 50px "Courier New", monospace';
         const textWidth = ctx.measureText(line).width;
-        const availableWidth = width - 20;
-        const x = 10 + (availableWidth - textWidth) / 2;
+        const x = (width - textWidth) / 2;
         drawBoldText(ctx as any, line, x, y);
         ctx.font = 'bold 43px "Courier New", monospace';
-      // Dòng items và các dòng có " - x" (SL)
       } else if (line.includes(' - x')) {
         ctx.font = 'bold 38px "Courier New", monospace';
-        ctx.fillText(line, 10, y); // Viền trái 10px
+        ctx.fillText(line, 0, y);
         ctx.font = 'bold 43px "Courier New", monospace';
-      // Các header/footer khác: căn giữa
       } else if (line.includes('HOA DON') || line.includes('HÓA ĐƠN') || line.includes('Cam on') || line.includes('Wifi') || line.includes('SĐT') || line.includes('MST') || line.includes('Pass:')) {
         ctx.font = 'bold 43px "Courier New", monospace';
         const textWidth = ctx.measureText(line).width;
-        const availableWidth = width - 20; // trừ lề
-        const x = 10 + (availableWidth - textWidth) / 2;
+        const x = (width - textWidth) / 2;
         ctx.fillText(line, x, y);
       } else {
-        // Font size chung
         ctx.font = 'bold 43px "Courier New", monospace';
-        ctx.fillText(line, 10, y); // Viền trái 10px
+        ctx.fillText(line, 0, y);
       }
     }
     y += lineHeight;
@@ -492,23 +456,30 @@ ${items.map(item => `${item.name} - x${item.quantity}`).join('\n')}
       method: 'GET',
       signal: controller.signal
     });
-    
     clearTimeout(timeoutId);
-    
-    if (healthCheck.ok) {
-      const response = await fetch(`${windowsServerUrl}/print/image`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          printer_name: printer.name,
-          image_base64: imageBase64,
-          filename: `${printer.location || 'print'}_${Date.now()}.png`
-        })
-      });
 
-      if (response.ok) {
-        console.log(`✅ Printed to ${printer.name} via Windows server (image method)`);
-        return;
+    if (healthCheck.ok) {
+      try {
+        const response = await fetch(`${windowsServerUrl}/print/image-strict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            printer_name: printer.name,
+            image_base64: imageBase64,
+            filename: `${printer.location || 'print'}_${Date.now()}.png`,
+            margins_px: 10,
+            paper_width_mm: 80,
+            overscan_bleed_px: 12
+          })
+        });
+        if (response.ok) {
+          console.log(`✅ Printed to ${printer.name} via Windows server`);
+          return;
+        } else {
+          console.warn('⚠️ Windows server responded non-OK, fallback to Vercel API');
+        }
+      } catch (serverError) {
+        console.warn('⚠️ Windows server print failed, fallback to Vercel API:', serverError);
       }
     }
   } catch (windowsError) {
