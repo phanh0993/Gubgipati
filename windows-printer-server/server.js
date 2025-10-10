@@ -421,6 +421,88 @@ app.post('/print/pdf', async (req, res) => {
   }
 });
 
+// In ảnh với margin cố định bằng .NET PrintDocument (strict margins)
+app.post('/print/image-strict', async (req, res) => {
+  try {
+    const { printer_name, image_base64, filename, margins_px, paper_width_mm } = req.body || {};
+    if (!printer_name || !image_base64) {
+      return sendJSON(res, 400, { error: 'Missing printer_name or image_base64' });
+    }
+
+    const marginPx = Number.isFinite(margins_px) ? Number(margins_px) : 10; // mặc định 10px
+    const paperWidthMM = Number.isFinite(paper_width_mm) ? Number(paper_width_mm) : 80; // mặc định 80mm
+
+    // Lưu ảnh tạm
+    const tempDir = require('os').tmpdir();
+    const safeName = (filename && String(filename).replace(/[^\w\.-]/g, '')) || `image_${Date.now()}.png`;
+    const tempFile = path.join(tempDir, safeName.endsWith('.png') || safeName.endsWith('.jpg') || safeName.endsWith('.jpeg') ? safeName : `${safeName}.png`);
+
+    const base64Data = String(image_base64).includes(',') ? image_base64.split(',')[1] : image_base64;
+    const buffer = Buffer.from(base64Data, 'base64');
+    fs.writeFileSync(tempFile, buffer);
+    console.log(`🖼️ Saved image for strict printing: ${tempFile}`);
+
+    // PowerShell script: in ảnh với PrintDocument, margin theo px (quy đổi sang hundredths of an inch)
+    const ps = `
+      Param(
+        [string]$PrinterName,
+        [string]$ImagePath,
+        [int]$MarginPx = 10,
+        [int]$PaperWidthMM = 80
+      )
+      Add-Type -AssemblyName System.Drawing
+      Add-Type -AssemblyName System.Windows.Forms
+
+      $dpi = 203.0 # giả định nhiệt 203 DPI
+      $marginHundInch = [int]([math]::Round(($MarginPx / $dpi) * 100))
+      $paperWidthInch = $PaperWidthMM / 25.4
+      $paperWidthHundInch = [int]([math]::Round($paperWidthInch * 100))
+
+      $doc = New-Object System.Drawing.Printing.PrintDocument
+      $doc.PrinterSettings.PrinterName = $PrinterName
+      $doc.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins($marginHundInch,$marginHundInch,$marginHundInch,$marginHundInch)
+      $doc.DefaultPageSettings.Landscape = $false
+      $custom = New-Object System.Drawing.Printing.PaperSize('POS80', $paperWidthHundInch, 10000) # height auto
+      $doc.DefaultPageSettings.PaperSize = $custom
+
+      $img = [System.Drawing.Image]::FromFile($ImagePath)
+      $handler = {
+        param($sender, $e)
+        $g = $e.Graphics
+        $bounds = $e.MarginBounds
+        $ratio = [math]::Min($bounds.Width / $img.Width, $bounds.Height / $img.Height)
+        if ($ratio -le 0) { $ratio = 1 }
+        $w = [int]($img.Width * $ratio)
+        $h = [int]($img.Height * $ratio)
+        $x = $bounds.X + [int](($bounds.Width - $w) / 2)
+        if ($x -lt $bounds.X) { $x = $bounds.X }
+        $y = $bounds.Y
+        $g.DrawImage($img, $x, $y, $w, $h)
+        $e.HasMorePages = $false
+      }
+      $null = $doc.add_PrintPage($handler)
+      $doc.Print()
+      $img.Dispose()
+      $doc.Dispose()
+    `;
+
+    const psFile = path.join(tempDir, `print_strict_${Date.now()}.ps1`);
+    fs.writeFileSync(psFile, ps, 'utf8');
+
+    const cmd = `powershell -ExecutionPolicy Bypass -File "${psFile}" -PrinterName "${printer_name}" -ImagePath "${tempFile}" -MarginPx ${marginPx} -PaperWidthMM ${paperWidthMM}`;
+    console.log('🖨️ Printing image (strict) with margins:', marginPx, 'px, paper:', paperWidthMM, 'mm');
+    await execAsync(cmd);
+
+    try { fs.unlinkSync(tempFile); } catch {}
+    try { fs.unlinkSync(psFile); } catch {}
+
+    return sendJSON(res, 200, { success: true, message: 'Image printed with strict margins' });
+  } catch (error) {
+    console.error('❌ Print image-strict failed:', error.message);
+    return sendJSON(res, 500, { error: 'Print image-strict failed', details: error.message });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   sendJSON(res, 200, { 
