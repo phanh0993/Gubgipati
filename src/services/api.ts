@@ -376,6 +376,13 @@ const processPrintJobs = async (orderId: number, items: any[], orderData: any) =
   }
 };
 
+// Helper: vẽ chữ đậm bằng cách vẽ chồng nhẹ nhiều lần
+const drawBoldText = (ctx: CanvasRenderingContext2D, text: string, x: number, y: number) => {
+  ctx.fillText(text, x, y);
+  ctx.fillText(text, x + 0.6, y);
+  ctx.fillText(text, x, y + 0.6);
+};
+
 // Function để tạo ảnh từ template text
 const createImageFromTemplate = (template: string, orderData: any, items: any[], printer: any): string => {
   const canvas = document.createElement('canvas');
@@ -395,9 +402,9 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   ctx.fillStyle = '#FFFFFF';
   ctx.fillRect(0, 0, width, height);
   
-  // Font settings - FONT CHUNG 36PX
+  // Font settings - tăng ~20%
   ctx.fillStyle = '#000000';
-  ctx.font = 'bold 36px "Courier New", monospace'; // Font size chung 36px
+  ctx.font = 'bold 43px "Courier New", monospace'; // Font size chung ~20% lớn hơn 36px
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   
@@ -409,24 +416,41 @@ const createImageFromTemplate = (template: string, orderData: any, items: any[],
   
   // Vẽ từng dòng với font size khác nhau - CÓ VIỀN 10PX
   let y = 10; // Viền trên 10px
-  const lineHeight = 42; // Line height cho font 36px
+  const lineHeight = 50; // Line height ~20% lớn hơn 42
   
   lines.forEach(line => {
     if (line.trim()) {
-      // Kiểm tra nếu là dòng chứa bàn, khu, nhân viên hoặc items
-      if (line.includes(' - ') && (line.includes('Bàn') || line.includes('Khu') || line.includes('x'))) {
-        // Font size 32px cho items_list
-        ctx.font = 'bold 32px "Courier New", monospace';
-        ctx.fillText(line, 10, y); // Viền trái 10px
-        ctx.font = 'bold 36px "Courier New", monospace'; // Reset về font chung
-      } else if (line.includes('GUBGIPATI') || line.includes('HOA DON') || line.includes('TONG') || line.includes('Cam on') || line.includes('Wifi') || line.includes('SĐT') || line.includes('Can Tho') || line.includes('Pass:')) {
-        // Căn giữa cho header và footer
-        ctx.font = 'bold 36px "Courier New", monospace';
+      // Header nhà hàng: đậm hơn, to hơn và căn giữa
+      if (line.toUpperCase().includes('GUBGIPATI') || line.toUpperCase().includes('GUBGIPATI -')) {
+        ctx.font = 'bold 50px "Courier New", monospace';
         const textWidth = ctx.measureText(line).width;
-        const x = (width - textWidth) / 2;
+        const availableWidth = width - 20; // lề 10px hai bên
+        const x = 10 + (availableWidth - textWidth) / 2;
+        drawBoldText(ctx as any, line, x, y);
+        ctx.font = 'bold 43px "Courier New", monospace';
+      // Tổng tiền: đậm hơn, to hơn và căn giữa
+      } else if (line.startsWith('TONG ') || line.startsWith('TỔNG') || line.startsWith('TONG TAM') || line.startsWith('TONG THANH')) {
+        ctx.font = 'bold 50px "Courier New", monospace';
+        const textWidth = ctx.measureText(line).width;
+        const availableWidth = width - 20;
+        const x = 10 + (availableWidth - textWidth) / 2;
+        drawBoldText(ctx as any, line, x, y);
+        ctx.font = 'bold 43px "Courier New", monospace';
+      // Dòng items và các dòng có " - x" (SL)
+      } else if (line.includes(' - x')) {
+        ctx.font = 'bold 38px "Courier New", monospace';
+        ctx.fillText(line, 10, y); // Viền trái 10px
+        ctx.font = 'bold 43px "Courier New", monospace';
+      // Các header/footer khác: căn giữa
+      } else if (line.includes('HOA DON') || line.includes('HÓA ĐƠN') || line.includes('Cam on') || line.includes('Wifi') || line.includes('SĐT') || line.includes('MST') || line.includes('Pass:')) {
+        ctx.font = 'bold 43px "Courier New", monospace';
+        const textWidth = ctx.measureText(line).width;
+        const availableWidth = width - 20; // trừ lề
+        const x = 10 + (availableWidth - textWidth) / 2;
         ctx.fillText(line, x, y);
       } else {
-        // Font size 36px cho các dòng khác
+        // Font size chung
+        ctx.font = 'bold 43px "Courier New", monospace';
         ctx.fillText(line, 10, y); // Viền trái 10px
       }
     }
