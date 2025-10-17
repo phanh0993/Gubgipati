@@ -751,6 +751,13 @@ Thoi gian: {{print_time}}
           <Typography variant="h6">Danh sách máy in</Typography>
           <Box>
             <Button
+              variant="text"
+              onClick={() => window.open('/test-printer', '_blank')}
+              sx={{ mr: 2 }}
+            >
+              Mở trang Test Printer
+            </Button>
+            <Button
               variant="outlined"
               startIcon={<RefreshIcon />}
               onClick={handleScanPrinters}

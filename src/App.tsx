@@ -38,6 +38,7 @@ import MobileTablesPage from './pages/MobileTablesPage';
 import MobileMenuPage from './pages/MobileMenuPage';
 import MobileBillPage from './pages/MobileBillPage';
 import PrinterManagementPage from './pages/PrinterManagementPage';
+import TestPrinterPage from './pages/TestPrinterPage';
 import MobileLoginPage from './pages/MobileLoginPage';
 import MobileInvoicesPage from './pages/MobileInvoicesPage';
 import MobileOrderDetailsPage from './pages/MobileOrderDetailsPage';
@@ -176,6 +177,7 @@ function App() {
                   <Route path="/food" element={<FoodManagementPage />} />
                   <Route path="/buffet-food" element={<BuffetFoodManagement />} />
                   <Route path="/printers" element={<PrinterManagementPage />} />
+                        <Route path="/test-printer" element={<TestPrinterPage />} />
                       </Routes>
                     </Layout>
                   </ProtectedRoute>
