@@ -187,11 +187,66 @@ const server = http.createServer((req, res) => {
       timestamp: new Date().toISOString(),
       endpoints: [
         'GET /health',
+        'GET /test/network/:ip/:port',
         'POST /test/text',
         'POST /test/raster'
       ]
     }));
     return;
+  }
+  
+  // Network connectivity test
+  if (path.startsWith('/test/network/') && req.method === 'GET') {
+    const pathParts = path.split('/');
+    if (pathParts.length >= 5) {
+      const ip = pathParts[3];
+      const port = parseInt(pathParts[4]) || 9100;
+      
+      console.log(`🔍 Testing network connectivity to ${ip}:${port}`);
+      
+      const client = new net.Socket();
+      client.setTimeout(3000);
+      
+      client.connect(port, ip, () => {
+        console.log(`✅ Successfully connected to ${ip}:${port}`);
+        client.destroy();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: `Successfully connected to ${ip}:${port}`,
+          ip,
+          port,
+          timestamp: new Date().toISOString()
+        }));
+      });
+      
+      client.on('error', (error) => {
+        console.error(`❌ Connection error to ${ip}:${port}:`, error.message);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: error.message,
+          ip,
+          port,
+          timestamp: new Date().toISOString()
+        }));
+      });
+      
+      client.on('timeout', () => {
+        console.error(`❌ Connection timeout to ${ip}:${port}`);
+        client.destroy();
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Connection timeout',
+          ip,
+          port,
+          timestamp: new Date().toISOString()
+        }));
+      });
+      
+      return;
+    }
   }
   
   if (path === '/test/text' && req.method === 'POST') {
