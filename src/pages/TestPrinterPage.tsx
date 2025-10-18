@@ -43,7 +43,7 @@ const TestPrinterPage: React.FC = () => {
   const [noteFont, setNoteFont] = useState(40);
   const [align, setAlign] = useState<AlignOption>('left');
   const [printerName, setPrinterName] = useState('POS-80C');
-  const [printerIp, setPrinterIp] = useState('192.168.123.100');
+  const [printerIp, setPrinterIp] = useState('192.168.10.3');
   const [printerPort, setPrinterPort] = useState(9100);
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({ open: false, message: '', severity: 'success' });
 

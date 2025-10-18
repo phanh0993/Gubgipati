@@ -346,8 +346,8 @@ server.listen(PORT, () => {
   console.log('   POST http://localhost:' + PORT + '/test/raster');
   console.log('');
   console.log('💡 Usage:');
-  console.log('   Test text: curl -X POST http://localhost:' + PORT + '/test/text -H "Content-Type: application/json" -d \'{"printer_ip":"192.168.123.100"}\'');
-  console.log('   Test raster: curl -X POST http://localhost:' + PORT + '/test/raster -H "Content-Type: application/json" -d \'{"printer_ip":"192.168.123.100"}\'');
+  console.log('   Test text: curl -X POST http://localhost:' + PORT + '/test/text -H "Content-Type: application/json" -d \'{"printer_ip":"192.168.10.3"}\'');
+  console.log('   Test raster: curl -X POST http://localhost:' + PORT + '/test/raster -H "Content-Type: application/json" -d \'{"printer_ip":"192.168.10.3"}\'');
   console.log('');
   console.log('Press Ctrl+C to stop the server');
 });
