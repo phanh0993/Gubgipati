@@ -163,6 +163,89 @@ function testEscPosRaster(printerIp, port = 9100) {
   });
 }
 
+// Test ESC/POS Invoice
+function testEscPosInvoice(printerIp, port = 9100, orderData, items) {
+  return new Promise((resolve, reject) => {
+    console.log(`🔍 Testing ESC/POS Invoice to ${printerIp}:${port}`);
+    
+    const client = new net.Socket();
+    client.setTimeout(15000);
+    
+    client.connect(port, printerIp, () => {
+      console.log('✅ Connected to printer for invoice test');
+      
+      try {
+        // Tạo hóa đơn ESC/POS
+        let invoiceLines = [
+          'HOÁ ĐƠN TEST',
+          '========================',
+          `Số đơn: ${orderData.order_number}`,
+          `Thời gian: ${orderData.checkin_time}`,
+          `Bàn: ${orderData.table_name} - ${orderData.zone_name}`,
+          `NV: ${orderData.staff_name}`,
+          '========================',
+          'MÓN ĂN - SL - GIÁ',
+          '========================'
+        ];
+        
+        // Thêm items
+        items.forEach(item => {
+          invoiceLines.push(`${item.name} - x${item.quantity}`);
+          if (item.price > 0) {
+            invoiceLines.push(`  ${item.price.toLocaleString('vi-VN')}đ`);
+          }
+          if (item.notes) {
+            invoiceLines.push(`  Ghi chú: ${item.notes}`);
+          }
+        });
+        
+        invoiceLines.push('========================');
+        invoiceLines.push('Cảm ơn quý khách!');
+        invoiceLines.push('========================');
+        
+        // Tạo command ESC/POS
+        let command = Buffer.concat([
+          ESCPOS_COMMANDS.INIT,
+          ESCPOS_COMMANDS.SET_LEFT_MARGIN,
+          ...invoiceLines.map(line => Buffer.concat([
+            Buffer.from(line + '\n', 'ascii'),
+            ESCPOS_COMMANDS.LINE_FEED
+          ])),
+          ESCPOS_COMMANDS.CUT_PAPER
+        ]);
+        
+        console.log('📤 Sending ESC/POS invoice command...');
+        console.log('📋 Command length:', command.length, 'bytes');
+        console.log('📋 Invoice lines:', invoiceLines.length);
+        
+        client.write(command);
+        client.end();
+        
+        resolve({
+          success: true,
+          message: 'ESC/POS invoice command sent successfully',
+          commandLength: command.length,
+          invoiceLines: invoiceLines.length
+        });
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
+    
+    client.on('error', (error) => {
+      console.error('❌ Connection error:', error.message);
+      reject(error);
+    });
+    
+    client.on('timeout', () => {
+      console.error('❌ Connection timeout');
+      client.destroy();
+      reject(new Error('Connection timeout'));
+    });
+  });
+}
+
 // Simple HTTP server
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -189,7 +272,8 @@ const server = http.createServer((req, res) => {
         'GET /health',
         'GET /test/network/:ip/:port',
         'POST /test/text',
-        'POST /test/raster'
+        'POST /test/raster',
+        'POST /test/invoice'
       ]
     }));
     return;
@@ -320,6 +404,50 @@ const server = http.createServer((req, res) => {
         
       } catch (error) {
         console.error('❌ ESC/POS raster test error:', error);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        }));
+      }
+    });
+    return;
+  }
+  
+  if (path === '/test/invoice' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body);
+        const { printer_ip, port = 9100, orderData, items } = data;
+        
+        if (!printer_ip) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: 'printer_ip is required' }));
+          return;
+        }
+        
+        console.log(`🖨️ Testing Invoice to ${printer_ip}:${port}`);
+        console.log('📋 Order data:', orderData);
+        console.log('📋 Items:', items);
+        
+        const result = await testEscPosInvoice(printer_ip, port, orderData, items);
+        
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          success: true,
+          message: 'Invoice test completed',
+          result,
+          timestamp: new Date().toISOString()
+        }));
+        
+      } catch (error) {
+        console.error('❌ Invoice test error:', error);
         res.writeHead(500, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           success: false,

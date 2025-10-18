@@ -174,86 +174,51 @@ const TestPrinterPage: React.FC = () => {
     }
   };
 
-  const handleTestEscPosText = async () => {
+  const handleTestInvoice = async () => {
     try {
-      console.log('🧪 Testing ESC/POS Text RAW...');
+      console.log('🧪 Testing Invoice with ESC/POS RAW...');
       
-      const escPosServerUrl = 'http://localhost:9978/test/text';
-      const payload = {
+      // Tạo hóa đơn test
+      const testInvoice = {
         printer_ip: printerIp,
-        port: printerPort
+        port: printerPort,
+        orderData: {
+          order_number: 'TEST-001',
+          table_name: tableName,
+          zone_name: zoneName,
+          staff_name: staffName,
+          checkin_time: new Date().toLocaleString('vi-VN'),
+          notes: orderNote
+        },
+        items: items.map(item => ({
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total,
+          notes: item.notes || ''
+        }))
       };
       
-      console.log('📤 ESC/POS Text payload:', payload);
+      console.log('📤 Invoice payload:', testInvoice);
       
-      const resp = await fetch(escPosServerUrl, {
+      const response = await fetch('http://localhost:9978/test/invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(testInvoice)
       });
       
-      console.log('🔍 ESC/POS server response status:', resp.status, resp.ok);
-      const result = await resp.json();
-      console.log('🔍 ESC/POS server response:', result);
-      
-      if (!resp.ok) throw new Error(result.error || 'ESC/POS test failed');
-      setSnackbar({ open: true, severity: 'success', message: 'ESC/POS Text test sent successfully' });
-    } catch (err: any) {
-      console.error('❌ ESC/POS Text error:', err);
-      setSnackbar({ open: true, severity: 'error', message: err?.message || 'ESC/POS Text test failed' });
-    }
-  };
-
-  const handleTestEscPosRaster = async () => {
-    try {
-      console.log('🧪 Testing ESC/POS Raster RAW...');
-      
-      const escPosServerUrl = 'http://localhost:9978/test/raster';
-      const payload = {
-        printer_ip: printerIp,
-        port: printerPort
-      };
-      
-      console.log('📤 ESC/POS Raster payload:', payload);
-      
-      const resp = await fetch(escPosServerUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      
-      console.log('🔍 ESC/POS server response status:', resp.status, resp.ok);
-      const result = await resp.json();
-      console.log('🔍 ESC/POS server response:', result);
-      
-      if (!resp.ok) throw new Error(result.error || 'ESC/POS test failed');
-      setSnackbar({ open: true, severity: 'success', message: 'ESC/POS Raster test sent successfully' });
-    } catch (err: any) {
-      console.error('❌ ESC/POS Raster error:', err);
-      setSnackbar({ open: true, severity: 'error', message: err?.message || 'ESC/POS Raster test failed' });
-    }
-  };
-
-  const handleTestNetwork = async () => {
-    try {
-      console.log('🔍 Testing network connectivity...');
-      
-      const networkUrl = `http://localhost:9978/test/network/${printerIp}/${printerPort}`;
-      console.log('📡 Network test URL:', networkUrl);
-      
-      const resp = await fetch(networkUrl);
-      const result = await resp.json();
-      
-      console.log('🔍 Network test result:', result);
+      const result = await response.json();
+      console.log('🔍 Invoice server response status:', response.status, response.ok);
+      console.log('🔍 Invoice server response:', result);
       
       if (result.success) {
-        setSnackbar({ open: true, severity: 'success', message: `Network OK: ${printerIp}:${printerPort}` });
+        setSnackbar({ open: true, message: 'Invoice printed successfully!', severity: 'success' });
       } else {
-        setSnackbar({ open: true, severity: 'error', message: `Network failed: ${result.error}` });
+        setSnackbar({ open: true, message: `Invoice error: ${result.error}`, severity: 'error' });
       }
-    } catch (err: any) {
-      console.error('❌ Network test error:', err);
-      setSnackbar({ open: true, severity: 'error', message: err?.message || 'Network test failed' });
+    } catch (error) {
+      console.error('❌ Invoice error:', error);
+      setSnackbar({ open: true, message: 'Invoice test failed', severity: 'error' });
     }
   };
 
@@ -326,25 +291,22 @@ const TestPrinterPage: React.FC = () => {
 
                 <Grid item xs={12}>
                   <Typography variant="subtitle2" gutterBottom>
-                    Test Methods (So sánh viền):
+                    Test Methods:
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Button variant="outlined" onClick={drawPreview}>Preview</Button>
                     <Button variant="contained" onClick={handlePrint}>In ảnh (MSPaint)</Button>
-                    <Button variant="outlined" color="secondary" onClick={handleTestNetwork}>Test Network</Button>
-                    <Button variant="outlined" color="secondary" onClick={handleTestEscPosText}>ESC/POS Text</Button>
-                    <Button variant="outlined" color="secondary" onClick={handleTestEscPosRaster}>ESC/POS Raster</Button>
+                    <Button variant="contained" color="success" onClick={handleTestInvoice}>In hóa đơn (ESC/POS RAW)</Button>
                   </Box>
                 </Grid>
                 
                 <Grid item xs={12}>
-                  <Alert severity="warning">
-                    <strong>So sánh viền:</strong><br/>
+                  <Alert severity="info">
+                    <strong>Phương pháp in:</strong><br/>
                     1. "In ảnh" = MSPaint (có thể có lề driver)<br/>
-                    2. "ESC/POS Text" = RAW text (không lề)<br/>
-                    3. "ESC/POS Raster" = RAW ảnh 576px (không lề)<br/>
+                    2. "In hóa đơn" = ESC/POS RAW (không lề, in trực tiếp)<br/>
                     <br/>
-                    <strong>Yêu cầu:</strong> Chạy ESC/POS server: <code>start-escpos-server.bat</code>
+                    <strong>Yêu cầu:</strong> Chạy ESC/POS server: <code>escpos-test-server-v2.exe</code>
                   </Alert>
                 </Grid>
               </Grid>
