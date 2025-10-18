@@ -43,6 +43,8 @@ const TestPrinterPage: React.FC = () => {
   const [noteFont, setNoteFont] = useState(40);
   const [align, setAlign] = useState<AlignOption>('left');
   const [printerName, setPrinterName] = useState('POS-80C');
+  const [printerIp, setPrinterIp] = useState('192.168.1.100');
+  const [printerPort, setPrinterPort] = useState(9100);
   const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({ open: false, message: '', severity: 'success' });
 
   const [tableName, setTableName] = useState('Bàn 11');
@@ -172,6 +174,89 @@ const TestPrinterPage: React.FC = () => {
     }
   };
 
+  const handleTestEscPosText = async () => {
+    try {
+      console.log('🧪 Testing ESC/POS Text RAW...');
+      
+      const escPosServerUrl = 'http://localhost:9978/test/text';
+      const payload = {
+        printer_ip: printerIp,
+        port: printerPort
+      };
+      
+      console.log('📤 ESC/POS Text payload:', payload);
+      
+      const resp = await fetch(escPosServerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      console.log('🔍 ESC/POS server response status:', resp.status, resp.ok);
+      const result = await resp.json();
+      console.log('🔍 ESC/POS server response:', result);
+      
+      if (!resp.ok) throw new Error(result.error || 'ESC/POS test failed');
+      setSnackbar({ open: true, severity: 'success', message: 'ESC/POS Text test sent successfully' });
+    } catch (err: any) {
+      console.error('❌ ESC/POS Text error:', err);
+      setSnackbar({ open: true, severity: 'error', message: err?.message || 'ESC/POS Text test failed' });
+    }
+  };
+
+  const handleTestEscPosRaster = async () => {
+    try {
+      console.log('🧪 Testing ESC/POS Raster RAW...');
+      
+      const escPosServerUrl = 'http://localhost:9978/test/raster';
+      const payload = {
+        printer_ip: printerIp,
+        port: printerPort
+      };
+      
+      console.log('📤 ESC/POS Raster payload:', payload);
+      
+      const resp = await fetch(escPosServerUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      console.log('🔍 ESC/POS server response status:', resp.status, resp.ok);
+      const result = await resp.json();
+      console.log('🔍 ESC/POS server response:', result);
+      
+      if (!resp.ok) throw new Error(result.error || 'ESC/POS test failed');
+      setSnackbar({ open: true, severity: 'success', message: 'ESC/POS Raster test sent successfully' });
+    } catch (err: any) {
+      console.error('❌ ESC/POS Raster error:', err);
+      setSnackbar({ open: true, severity: 'error', message: err?.message || 'ESC/POS Raster test failed' });
+    }
+  };
+
+  const handleTestNetwork = async () => {
+    try {
+      console.log('🔍 Testing network connectivity...');
+      
+      const networkUrl = `http://localhost:9978/test/network/${printerIp}/${printerPort}`;
+      console.log('📡 Network test URL:', networkUrl);
+      
+      const resp = await fetch(networkUrl);
+      const result = await resp.json();
+      
+      console.log('🔍 Network test result:', result);
+      
+      if (result.success) {
+        setSnackbar({ open: true, severity: 'success', message: `Network OK: ${printerIp}:${printerPort}` });
+      } else {
+        setSnackbar({ open: true, severity: 'error', message: `Network failed: ${result.error}` });
+      }
+    } catch (err: any) {
+      console.error('❌ Network test error:', err);
+      setSnackbar({ open: true, severity: 'error', message: err?.message || 'Network test failed' });
+    }
+  };
+
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
@@ -222,6 +307,11 @@ const TestPrinterPage: React.FC = () => {
                 <Grid item xs={12}><Divider /></Grid>
 
                 <Grid item xs={12}><TextField label="Tên máy in (Windows)" fullWidth value={printerName} onChange={(e) => setPrinterName(e.target.value)} /></Grid>
+                
+                <Grid item xs={12}><Divider /></Grid>
+                
+                <Grid item xs={8}><TextField label="Printer IP" fullWidth value={printerIp} onChange={(e) => setPrinterIp(e.target.value)} /></Grid>
+                <Grid item xs={4}><TextField label="Port" type="number" fullWidth value={printerPort} onChange={(e) => setPrinterPort(parseInt(e.target.value || '9100'))} /></Grid>
 
                 <Grid item xs={6}><TextField label="Bàn" fullWidth value={tableName} onChange={(e) => setTableName(e.target.value)} /></Grid>
                 <Grid item xs={6}><TextField label="Khu" fullWidth value={zoneName} onChange={(e) => setZoneName(e.target.value)} /></Grid>
@@ -235,10 +325,27 @@ const TestPrinterPage: React.FC = () => {
                 </Grid>
 
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2 }}>
-                    <Button variant="outlined" onClick={drawPreview}>Xem Preview</Button>
-                    <Button variant="contained" onClick={handlePrint}>In ảnh</Button>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Test Methods (So sánh viền):
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button variant="outlined" onClick={drawPreview}>Preview</Button>
+                    <Button variant="contained" onClick={handlePrint}>In ảnh (MSPaint)</Button>
+                    <Button variant="outlined" color="secondary" onClick={handleTestNetwork}>Test Network</Button>
+                    <Button variant="outlined" color="secondary" onClick={handleTestEscPosText}>ESC/POS Text</Button>
+                    <Button variant="outlined" color="secondary" onClick={handleTestEscPosRaster}>ESC/POS Raster</Button>
                   </Box>
+                </Grid>
+                
+                <Grid item xs={12}>
+                  <Alert severity="warning">
+                    <strong>So sánh viền:</strong><br/>
+                    1. "In ảnh" = MSPaint (có thể có lề driver)<br/>
+                    2. "ESC/POS Text" = RAW text (không lề)<br/>
+                    3. "ESC/POS Raster" = RAW ảnh 576px (không lề)<br/>
+                    <br/>
+                    <strong>Yêu cầu:</strong> Chạy ESC/POS server: <code>start-escpos-server.bat</code>
+                  </Alert>
                 </Grid>
               </Grid>
             </CardContent>
