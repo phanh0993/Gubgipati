@@ -1,0 +1,4 @@
+Force deploy timestamp: 2025-01-27T10:30:00Z
+
+This file is used to force Vercel redeployment when there are deployment issues.
+DATABASE_URL is configured in environment variables.

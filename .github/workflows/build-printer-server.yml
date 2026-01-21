@@ -1,0 +1,38 @@
+name: Build Windows Printer Server
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'windows-printer-server/**'
+      - '.github/workflows/build-printer-server.yml'
+
+jobs:
+  build-windows-exe:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install deps
+        working-directory: windows-printer-server
+        run: |
+          npm ci
+          npm i -g pkg
+
+      - name: Build exe with pkg
+        working-directory: windows-printer-server
+        run: |
+          pkg . --targets node18-win-x64 --output printer-server.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: printer-server-exe
+          path: windows-printer-server/printer-server.exe
+          if-no-files-found: error

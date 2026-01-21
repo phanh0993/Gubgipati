@@ -1,0 +1,37 @@
+{
+  "printers": [
+    {
+      "name": "BEP NONG",
+      "connection_type": "ip",
+      "ip_address": "192.168.1.235",
+      "port_number": 9100,
+      "location": "Bếp nóng",
+      "status": "active",
+      "driver_name": "XP-80C",
+      "notes": "Máy in tại Bếp nóng"
+    },
+    {
+      "name": "BEP THIT",
+      "connection_type": "ip",
+      "ip_address": "192.168.1.236",
+      "port_number": 9100,
+      "location": "Bếp thịt",
+      "status": "active",
+      "driver_name": "XP-80C",
+      "notes": "Máy in tại Bếp thịt"
+    },
+    {
+      "name": "QUAY BARR",
+      "connection_type": "ip",
+      "ip_address": "192.168.1.234",
+      "port_number": 9100,
+      "location": "Quầy Bar",
+      "status": "active",
+      "driver_name": "XP-80C",
+      "notes": "Máy in tại Quầy Bar - Đã đổi IP từ 192.168.2.234"
+    }
+  ],
+  "updated_at": "2025-01-27",
+  "description": "Danh sách máy in mới để test kết nối"
+}
+

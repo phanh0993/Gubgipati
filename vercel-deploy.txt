@@ -1,0 +1,9 @@
+Force Vercel deployment after environment variables setup
+Timestamp: 2025-08-27T12:45:00Z
+
+Required Environment Variables:
+- DATABASE_URL: PostgreSQL connection string
+- JWT_SECRET: Secret key for JWT tokens  
+- NODE_ENV: production
+
+After setting these variables, the login should work on Vercel.

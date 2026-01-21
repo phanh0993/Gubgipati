@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Employee Display</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Hiển Thị Thông Tin Nhân Viên</h1>
+    
+    <div class="test-section">
+        <h2>1. Test API Orders</h2>
+        <button onclick="testOrdersAPI()">Test GET /api/orders</button>
+        <div id="orders-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test API Order Details</h2>
+        <button onclick="testOrderDetailsAPI()">Test GET /api/orders/:id</button>
+        <div id="order-details-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Timezone Fix</h2>
+        <button onclick="testTimezone()">Test Timezone Conversion</button>
+        <div id="timezone-result"></div>
+    </div>
+
+    <script>
+        async function testOrdersAPI() {
+            const resultDiv = document.getElementById('orders-result');
+            try {
+                const response = await fetch('http://localhost:8000/api/orders');
+                const orders = await response.json();
+                
+                const hasEmployeeInfo = orders.some(order => order.employee_name);
+                const status = hasEmployeeInfo ? 'success' : 'error';
+                
+                resultDiv.innerHTML = `
+                    <div class="${status}">
+                        <h3>${hasEmployeeInfo ? '✅ Thành công' : '❌ Lỗi'}</h3>
+                        <p>Số lượng orders: ${orders.length}</p>
+                        <p>Có thông tin nhân viên: ${hasEmployeeInfo ? 'Có' : 'Không'}</p>
+                        <pre>${JSON.stringify(orders[0], null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Lỗi</h3><p>${error.message}</p></div>`;
+            }
+        }
+        
+        async function testOrderDetailsAPI() {
+            const resultDiv = document.getElementById('order-details-result');
+            try {
+                // Lấy order đầu tiên
+                const ordersResponse = await fetch('http://localhost:8000/api/orders');
+                const orders = await ordersResponse.json();
+                
+                if (orders.length === 0) {
+                    resultDiv.innerHTML = '<div class="error"><h3>❌ Không có orders</h3></div>';
+                    return;
+                }
+                
+                const orderId = orders[0].id;
+                const response = await fetch(`http://localhost:8000/api/orders/${orderId}`);
+                const order = await response.json();
+                
+                const hasEmployeeName = !!order.employee_name;
+                const hasBuffetPackage = !!order.buffet_package_name;
+                const status = hasEmployeeName && hasBuffetPackage ? 'success' : 'error';
+                
+                resultDiv.innerHTML = `
+                    <div class="${status}">
+                        <h3>${hasEmployeeName && hasBuffetPackage ? '✅ Thành công' : '❌ Lỗi'}</h3>
+                        <p>Order ID: ${order.id}</p>
+                        <p>Có tên nhân viên: ${hasEmployeeName ? 'Có' : 'Không'} (${order.employee_name || 'null'})</p>
+                        <p>Có tên gói buffet: ${hasBuffetPackage ? 'Có' : 'Không'} (${order.buffet_package_name || 'null'})</p>
+                        <pre>${JSON.stringify(order, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error"><h3>❌ Lỗi</h3><p>${error.message}</p></div>`;
+            }
+        }
+        
+        function testTimezone() {
+            const resultDiv = document.getElementById('timezone-result');
+            
+            // Test timezone conversion
+            const testDate = '2025-09-16T19:39:41.747Z';
+            const date = new Date(testDate);
+            
+            const localTime = date.toLocaleString('vi-VN', {
+                timeZone: 'Asia/Ho_Chi_Minh',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const utcTime = date.toLocaleString('vi-VN', {
+                timeZone: 'UTC',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Timezone Test</h3>
+                    <p><strong>UTC Time:</strong> ${utcTime}</p>
+                    <p><strong>Vietnam Time:</strong> ${localTime}</p>
+                    <p><strong>Difference:</strong> ${date.getTimezoneOffset() / 60} hours</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

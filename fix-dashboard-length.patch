@@ -1,0 +1,19 @@
+--- src/pages/DashboardPage.tsx.orig
++++ src/pages/DashboardPage.tsx
+@@ -450,7 +450,7 @@
+                 </Box>
+ 
+-                {dailyInvoices.invoices.length > 0 ? (
++                {dailyInvoices.invoices && dailyInvoices.invoices.length > 0 ? (
+                   <TableContainer component={Paper}>
+                     <Table>
+                       <TableHead>
+@@ -464,7 +464,7 @@
+                         </TableRow>
+                       </TableHead>
+                       <TableBody>
+-                        {dailyInvoices.invoices.map((invoice: any) => (
++                        {dailyInvoices.invoices && dailyInvoices.invoices.map((invoice: any) => (
+                           <TableRow key={invoice.id} hover>
+                             <TableCell>
+                               {invoice.invoice_number}
